@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 主题表 Mapper：version 乐观锁更新 -->
+<mapper namespace="com.dingring.infrastructure.persistence.mapper.TopicMapper">
+
+    <!-- ResultMap：feature JSON 字段需 typeHandler；status 自动映射为 TopicStatus 枚举 -->
+    <resultMap id="topicMap" type="com.dingring.domain.discussion.Topic">
+        <id column="id" property="id"/>
+        <result column="feature" property="feature"
+                typeHandler="com.dingring.infrastructure.persistence.typehandler.JsonMapTypeHandler"/>
+    </resultMap>
+
+    <sql id="columns">
+        id, chat_group_id, title, status, conclusion, closed_at, version, feature, create_time, update_time
+    </sql>
+
+    <select id="findById" resultMap="topicMap">
+        SELECT <include refid="columns"/>
+        FROM topic
+        WHERE id = #{id}
+    </select>
+
+    <select id="findActiveByGroupId" resultMap="topicMap">
+        SELECT <include refid="columns"/>
+        FROM topic
+        WHERE chat_group_id = #{groupId} AND status = 'IN_PROGRESS'
+        LIMIT 1
+    </select>
+
+    <select id="findByGroupId" resultMap="topicMap">
+        SELECT <include refid="columns"/>
+        FROM topic
+        WHERE chat_group_id = #{groupId}
+        ORDER BY create_time DESC, id DESC
+    </select>
+
+    <select id="findClosedByGroupId" resultMap="topicMap">
+        SELECT <include refid="columns"/>
+        FROM topic
+        WHERE chat_group_id = #{groupId} AND status = 'CLOSED'
+        ORDER BY closed_at ASC, id ASC
+    </select>
+
+    <insert id="insert" parameterType="com.dingring.domain.discussion.Topic"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO topic (chat_group_id, title, status, conclusion, closed_at, version, feature, create_time, update_time)
+        VALUES (#{chatGroupId}, #{title}, #{status}, #{conclusion}, #{closedAt}, #{version},
+                #{feature, typeHandler=com.dingring.infrastructure.persistence.typehandler.JsonMapTypeHandler},
+                #{createTime}, #{updateTime})
+    </insert>
+
+    <!-- 乐观锁更新：version 匹配才生效，成功后 version + 1 -->
+    <update id="updateWithVersion" parameterType="com.dingring.domain.discussion.Topic">
+        UPDATE topic
+        SET title       = #{title},
+            status      = #{status},
+            conclusion  = #{conclusion},
+            closed_at   = #{closedAt},
+            version     = version + 1,
+            feature     = #{feature, typeHandler=com.dingring.infrastructure.persistence.typehandler.JsonMapTypeHandler},
+            update_time = #{updateTime}
+        WHERE id = #{id} AND version = #{version}
+    </update>
+
+</mapper>

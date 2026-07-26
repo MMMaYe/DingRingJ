@@ -18,7 +18,10 @@ server:
   port: 8080
 
 mybatis:
+  # Mapper XML 文件位置（与 Mapper 接口同包名映射，namespace 全限定类名）
+  mapper-locations: classpath*:mapper/*.xml
   configuration:
+    # 下划线 -> 驼峰自动映射（chat_group_id -> chatGroupId）
     map-underscore-to-camel-case: true
 
 dingring:

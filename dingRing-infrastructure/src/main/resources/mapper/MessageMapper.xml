@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 群消息表 Mapper：用户/Agent/系统消息统一存储 -->
+<mapper namespace="com.dingring.infrastructure.persistence.mapper.MessageMapper">
+
+    <!-- ResultMap：feature JSON 字段需 typeHandler -->
+    <resultMap id="messageMap" type="com.dingring.domain.group.GroupMessage">
+        <id column="id" property="id"/>
+        <result column="feature" property="feature"
+                typeHandler="com.dingring.infrastructure.persistence.typehandler.JsonMapTypeHandler"/>
+    </resultMap>
+
+    <sql id="columns">
+        id, chat_group_id, topic_id, sender_id, sender_type, message_type, content,
+        reply_to_message_id, feature, create_time, update_time
+    </sql>
+
+    <select id="findById" resultMap="messageMap">
+        SELECT <include refid="columns"/>
+        FROM message
+        WHERE id = #{id}
+    </select>
+
+    <insert id="insert" parameterType="com.dingring.domain.group.GroupMessage"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO message (chat_group_id, topic_id, sender_id, sender_type, message_type, content,
+                             reply_to_message_id, feature, create_time, update_time)
+        VALUES (#{chatGroupId}, #{topicId}, #{senderId}, #{senderType}, #{messageType}, #{content},
+                #{replyToMessageId},
+                #{feature, typeHandler=com.dingring.infrastructure.persistence.typehandler.JsonMapTypeHandler},
+                #{createTime}, #{updateTime})
+    </insert>
+
+    <select id="findByTopicId" resultMap="messageMap">
+        SELECT <include refid="columns"/>
+        FROM message
+        WHERE topic_id = #{topicId}
+        ORDER BY create_time ASC, id ASC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countByTopicId" resultType="long">
+        SELECT COUNT(*) FROM message WHERE topic_id = #{topicId}
+    </select>
+
+    <select id="findByGroupId" resultMap="messageMap">
+        SELECT <include refid="columns"/>
+        FROM message
+        WHERE chat_group_id = #{groupId}
+        ORDER BY create_time ASC, id ASC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countByGroupId" resultType="long">
+        SELECT COUNT(*) FROM message WHERE chat_group_id = #{groupId}
+    </select>
+
+    <!-- 取最近 N 条并正序返回：子查询倒序取 N 条，外层再正序排 -->
+    <select id="findRecentByTopicId" resultMap="messageMap">
+        SELECT * FROM (
+            SELECT <include refid="columns"/>
+            FROM message
+            WHERE topic_id = #{topicId}
+            ORDER BY create_time DESC, id DESC
+            LIMIT #{limit}
+        ) t
+        ORDER BY t.create_time ASC, t.id ASC
+    </select>
+
+    <select id="findRecentByGroupId" resultMap="messageMap">
+        SELECT * FROM (
+            SELECT <include refid="columns"/>
+            FROM message
+            WHERE chat_group_id = #{groupId}
+            ORDER BY create_time DESC, id DESC
+            LIMIT #{limit}
+        ) t
+        ORDER BY t.create_time ASC, t.id ASC
+    </select>
+
+    <select id="countByTopicIdAndSender" resultType="long">
+        SELECT COUNT(*) FROM message
+        WHERE topic_id = #{topicId}
+          AND sender_id = #{senderId}
+          AND sender_type = #{senderType}
+    </select>
+
+    <select id="countByTopicIdAndSenderType" resultType="long">
+        SELECT COUNT(*) FROM message
+        WHERE topic_id = #{topicId}
+          AND sender_type = #{senderType}
+    </select>
+
+    <select id="findLastByGroupId" resultMap="messageMap">
+        SELECT <include refid="columns"/>
+        FROM message
+        WHERE chat_group_id = #{groupId}
+        ORDER BY create_time DESC, id DESC
+        LIMIT 1
+    </select>
+
+</mapper>

@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 知识卡片表 Mapper：讨论结论异步提取的 Q&A -->
+<mapper namespace="com.dingring.infrastructure.persistence.mapper.CardMapper">
+
+    <!-- ResultMap：feature JSON 字段需 typeHandler -->
+    <resultMap id="cardMap" type="com.dingring.domain.discussion.KnowledgeCard">
+        <id column="id" property="id"/>
+        <result column="feature" property="feature"
+                typeHandler="com.dingring.infrastructure.persistence.typehandler.JsonMapTypeHandler"/>
+    </resultMap>
+
+    <sql id="columns">
+        id, topic_id, question, answer, category, feature, create_time, update_time
+    </sql>
+
+    <select id="findByTopicId" resultMap="cardMap">
+        SELECT <include refid="columns"/>
+        FROM knowledge_card
+        WHERE topic_id = #{topicId}
+        ORDER BY id ASC
+    </select>
+
+    <select id="findByCategory" resultMap="cardMap">
+        SELECT <include refid="columns"/>
+        FROM knowledge_card
+        WHERE category = #{category}
+        ORDER BY id ASC
+    </select>
+
+    <select id="findAllCards" resultMap="cardMap">
+        SELECT <include refid="columns"/>
+        FROM knowledge_card
+        ORDER BY id ASC
+    </select>
+
+    <select id="findAllCategories" resultType="string">
+        SELECT DISTINCT category FROM knowledge_card
+        WHERE category IS NOT NULL
+        ORDER BY category ASC
+    </select>
+
+    <insert id="insert" parameterType="com.dingring.domain.discussion.KnowledgeCard"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO knowledge_card (topic_id, question, answer, category, feature, create_time, update_time)
+        VALUES (#{topicId}, #{question}, #{answer}, #{category},
+                #{feature, typeHandler=com.dingring.infrastructure.persistence.typehandler.JsonMapTypeHandler},
+                #{createTime}, #{updateTime})
+    </insert>
+
+</mapper>

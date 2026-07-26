@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 用户表 Mapper：单用户模式，预留扩展 -->
+<mapper namespace="com.dingring.infrastructure.persistence.mapper.UserMapper">
+
+    <!-- ResultMap：feature 字段需 JsonMapTypeHandler -->
+    <resultMap id="userMap" type="com.dingring.domain.user.User">
+        <id column="id" property="id"/>
+        <result column="feature" property="feature"
+                typeHandler="com.dingring.infrastructure.persistence.typehandler.JsonMapTypeHandler"/>
+    </resultMap>
+
+    <sql id="columns">id, name, profile_picture, feature, create_time, update_time</sql>
+
+    <select id="findById" resultMap="userMap">
+        SELECT <include refid="columns"/>
+        FROM `user`
+        WHERE id = #{id}
+    </select>
+
+    <insert id="insert" parameterType="com.dingring.domain.user.User"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO `user` (name, profile_picture, feature, create_time, update_time)
+        VALUES (#{name}, #{profilePicture},
+                #{feature, typeHandler=com.dingring.infrastructure.persistence.typehandler.JsonMapTypeHandler},
+                #{createTime}, #{updateTime})
+    </insert>
+
+</mapper>

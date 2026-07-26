@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- Agent 表 Mapper：AI 成员配置 -->
+<mapper namespace="com.dingring.infrastructure.persistence.mapper.AgentMapper">
+
+    <!-- ResultMap：feature 字段需 JsonMapTypeHandler，其他字段由下划线转驼峰自动映射 -->
+    <resultMap id="agentMap" type="com.dingring.domain.agent.Agent">
+        <id column="id" property="id"/>
+        <result column="feature" property="feature"
+                typeHandler="com.dingring.infrastructure.persistence.typehandler.JsonMapTypeHandler"/>
+    </resultMap>
+
+    <sql id="columns">
+        id, name, profile_picture, description, base_url, api_key, model_name, call_type,
+        system_prompt, feature, create_time, update_time
+    </sql>
+
+    <select id="findById" resultMap="agentMap">
+        SELECT <include refid="columns"/>
+        FROM agent
+        WHERE id = #{id}
+    </select>
+
+    <select id="findByIds" resultMap="agentMap">
+        SELECT <include refid="columns"/>
+        FROM agent
+        WHERE id IN
+        <foreach collection="ids" item="item" open="(" separator="," close=")">
+            #{item}
+        </foreach>
+    </select>
+
+    <select id="findAll" resultMap="agentMap">
+        SELECT <include refid="columns"/>
+        FROM agent
+        ORDER BY id ASC
+    </select>
+
+    <insert id="insert" parameterType="com.dingring.domain.agent.Agent"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO agent (name, profile_picture, description, base_url, api_key, model_name, call_type,
+                           system_prompt, feature, create_time, update_time)
+        VALUES (#{name}, #{profilePicture}, #{description}, #{baseUrl}, #{apiKey}, #{modelName}, #{callType},
+                #{systemPrompt},
+                #{feature, typeHandler=com.dingring.infrastructure.persistence.typehandler.JsonMapTypeHandler},
+                #{createTime}, #{updateTime})
+    </insert>
+
+    <update id="update" parameterType="com.dingring.domain.agent.Agent">
+        UPDATE agent
+        SET name          = #{name},
+            profile_picture = #{profilePicture},
+            description   = #{description},
+            base_url      = #{baseUrl},
+            api_key       = #{apiKey},
+            model_name    = #{modelName},
+            call_type     = #{callType},
+            system_prompt = #{systemPrompt},
+            feature       = #{feature, typeHandler=com.dingring.infrastructure.persistence.typehandler.JsonMapTypeHandler},
+            update_time   = #{updateTime}
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM agent WHERE id = #{id}
+    </delete>
+
+</mapper>
