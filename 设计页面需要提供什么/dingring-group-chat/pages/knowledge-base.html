@@ -1,0 +1,2315 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DingRing - 知识库管理</title>
+    <style id="theme-vars">
+/**
+ * Trae design library tokens
+ * Dark-only colors and typography tokens.
+ * Source references:
+ * - /workspace/.uploads/c7804cd9-3301-4b42-8895-bb409861b29a_trae.md
+ * - /workspace/.uploads/3164f329-b5a1-42ba-9dcb-5f1b36b48506_trae.css
+ *
+ * Notes:
+ * - Token values are preserved from the source files.
+ * - Grouping is preserved.
+ * - No alias layer is included.
+ * - Invalid source token names that contained spaces were normalized to kebab-case.
+ *   The original source names are kept in comments.
+ */
+
+/* @dark-only */
+/* @group-priority: brand-green, status, brand-blue, brand-purple, brand-yellow */
+
+:root {
+  /* radius */
+  --radius-2: 2px;
+  --radius-4: 4px;
+  --radius-6: 6px;
+  --radius-8: 8px;
+  --radius-10: 10px;
+  --radius-full: 9999px;
+
+  /* spacers */
+  --spacer-0: 0px;
+  --spacer-4: 4px;
+  --spacer-6: 6px;
+  --spacer-8: 8px;
+  --spacer-12: 12px;
+  --spacer-16: 16px;
+  --spacer-24: 24px;
+  --spacer-32: 32px;
+  --spacer-40: 40px;
+
+  /* font */
+  --font-family-default: SF Pro Text;
+  --font-family-heading: SF Pro;
+  --font-family-mono: JetBrains Mono;
+  --font-weight-default: 400;
+  --font-weight-code: 450;
+  --font-weight-medium: 500;
+  --font-weight-strong: 600;
+  --font-family-base: var(--font-family-default);
+  --font-family-heading-alias: var(--font-family-heading);
+  --font-family-mono-alias: var(--font-family-mono);
+
+  /* body */
+  --body-xs-font-family: "SF Pro Text", system-ui, -apple-system, sans-serif;
+  --body-xs-font-size: 10px;
+  --body-xs-font-weight: 400;
+  --body-xs-line-height: 14px;
+  --body-sm-font-family: "SF Pro Text", system-ui, -apple-system, sans-serif;
+  --body-sm-font-size: 11px;
+  --body-sm-font-weight: 400;
+  --body-sm-line-height: 16px;
+  --body-sm-strong-font-family: "SF Pro Text", system-ui, -apple-system, sans-serif;
+  --body-sm-strong-font-size: 11px;
+  --body-sm-strong-font-weight: 500;
+  --body-sm-strong-line-height: 16px;
+  --body-md-font-family: "SF Pro Text", system-ui, -apple-system, sans-serif;
+  --body-md-font-size: 12px;
+  --body-md-font-weight: 400;
+  --body-md-line-height: 18px;
+  --body-md-strong-font-family: "SF Pro Text", system-ui, -apple-system, sans-serif;
+  --body-md-strong-font-size: 12px;
+  --body-md-strong-font-weight: 500;
+  --body-md-strong-line-height: 18px;
+  --body-base-font-family: "SF Pro Text", system-ui, -apple-system, sans-serif;
+  --body-base-font-size: 13px;
+  --body-base-font-weight: 400;
+  --body-base-line-height: 20px;
+  --body-base-strong-font-family: "SF Pro Text", system-ui, -apple-system, sans-serif;
+  --body-base-strong-font-size: 13px;
+  --body-base-strong-font-weight: 500;
+  --body-base-strong-line-height: 20px;
+
+  /* heading */
+  --heading-3xs-font-family: "SF Pro Text", system-ui, -apple-system, sans-serif;
+  --heading-3xs-font-size: 11px;
+  --heading-3xs-font-weight: 600;
+  --heading-3xs-line-height: 16px;
+  --heading-2xs-font-family: "SF Pro Text", system-ui, -apple-system, sans-serif;
+  --heading-2xs-font-size: 12px;
+  --heading-2xs-font-weight: 600;
+  --heading-2xs-line-height: 18px;
+  --heading-xs-font-family: "SF Pro Text", system-ui, -apple-system, sans-serif;
+  --heading-xs-font-size: 13px;
+  --heading-xs-font-weight: 600;
+  --heading-xs-line-height: 20px;
+  --heading-sm-font-family: "SF Pro Text", system-ui, -apple-system, sans-serif;
+  --heading-sm-font-size: 16px;
+  --heading-sm-font-weight: 600;
+  --heading-sm-line-height: 24px;
+  --heading-md-font-family: "SF Pro", system-ui, -apple-system, sans-serif;
+  --heading-md-font-size: 20px;
+  --heading-md-font-weight: 600;
+  --heading-md-line-height: 28px;
+  --heading-lg-font-family: "SF Pro", system-ui, -apple-system, sans-serif;
+  --heading-lg-font-size: 22px;
+  --heading-lg-font-weight: 600;
+  --heading-lg-line-height: 30px;
+  --heading-xl-font-family: "SF Pro", system-ui, -apple-system, sans-serif;
+  --heading-xl-font-size: 24px;
+  --heading-xl-font-weight: 600;
+  --heading-xl-line-height: 32px;
+  --heading-2xl-font-family: "SF Pro", system-ui, -apple-system, sans-serif;
+  --heading-2xl-font-size: 28px;
+  --heading-2xl-font-weight: 600;
+  --heading-2xl-line-height: 36px;
+  --heading-3xl-font-family: "SF Pro", system-ui, -apple-system, sans-serif;
+  --heading-3xl-font-size: 32px;
+  --heading-3xl-font-weight: 600;
+  --heading-3xl-line-height: 40px;
+
+  /* code */
+  --code-editor-font-family: "JetBrains Mono", system-ui, -apple-system, sans-serif;
+  --code-editor-font-size: 13px;
+  --code-editor-font-weight: 450;
+  --code-editor-line-height: 20px;
+  --code-terminal-font-family: "JetBrains Mono", system-ui, -apple-system, sans-serif;
+  --code-terminal-font-size: 12px;
+  --code-terminal-font-weight: 450;
+  --code-terminal-line-height: 18px;
+  --code-text: #E0E3EE;
+  --code-doc: #7F838C;
+  --code-link: #3C7EFF;
+  --code-number: #F48CCA;
+  --code-action: #B38CFF;
+  --code-instruction: #F0D8FF;
+  --code-function: #F29D79;
+  --code-constant: #80BBFF;
+  --code-parameter: #82D99F;
+  --code-attribute: #DED47E;
+  --code-tag: #F2858C;
+
+  /* bg */
+  --bg-base-default: #1A1B1D;
+  --bg-base-secondary: #222427;
+  --bg-base-tertiary: #2A2D31;
+  --bg-overlay-l1: rgba(224, 226, 242, 0.04);
+  --bg-overlay-l2: rgba(224, 226, 242, 0.06);
+  --bg-overlay-l3: rgba(224, 226, 242, 0.08);
+  --bg-overlay-l4: rgba(224, 226, 242, 0.12);
+  --bg-menu: #202123;
+  --bg-tooltip: #1A1B1D;
+  --bg-invert: #DADDE5;
+  --bg-invert-hover: #EDEFF2;
+  --bg-invert-active: #979AA4;
+  --bg-invert-disabled: rgba(224, 226, 242, 0.12);
+  --color-background: var(--bg-base-default);
+  --color-surface: var(--bg-base-secondary);
+  --color-surface-variant: var(--bg-base-tertiary);
+  --color-overlay-1: var(--bg-overlay-l1);
+  --color-overlay-2: var(--bg-overlay-l2);
+  --color-overlay-3: var(--bg-overlay-l3);
+  --color-overlay-4: var(--bg-overlay-l4);
+  --color-card: var(--bg-base-secondary);
+  --color-tooltip: var(--bg-tooltip);
+  --color-menu: var(--bg-menu);
+
+  /* bg-brand */
+  --bg-brand: #32F08C;
+  --bg-brand-hover: #0FDC78;
+  --bg-brand-disabled: rgba(50, 240, 140, 0.2);
+  --bg-brand-popup: rgba(50, 240, 140, 0.12);
+  --color-primary: var(--bg-brand);
+  --color-primary-hover: var(--bg-brand-hover);
+  --color-primary-disabled: var(--bg-brand-disabled);
+  --color-primary-soft: var(--bg-brand-popup);
+  --color-accent: var(--bg-brand);
+
+  /* text */
+  --text-default: #D1D3DB;
+  --text-default-hover: #F5F9FE;
+  --text-default-active: #F5F9FE;
+  --text-secondary: #9599A6;
+  --text-secondary-hover: #D1D3DB;
+  --text-secondary-active: #D1D3DB;
+  --text-tertiary: #666B75;
+  --text-disabled: #666B75;
+  --text-onbrand: #0C0C0D;
+  --text-onaccent: #0C0C0D;
+  --color-foreground: var(--text-default);
+  --color-foreground-hover: var(--text-default-hover);
+  --color-on-surface: var(--text-default);
+  --color-on-surface-variant: var(--text-secondary);
+  --color-muted-foreground: var(--text-secondary);
+  --color-disabled-foreground: var(--text-disabled);
+  --color-on-primary: var(--text-onbrand);
+
+  /* text-brand */
+  --text-brand: #32F08C;
+  --text-brand-hover: #0FDC78;
+
+  /* icon */
+  --icon-default: #D1D3DB;
+  --icon-default-hover: #F5F9FE;
+  --icon-default-active: #F5F9FE;
+  --icon-secondary: #9599A6;
+  --icon-secondary-hover: #D1D3DB;
+  --icon-secondary-active: #D1D3DB;
+  --icon-tertiary: #666B75;
+  --icon-disabled: #666B75;
+  --icon-onbrand: #0C0C0D;
+  --icon-onaccent: #0C0C0D;
+
+  /* icon-brand */
+  --icon-brand: #32F08C;
+  --icon-brand-hover: #0FDC78;
+
+  /* border */
+  --border-neutral-l1: rgba(224, 226, 242, 0.1);
+  --border-neutral-l2: rgba(224, 226, 242, 0.16);
+  --border-neutral-l3: rgba(224, 226, 242, 0.2);
+  --border-contrast: #FFFFFF;
+  --border-brand: #32F08C;
+  --color-border: var(--border-neutral-l1);
+  --color-border-strong: var(--border-neutral-l2);
+  --color-border-stronger: var(--border-neutral-l3);
+  --color-border-contrast: var(--border-contrast);
+  --color-outline: var(--border-neutral-l1);
+
+  /* accent */
+  --accent-teal: #2DD288;
+  --accent-coral: #FF9392;
+  --accent-amber: #DCB364;
+  --accent-lime: #8ACB3A;
+  --accent-cyan: #04CBE5;
+  --accent-blue: #7BB8FF;
+  --accent-magenta: #EC93FF;
+  --accent-violet: #BFA5FF;
+  --accent-slate: #AFB9CF;
+
+  /* status */
+  --status-primary-default: #387BFF;
+  --status-primary-hover: #4C88FF;
+  --status-primary-active: #1759DD;
+  --status-primary-surface-l1: rgba(53, 121, 255, 0.18);
+  --status-primary-surface-l2: rgba(53, 121, 255, 0.28);
+  --status-primary-surface-l3: rgba(53, 121, 255, 0.36);
+  --status-success-default: #33C192;
+  --status-success-hover: #5ED4AD;
+  --status-success-active: #27B082;
+  --status-success-surface-l1: rgba(0, 165, 110, 0.18);
+  --status-success-surface-l2: rgba(0, 165, 110, 0.28);
+  --status-success-surface-l3: rgba(0, 165, 110, 0.36);
+  --status-alert-default: #D29D00;
+  --status-alert-hover: #DFB949;
+  --status-alert-active: #AB8820;
+  --status-alert-surface-l1: rgba(210, 157, 0, 0.16);
+  --status-alert-surface-l2: rgba(210, 157, 0, 0.28);
+  --status-alert-surface-l3: rgba(210, 157, 0, 0.36);
+  --status-warning-default: #D27E24;
+  --status-warning-hover: #D78B28;
+  --status-warning-active: #B46510;
+  --status-warning-surface-l1: rgba(210, 126, 36, 0.16);
+  --status-warning-surface-l2: rgba(210, 126, 36, 0.28);
+  --status-warning-surface-l3: rgba(210, 126, 36, 0.36);
+  --status-error-default: #F65A5A;
+  --status-error-hover: #F86262;
+  --status-error-active: #B33636;
+  --status-error-surface-l1: rgba(246, 70, 70, 0.18);
+  --status-error-surface-l2: rgba(246, 70, 70, 0.28);
+  --status-error-surface-l3: rgba(246, 70, 70, 0.36);
+  --color-info: var(--status-primary-default);
+  --color-success: var(--status-success-default);
+  --color-warning: var(--status-warning-default);
+  --color-error: var(--status-error-default);
+  --color-error-soft: var(--status-error-surface-l1);
+
+  /* brand */
+  --brand-green-100: #E5FFF2;
+  --brand-green-200: #B4FDD9;
+  --brand-green-300: #85FABF;
+  --brand-green-400: #5CF5A8;
+  --brand-green-500: #32F08C;
+  --brand-green-600: #0FDC78;
+  --brand-green-700: #0AB861;
+  --brand-green-800: #05994F;
+  --brand-green-900: #02743B;
+  --brand-green-1000: #004D26;
+  --brand-red-100: #FFE5E5;
+  --brand-red-200: #FFCCCC;
+  --brand-red-300: #FFB2B2;
+  --brand-red-400: #FF9999;
+  --brand-red-500: #FF8080;
+  --brand-red-600: #FF6464;
+  --brand-red-700: #E63737;
+  --brand-red-800: #CB1010;
+  --brand-red-900: #8F0505;
+  --brand-red-1000: #4D0000;
+  --brand-yellow-100: #FFF6E5;
+  --brand-yellow-200: #FFECCC;
+  --brand-yellow-300: #FFE3B2;
+  --brand-yellow-400: #FFDA99;
+  --brand-yellow-500: #FFD080;
+  --brand-yellow-600: #FFC864;
+  --brand-yellow-700: #E6A637;
+  --brand-yellow-800: #CB8710;
+  --brand-yellow-900: #8F5C05;
+  --brand-yellow-1000: #4D3000;
+  --brand-blue-100: #E5F3FF;
+  --brand-blue-200: #CCE6FF;
+  --brand-blue-300: #B2DAFF;
+  --brand-blue-400: #99CEFF;
+  --brand-blue-500: #80C1FF;
+  --brand-blue-600: #64B4FF;
+  --brand-blue-700: #3792E6;
+  --brand-blue-800: #1071CB;
+  --brand-blue-900: #054C8F;
+  --brand-blue-1000: #00284D;
+  --brand-purple-100: #E8E5FF;
+  --brand-purple-200: #D2CCFF;
+  --brand-purple-300: #BBB2FF;
+  --brand-purple-400: #A599FF;
+  --brand-purple-500: #8E80FF;
+  --brand-purple-600: #7864FF;
+  --brand-purple-700: #4C37E6;
+  --brand-purple-800: #2610CB;
+  --brand-purple-900: #15058F;
+  --brand-purple-1000: #09004D;
+  /* original source token: --brand-neutral grey-100 */
+  --brand-neutral-grey-100: #F2F2F2;
+  /* original source token: --brand-neutral grey-200 */
+  --brand-neutral-grey-200: #E3E3E3;
+  /* original source token: --brand-neutral grey-300 */
+  --brand-neutral-grey-300: #D6D6D6;
+  /* original source token: --brand-neutral grey-400 */
+  --brand-neutral-grey-400: #C7C7C7;
+  /* original source token: --brand-neutral grey-500 */
+  --brand-neutral-grey-500: #BABABA;
+  /* original source token: --brand-neutral grey-600 */
+  --brand-neutral-grey-600: #ABABAB;
+  /* original source token: --brand-neutral grey-700 */
+  --brand-neutral-grey-700: #8A8A8A;
+  /* original source token: --brand-neutral grey-800 */
+  --brand-neutral-grey-800: #686868;
+  /* original source token: --brand-neutral grey-900 */
+  --brand-neutral-grey-900: #474747;
+  /* original source token: --brand-neutral grey-1000 */
+  --brand-neutral-grey-1000: #262626;
+  /* original source token: --brand-blue grey-100 */
+  --brand-blue-grey-100: #F1EFF4;
+  /* original source token: --brand-blue grey-200 */
+  --brand-blue-grey-200: #E0E1E6;
+  /* original source token: --brand-blue grey-300 */
+  --brand-blue-grey-300: #CFD3D8;
+  /* original source token: --brand-blue grey-400 */
+  --brand-blue-grey-400: #BFC5CA;
+  /* original source token: --brand-blue grey-500 */
+  --brand-blue-grey-500: #B0B5BA;
+  /* original source token: --brand-blue grey-600 */
+  --brand-blue-grey-600: #A0A6AB;
+  /* original source token: --brand-blue grey-700 */
+  --brand-blue-grey-700: #80898E;
+  /* original source token: --brand-blue grey-800 */
+  --brand-blue-grey-800: #5E696E;
+  /* original source token: --brand-blue grey-900 */
+  --brand-blue-grey-900: #404A4F;
+  /* original source token: --brand-blue grey-1000 */
+  --brand-blue-grey-1000: #21262B;
+  /* original source token: --brand-green grey-100 */
+  --brand-green-grey-100: #F1F4F4;
+  /* original source token: --brand-green grey-200 */
+  --brand-green-grey-200: #E0E6E6;
+  /* original source token: --brand-green grey-300 */
+  --brand-green-grey-300: #CFD8D8;
+  /* original source token: --brand-green grey-400 */
+  --brand-green-grey-400: #BFCACA;
+  /* original source token: --brand-green grey-500 */
+  --brand-green-grey-500: #B0BABA;
+  /* original source token: --brand-green grey-600 */
+  --brand-green-grey-600: #A0ABAB;
+  /* original source token: --brand-green grey-700 */
+  --brand-green-grey-700: #808E8E;
+  /* original source token: --brand-green grey-800 */
+  --brand-green-grey-800: #5E6E6E;
+  /* original source token: --brand-green grey-900 */
+  --brand-green-grey-900: #404F4F;
+  /* original source token: --brand-green grey-1000 */
+  --brand-green-grey-1000: #212B2B;
+
+  /* font (generic fallback — used by a few preview sections) */
+  --font-family: "SF Pro Text", system-ui, -apple-system, sans-serif;
+  --font-size: 10px;
+  --font-weight: 400;
+  --line-height: 14px;
+
+  /* viz */
+  --viz-series-coral: #F87454;
+  --viz-series-amber: #EDAA45;
+  --viz-series-mint: #1DC981;
+  --viz-series-teal: #78F2F2;
+  --viz-series-sky: #22A5F7;
+  --viz-series-violet: #B655FC;
+  --viz-series-magenta: #FB9DD7;
+  --viz-series-indigo: #B6A3FF;
+  --viz-series-lime: #A6EA39;
+  --viz-series-slate: #859EAD;
+  --viz-ui-bg-chart: #202123;
+  --viz-ui-bg-tooltip: #1A1B1D;
+  --viz-ui-chart-title: #D1D3DB;
+  --viz-ui-chart-subtitle: #9599A6;
+  --viz-ui-chart-axis: rgba(224, 226, 242, 0.16);
+  --viz-ui-chart-tick: #9599A6;
+  --viz-ui-legend-label: #9599A6;
+  --viz-ui-legend-value: #D1D3DB;
+
+  /* special */
+  --special-white: #FFFFFF;
+  --special-black: #000000;
+  --special-bgtabsoverlay: rgba(0, 0, 0, 0.2);
+
+  /* layout aliases (originally fallback in _preview.css) */
+  --brand-1: #32f08c;
+  --brand-2: #3ee1a3;
+  --brand-3: #60f2bd;
+  --brand-4: #a0fde7;
+  --site-canvas: #1A1B1D;
+  --bg-layout-1: var(--bg-base-secondary);
+  --bg-layout-2: var(--bg-overlay-l1);
+  --border-1: var(--border-neutral-l1);
+
+  /* semantic aliases for head contract */
+  --color-muted: var(--text-secondary);
+  --color-radius-sm: var(--radius-6);
+  --color-radius-md: var(--radius-8);
+  --color-radius-lg: var(--radius-10);
+}
+
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.1/dist/index.global.js"></script>
+    <script src="https://unpkg.com/lucide@1.8.0/dist/umd/lucide.min.js"></script>
+    <style type="text/tailwindcss">
+  @theme inline {
+    --color-background: var(--color-background);
+    --color-foreground: var(--color-foreground);
+    --color-card: var(--color-card);
+    --color-primary: var(--color-primary);
+    --color-muted: var(--color-muted);
+    --color-muted-foreground: var(--color-muted-foreground);
+    --color-accent: var(--color-accent);
+    --color-border: var(--color-border);
+    --radius-sm: var(--color-radius-sm);
+    --radius-md: var(--color-radius-md);
+    --radius-lg: var(--color-radius-lg);
+  }
+  @layer base {
+    body { background: var(--color-background); color: var(--color-foreground); }
+    td, th { @apply break-words; word-break: break-all; word-break: auto-phrase; }
+    th { @apply whitespace-nowrap; }
+  }
+    </style>
+    <style id="semantic-token-fallback">
+      .bg-background { background-color: var(--color-background); }
+      .text-background { color: var(--color-background); }
+      .border-background { border-color: var(--color-background); }
+      .ring-background { --tw-ring-color: var(--color-background); }
+      .bg-foreground { background-color: var(--color-foreground); }
+      .text-foreground { color: var(--color-foreground); }
+      .border-foreground { border-color: var(--color-foreground); }
+      .ring-foreground { --tw-ring-color: var(--color-foreground); }
+      .bg-card { background-color: var(--color-card); }
+      .text-card { color: var(--color-card); }
+      .border-card { border-color: var(--color-card); }
+      .ring-card { --tw-ring-color: var(--color-card); }
+      .bg-primary { background-color: var(--color-primary); }
+      .text-primary { color: var(--color-primary); }
+      .border-primary { border-color: var(--color-primary); }
+      .ring-primary { --tw-ring-color: var(--color-primary); }
+      .bg-muted { background-color: var(--color-muted); }
+      .text-muted { color: var(--color-muted); }
+      .border-muted { border-color: var(--color-muted); }
+      .ring-muted { --tw-ring-color: var(--color-muted); }
+      .bg-muted-foreground { background-color: var(--color-muted-foreground); }
+      .text-muted-foreground { color: var(--color-muted-foreground); }
+      .border-muted-foreground { border-color: var(--color-muted-foreground); }
+      .ring-muted-foreground { --tw-ring-color: var(--color-muted-foreground); }
+      .bg-accent { background-color: var(--color-accent); }
+      .text-accent { color: var(--color-accent); }
+      .border-accent { border-color: var(--color-accent); }
+      .ring-accent { --tw-ring-color: var(--color-accent); }
+      .bg-border { background-color: var(--color-border); }
+      .text-border { color: var(--color-border); }
+      .border-border { border-color: var(--color-border); }
+      .ring-border { --tw-ring-color: var(--color-border); }
+    </style>
+    <style>
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      [data-icon] {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        -webkit-mask-size: contain;
+        mask-size: contain;
+        -webkit-mask-repeat: no-repeat;
+        mask-repeat: no-repeat;
+        -webkit-mask-position: center;
+        mask-position: center;
+        background-color: currentColor;
+      }
+    </style>
+</head>
+<body>
+    <style>
+      /* ===== Page-level reset & base ===== */
+      *, *::before, *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        font-family: var(--body-base-font-family);
+        font-size: var(--body-base-font-size);
+        font-weight: var(--body-base-font-weight);
+        line-height: var(--body-base-line-height);
+        color: var(--text-default);
+        background: var(--bg-base-default);
+        min-height: 100vh;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      /* ===== App Shell ===== */
+      .app-shell {
+        display: flex;
+        min-height: 100vh;
+      }
+
+      /* ===== Left Sidebar ===== */
+      .sidebar {
+        width: 220px;
+        flex-shrink: 0;
+        display: flex;
+        flex-direction: column;
+        background: var(--bg-base-secondary);
+        border-right: 1px solid var(--border-neutral-l1);
+      }
+
+      .sidebar__header {
+        display: flex;
+        align-items: center;
+        gap: var(--spacer-8);
+        padding: var(--spacer-16) var(--spacer-16) var(--spacer-12);
+      }
+
+      .sidebar__logo {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        border-radius: var(--radius-6);
+        background: var(--bg-brand);
+        flex-shrink: 0;
+      }
+
+      .sidebar__logo img {
+        width: 16px;
+        height: 16px;
+      }
+
+      .sidebar__title {
+        font-family: var(--heading-sm-font-family);
+        font-size: var(--heading-sm-font-size);
+        font-weight: var(--heading-sm-font-weight);
+        color: var(--text-default);
+        letter-spacing: -0.01em;
+      }
+
+      .sidebar__title-accent {
+        color: var(--bg-brand);
+      }
+
+      .sidebar__nav {
+        padding: 0 var(--spacer-8);
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+
+      .sidebar__nav-item {
+        display: flex;
+        align-items: center;
+        gap: var(--spacer-8);
+        padding: var(--spacer-8);
+        border-radius: var(--radius-6);
+        color: var(--text-secondary);
+        text-decoration: none;
+        font-size: var(--body-base-font-size);
+        font-weight: var(--font-weight-medium);
+        transition: background 0.12s ease;
+        cursor: pointer;
+      }
+
+      .sidebar__nav-item:hover {
+        background: var(--bg-overlay-l1);
+        color: var(--text-default);
+      }
+
+      .sidebar__nav-item--active {
+        background: var(--status-success-surface-l1);
+        color: var(--text-default);
+      }
+
+      .sidebar__nav-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--text-tertiary);
+        flex-shrink: 0;
+      }
+
+      .sidebar__nav-item--active .sidebar__nav-icon {
+        color: var(--bg-brand);
+      }
+
+      .sidebar__nav-text {
+        flex: 1;
+      }
+
+      /* ===== Top Header Bar ===== */
+      .header-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: var(--spacer-12) var(--spacer-24);
+        border-bottom: 1px solid var(--border-neutral-l1);
+        background: var(--bg-base-default);
+        position: sticky;
+        top: 0;
+        z-index: 50;
+      }
+
+      .header-logo {
+        display: flex;
+        align-items: center;
+        gap: var(--spacer-8);
+        font-family: var(--heading-md-font-family);
+        font-size: var(--heading-md-font-size);
+        font-weight: var(--heading-md-font-weight);
+        color: var(--bg-brand);
+        flex-shrink: 0;
+      }
+
+      .header-logo img {
+        width: 28px;
+        height: 28px;
+      }
+
+      .header-search {
+        flex: 1;
+        max-width: 420px;
+        position: relative;
+      }
+
+      .header-search input {
+        width: 100%;
+        height: 36px;
+        padding: 0 var(--spacer-12) 0 36px;
+        background: var(--bg-base-secondary);
+        border: 1px solid var(--border-neutral-l1);
+        border-radius: var(--radius-8);
+        color: var(--text-default);
+        font-size: var(--body-base-font-size);
+        font-family: var(--body-base-font-family);
+        outline: none;
+        transition: border-color 0.15s ease;
+      }
+
+      .header-search input::placeholder {
+        color: var(--text-tertiary);
+      }
+
+      .header-search input:focus {
+        border-color: var(--bg-brand);
+      }
+
+      .header-search-icon {
+        position: absolute;
+        left: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--text-tertiary);
+        width: 16px;
+        height: 16px;
+        pointer-events: none;
+      }
+
+      .header-actions {
+        display: flex;
+        align-items: center;
+        gap: var(--spacer-8);
+        flex-shrink: 0;
+      }
+
+      /* ===== Buttons ===== */
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: var(--spacer-6);
+        height: 36px;
+        padding: 0 var(--spacer-16);
+        border-radius: var(--radius-8);
+        font-size: var(--body-md-font-size);
+        font-weight: var(--font-weight-medium);
+        font-family: var(--body-md-font-family);
+        border: none;
+        cursor: pointer;
+        transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+        white-space: nowrap;
+        line-height: 1;
+      }
+
+      .btn--primary {
+        background: var(--bg-brand);
+        color: var(--text-onbrand);
+      }
+      .btn--primary:hover {
+        background: var(--bg-brand-hover);
+      }
+
+      .btn--secondary {
+        background: var(--bg-overlay-l2);
+        color: var(--text-default);
+        border: 1px solid var(--border-neutral-l1);
+      }
+      .btn--secondary:hover {
+        background: var(--bg-overlay-l3);
+        border-color: var(--border-neutral-l2);
+      }
+
+      .btn--ghost {
+        background: transparent;
+        color: var(--text-secondary);
+        border: 1px solid var(--border-neutral-l1);
+      }
+      .btn--ghost:hover {
+        background: var(--bg-overlay-l2);
+        color: var(--text-default);
+      }
+
+      .btn--sm {
+        height: 28px;
+        padding: 0 var(--spacer-12);
+        font-size: var(--body-sm-font-size);
+      }
+
+      .btn-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        border-radius: var(--radius-6);
+        background: transparent;
+        border: 1px solid var(--border-neutral-l1);
+        cursor: pointer;
+        color: var(--text-secondary);
+        transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+      }
+
+      .btn-icon:hover {
+        background: var(--bg-overlay-l2);
+        color: var(--text-default);
+        border-color: var(--border-neutral-l2);
+      }
+
+      .btn-icon img {
+        width: 14px;
+        height: 14px;
+      }
+
+      /* ===== Filter / Tab Bar ===== */
+      .filter-bar {
+        display: flex;
+        align-items: center;
+        gap: var(--spacer-4);
+        padding: var(--spacer-12) var(--spacer-24);
+        border-bottom: 1px solid var(--border-neutral-l1);
+        background: var(--bg-base-default);
+        overflow-x: auto;
+      }
+
+      .filter-tab {
+        display: inline-flex;
+        align-items: center;
+        height: 32px;
+        padding: 0 var(--spacer-12);
+        border-radius: var(--radius-full);
+        font-size: var(--body-md-font-size);
+        font-weight: var(--font-weight-medium);
+        font-family: var(--body-md-font-family);
+        color: var(--text-secondary);
+        background: var(--bg-overlay-2);
+        border: 1px solid transparent;
+        cursor: pointer;
+        transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+        white-space: nowrap;
+      }
+
+      .filter-tab:hover {
+        background: var(--bg-overlay-l3);
+        color: var(--text-default);
+      }
+
+      .filter-tab.active {
+        background: var(--bg-brand);
+        color: var(--text-onbrand);
+        border-color: var(--bg-brand);
+      }
+
+      /* ===== Main Content ===== */
+      .main-content {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: var(--spacer-24);
+      }
+
+      /* ===== Tag Component ===== */
+      .tag {
+        display: inline-flex;
+        align-items: center;
+        height: 20px;
+        padding: 0 6px;
+        border-radius: var(--radius-full);
+        font-size: 10px;
+        font-weight: var(--font-weight-medium);
+        gap: 4px;
+      }
+      .tag--brand { background: rgba(50, 240, 140, 0.12); color: var(--bg-brand); }
+      .tag--success { background: var(--status-success-surface-l1); color: var(--status-success-default); }
+      .tag--warning { background: var(--status-warning-surface-l1); color: var(--status-warning-default); }
+      .tag--neutral { background: var(--bg-overlay-l2); color: var(--text-secondary); }
+      .tag--info { background: var(--status-primary-surface-l1); color: var(--status-primary-default); }
+      .tag--error { background: var(--status-error-surface-l1); color: var(--status-error-default); }
+
+      /* ===== Statistics Summary Bar ===== */
+      .stats-bar {
+        display: flex;
+        align-items: center;
+        gap: var(--spacer-16);
+        padding: var(--spacer-16) 0;
+        margin-bottom: var(--spacer-8);
+        border-bottom: 1px solid var(--border-neutral-l1);
+        flex-wrap: wrap;
+      }
+
+      .stat-item {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--spacer-8);
+        background: var(--bg-base-secondary);
+        border: 1px solid var(--border-neutral-l1);
+        border-radius: var(--radius-8);
+        padding: var(--spacer-8) var(--spacer-16);
+        transition: border-color 0.15s ease;
+      }
+
+      .stat-item:hover {
+        border-color: var(--border-neutral-l2);
+      }
+
+      .stat-item img {
+        width: 16px;
+        height: 16px;
+        color: var(--text-secondary);
+      }
+
+      .stat-number {
+        font-family: var(--heading-xs-font-family);
+        font-size: var(--heading-xs-font-size);
+        font-weight: var(--heading-xs-font-weight);
+        color: var(--text-default);
+        line-height: var(--heading-xs-line-height);
+      }
+
+      .stat-label {
+        font-size: var(--body-sm-font-size);
+        font-weight: var(--body-sm-font-weight);
+        color: var(--text-secondary);
+        line-height: var(--body-sm-line-height);
+      }
+
+      /* ===== Knowledge Base Card List ===== */
+      .kb-list {
+        display: flex;
+        flex-direction: column;
+        gap: var(--spacer-8);
+      }
+
+      /* ===== Empty State ===== */
+      .empty-state {
+        display: none;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: var(--spacer-40) var(--spacer-24);
+        text-align: center;
+      }
+
+      .empty-state__icon {
+        width: 56px;
+        height: 56px;
+        border-radius: var(--radius-full);
+        background: var(--bg-base-tertiary);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: var(--spacer-16);
+        opacity: 0.6;
+      }
+
+      .empty-state__icon img { width: 24px; height: 24px; }
+
+      .empty-state__title {
+        font-size: var(--body-base-font-size);
+        font-weight: var(--font-weight-medium);
+        color: var(--text-default);
+        margin-bottom: var(--spacer-4);
+      }
+
+      .empty-state__desc {
+        font-size: var(--body-sm-font-size);
+        color: var(--text-tertiary);
+      }
+
+      .empty-state__action {
+        margin-top: var(--spacer-16);
+        padding: 6px var(--spacer-12);
+        border: 1px solid var(--border-neutral-l2);
+        border-radius: var(--radius-6);
+        background: transparent;
+        color: var(--text-default);
+        font-size: var(--body-sm-font-size);
+        cursor: pointer;
+        transition: background 0.15s ease, border-color 0.15s ease;
+      }
+
+      .empty-state__action:hover {
+        background: var(--bg-base-tertiary);
+        border-color: var(--border-neutral-l3);
+      }
+
+      .kb-card {
+        background: var(--bg-base-secondary);
+        border: 1px solid var(--border-neutral-l1);
+        border-radius: var(--radius-8);
+        padding: var(--spacer-16) var(--spacer-24);
+        display: flex;
+        align-items: center;
+        gap: var(--spacer-16);
+        transition: border-color 0.2s ease, background-color 0.2s ease;
+        cursor: default;
+      }
+
+      .kb-card:hover {
+        border-color: var(--border-neutral-l2);
+        background: var(--bg-base-tertiary);
+      }
+
+      /* ===== KB Card: Avatar ===== */
+      .kb-avatar {
+        width: 48px;
+        height: 48px;
+        border-radius: var(--radius-full);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+      }
+
+      .kb-avatar--green {
+        background: rgba(50, 240, 140, 0.12);
+        color: var(--bg-brand);
+      }
+
+      .kb-avatar--blue {
+        background: var(--status-primary-surface-l1);
+        color: var(--status-primary-default);
+      }
+
+      .kb-avatar--amber {
+        background: var(--status-alert-surface-l1);
+        color: var(--status-alert-default);
+      }
+
+      .kb-avatar--purple {
+        background: rgba(142, 128, 255, 0.12);
+        color: #8E80FF;
+      }
+
+      .kb-avatar img {
+        width: 24px;
+        height: 24px;
+      }
+
+      /* ===== KB Card: Middle Section ===== */
+      .kb-info {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: var(--spacer-6);
+      }
+
+      .kb-name {
+        font-family: var(--heading-xs-font-family);
+        font-size: var(--heading-xs-font-size);
+        font-weight: var(--heading-xs-font-weight);
+        line-height: var(--heading-xs-line-height);
+        color: var(--text-default);
+      }
+
+      .kb-description {
+        font-size: var(--body-sm-font-size);
+        font-weight: var(--body-sm-font-weight);
+        line-height: var(--body-sm-line-height);
+        color: var(--text-secondary);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .kb-tags {
+        display: flex;
+        align-items: center;
+        gap: var(--spacer-6);
+        flex-wrap: wrap;
+      }
+
+      /* ===== KB Card: Right Section ===== */
+      .kb-right {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: var(--spacer-8);
+        flex-shrink: 0;
+        min-width: 200px;
+      }
+
+      .kb-status {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--spacer-6);
+        font-size: var(--body-md-font-size);
+        font-weight: var(--body-md-strong-font-weight);
+        line-height: var(--body-md-strong-line-height);
+      }
+
+      .kb-status--connected {
+        color: var(--status-success-default);
+      }
+
+      .kb-status--disconnected {
+        color: var(--status-error-default);
+      }
+
+      .kb-status--syncing {
+        color: var(--status-primary-default);
+      }
+
+      .kb-sync-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--status-primary-default);
+        display: inline-block;
+        animation: kb-spin 1.5s ease-in-out infinite;
+      }
+
+      @keyframes kb-spin {
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50% { opacity: 0.4; transform: scale(0.7); }
+      }
+
+      .kb-meta {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: var(--spacer-4);
+      }
+
+      .kb-meta-item {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--spacer-4);
+        font-size: var(--body-xs-font-size);
+        color: var(--text-tertiary);
+        line-height: var(--body-xs-line-height);
+      }
+
+      .kb-meta-item img {
+        width: 12px;
+        height: 12px;
+        color: var(--text-tertiary);
+      }
+
+      .kb-actions {
+        display: flex;
+        align-items: center;
+        gap: var(--spacer-8);
+        padding-top: var(--spacer-8);
+        border-top: 1px solid var(--border-neutral-l1);
+      }
+
+      .kb-action-link {
+        font-size: var(--body-sm-strong-font-size);
+        font-weight: var(--body-sm-strong-font-weight);
+        color: var(--text-brand);
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 0;
+        font-family: var(--body-sm-strong-font-family);
+        transition: color 0.15s ease;
+      }
+
+      .kb-action-link:hover {
+        color: var(--text-brand-hover);
+      }
+
+      /* ===== Toast Notification ===== */
+      .kb-toast {
+        position: fixed;
+        bottom: 24px;
+        left: 50%;
+        transform: translateX(-50%) translateY(20px);
+        background: var(--bg-base-tertiary);
+        border: 1px solid var(--border-neutral-l2);
+        border-radius: var(--radius-8);
+        padding: var(--spacer-12) var(--spacer-16);
+        color: var(--text-default);
+        font-size: var(--body-base-font-size);
+        opacity: 0;
+        transition: all 0.3s ease;
+        z-index: 200;
+        pointer-events: none;
+      }
+
+      .kb-toast--visible {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+      }
+
+      /* ===== Modal Overlay & Panel ===== */
+      .kb-modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 100;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        animation: kb-modal-fade-in 0.2s ease;
+      }
+      .kb-modal-overlay.open {
+        display: flex;
+      }
+      @keyframes kb-modal-fade-in {
+        from { opacity: 0; }
+        to { opacity: 1; }
+      }
+
+      .kb-modal {
+        background: var(--bg-base-secondary);
+        border: 1px solid var(--border-neutral-l2);
+        border-radius: var(--radius-10);
+        width: 520px;
+        max-width: 92vw;
+        max-height: 85vh;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
+        animation: kb-modal-slide-up 0.25s ease;
+      }
+      @keyframes kb-modal-slide-up {
+        from { opacity: 0; transform: translateY(12px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+
+      .kb-modal-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: var(--spacer-16) var(--spacer-24);
+        border-bottom: 1px solid var(--border-neutral-l1);
+        flex-shrink: 0;
+      }
+      .kb-modal-title {
+        font-family: var(--heading-sm-font-family);
+        font-size: var(--heading-sm-font-size);
+        font-weight: var(--heading-sm-font-weight);
+        line-height: var(--heading-sm-line-height);
+        color: var(--text-default);
+      }
+      .kb-modal-close {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        border-radius: var(--radius-6);
+        background: transparent;
+        border: none;
+        cursor: pointer;
+        color: var(--text-secondary);
+        transition: background-color 0.15s ease, color 0.15s ease;
+      }
+      .kb-modal-close:hover {
+        background: var(--bg-overlay-l2);
+        color: var(--text-default);
+      }
+      .kb-modal-close img {
+        width: 16px;
+        height: 16px;
+      }
+
+      .kb-modal-body {
+        padding: var(--spacer-24);
+        overflow-y: auto;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: var(--spacer-16);
+      }
+
+      .kb-modal-footer {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: var(--spacer-8);
+        padding: var(--spacer-16) var(--spacer-24);
+        border-top: 1px solid var(--border-neutral-l1);
+        flex-shrink: 0;
+      }
+
+      /* ===== Modal Form Fields ===== */
+      .kb-form-group {
+        display: flex;
+        flex-direction: column;
+        gap: var(--spacer-6);
+      }
+      .kb-form-label {
+        font-size: var(--body-md-strong-font-size);
+        font-weight: var(--body-md-strong-font-weight);
+        font-family: var(--body-md-strong-font-family);
+        color: var(--text-default);
+        line-height: var(--body-md-strong-line-height);
+      }
+      .kb-form-input,
+      .kb-form-select {
+        width: 100%;
+        height: 36px;
+        padding: 0 var(--spacer-12);
+        background: var(--bg-base-tertiary);
+        border: 1px solid var(--border-neutral-l1);
+        border-radius: var(--radius-8);
+        color: var(--text-default);
+        font-size: var(--body-base-font-size);
+        font-family: var(--body-base-font-family);
+        outline: none;
+        transition: border-color 0.15s ease;
+      }
+      .kb-form-input:focus,
+      .kb-form-select:focus {
+        border-color: var(--bg-brand);
+      }
+      .kb-form-input[readonly] {
+        color: var(--text-secondary);
+        cursor: default;
+      }
+      .kb-form-input::placeholder {
+        color: var(--text-tertiary);
+      }
+      .kb-form-select {
+        appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239599A6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right var(--spacer-12) center;
+        padding-right: var(--spacer-32);
+        cursor: pointer;
+      }
+      .kb-form-select option {
+        background: var(--bg-base-tertiary);
+        color: var(--text-default);
+      }
+      .kb-form-hint {
+        font-size: var(--body-xs-font-size);
+        color: var(--text-tertiary);
+        line-height: var(--body-xs-line-height);
+      }
+
+      /* ===== Checkbox Group ===== */
+      .kb-checkbox-group {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--spacer-8);
+      }
+      .kb-checkbox-item {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--spacer-6);
+        height: 32px;
+        padding: 0 var(--spacer-12);
+        background: var(--bg-base-tertiary);
+        border: 1px solid var(--border-neutral-l1);
+        border-radius: var(--radius-full);
+        cursor: pointer;
+        transition: background-color 0.15s ease, border-color 0.15s ease;
+        user-select: none;
+      }
+      .kb-checkbox-item:hover {
+        border-color: var(--border-neutral-l2);
+        background: var(--bg-overlay-l3);
+      }
+      .kb-checkbox-item.selected {
+        border-color: var(--bg-brand);
+        background: var(--bg-brand-popup);
+        color: var(--bg-brand);
+      }
+      .kb-checkbox-item input[type="checkbox"] {
+        display: none;
+      }
+      .kb-checkbox-label {
+        font-size: var(--body-md-font-size);
+        font-weight: var(--font-weight-medium);
+        color: var(--text-default);
+        line-height: 1;
+      }
+      .kb-checkbox-item.selected .kb-checkbox-label {
+        color: var(--bg-brand);
+      }
+
+      /* ===== Toggle Switch ===== */
+      .kb-toggle-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .kb-toggle-switch {
+        position: relative;
+        width: 40px;
+        height: 22px;
+        background: var(--bg-base-tertiary);
+        border: 1px solid var(--border-neutral-l2);
+        border-radius: var(--radius-full);
+        cursor: pointer;
+        transition: background-color 0.2s ease, border-color 0.2s ease;
+        flex-shrink: 0;
+      }
+      .kb-toggle-switch.active {
+        background: var(--bg-brand);
+        border-color: var(--bg-brand);
+      }
+      .kb-toggle-switch::after {
+        content: '';
+        position: absolute;
+        top: 2px;
+        left: 2px;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: var(--text-secondary);
+        transition: transform 0.2s ease, background-color 0.2s ease;
+      }
+      .kb-toggle-switch.active::after {
+        transform: translateX(18px);
+        background: var(--text-onbrand);
+      }
+
+      /* ===== Config Modal: Agent Tags ===== */
+      .kb-config-agents {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--spacer-6);
+      }
+      .kb-config-agent-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--spacer-4);
+        height: 24px;
+        padding: 0 var(--spacer-8);
+        border-radius: var(--radius-full);
+        font-size: var(--body-sm-font-size);
+        font-weight: var(--font-weight-medium);
+        background: var(--bg-overlay-l2);
+        color: var(--text-secondary);
+        border: 1px solid var(--border-neutral-l1);
+      }
+      .kb-config-agent-tag img {
+        width: 12px;
+        height: 12px;
+      }
+
+      /* ===== Status Dot (for config modal) ===== */
+      .kb-config-status-dot {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        margin-right: var(--spacer-6);
+        flex-shrink: 0;
+      }
+      .kb-config-status-dot--connected {
+        background: var(--status-success-default);
+      }
+      .kb-config-status-dot--disconnected {
+        background: var(--status-error-default);
+      }
+      .kb-config-status-dot--syncing {
+        background: var(--status-primary-default);
+        animation: kb-spin 1.5s ease-in-out infinite;
+      }
+      .kb-config-status-text {
+        display: inline-flex;
+        align-items: center;
+        font-size: var(--body-base-font-size);
+        color: var(--text-default);
+      }
+
+      /* ===== Responsive ===== */
+      @media (max-width: 900px) {
+        .kb-card {
+          flex-wrap: wrap;
+        }
+        .kb-right {
+          min-width: auto;
+          flex-direction: row;
+          align-items: center;
+          flex-wrap: wrap;
+          gap: var(--spacer-12);
+          padding-top: var(--spacer-12);
+          border-top: 1px solid var(--border-neutral-l1);
+          width: 100%;
+          justify-content: flex-end;
+        }
+        .kb-meta {
+          flex-direction: row;
+          align-items: center;
+        }
+        .kb-actions {
+          border-top: none;
+          padding-top: 0;
+        }
+        .stats-bar {
+          gap: var(--spacer-8);
+        }
+      }
+
+      @media (max-width: 600px) {
+        .header-bar {
+          flex-wrap: wrap;
+          gap: var(--spacer-8);
+        }
+        .header-search {
+          order: 3;
+          max-width: 100%;
+          flex-basis: 100%;
+        }
+        .header-logo {
+          font-size: var(--heading-sm-font-size);
+        }
+        .header-logo img {
+          width: 24px;
+          height: 24px;
+        }
+        .kb-card {
+          padding: var(--spacer-12) var(--spacer-16);
+          gap: var(--spacer-12);
+        }
+        .stat-item {
+          padding: var(--spacer-6) var(--spacer-12);
+        }
+      }
+    </style>
+
+    <main class="app-shell">
+      <!-- Left Sidebar Nav -->
+      <aside class="sidebar" id="sidebar">
+        <div class="sidebar__header">
+          <div class="sidebar__logo">
+            <img src="../assets/icons/dl_builtin_trae/zap.0c0c0d.svg" width="16" height="16" alt="">
+          </div>
+          <span class="sidebar__title">Ding<span class="sidebar__title-accent">Ring</span></span>
+        </div>
+        <div class="sidebar__nav">
+          <a class="sidebar__nav-item" href="group-chat.html" data-dom-id="interaction-id-dd2dbhh">
+            <span class="sidebar__nav-icon">
+              <img src="../assets/icons/dl_builtin_trae/message-circle.svg" width="16" height="16" alt="">
+            </span>
+            <span class="sidebar__nav-text">群聊</span>
+          </a>
+          <a class="sidebar__nav-item" href="knowledge-cards.html" data-dom-id="interaction-id-l8jucy0">
+            <span class="sidebar__nav-icon">
+              <img src="../assets/icons/dl_builtin_trae/file-text.svg" width="16" height="16" alt="">
+            </span>
+            <span class="sidebar__nav-text">知识卡片管理</span>
+          </a>
+          <div class="sidebar__nav-item sidebar__nav-item--active">
+            <span class="sidebar__nav-icon">
+              <img src="../assets/icons/dl_builtin_trae/layers.svg" width="16" height="16" alt="">
+            </span>
+            <span class="sidebar__nav-text">知识库管理</span>
+          </div>
+          <a class="sidebar__nav-item" href="agent-management.html" data-dom-id="interaction-id-zx71ekm">
+            <span class="sidebar__nav-icon">
+              <img src="../assets/icons/dl_builtin_trae/sparkles.svg" width="16" height="16" alt="">
+            </span>
+            <span class="sidebar__nav-text">Agent 管理</span>
+          </a>
+        </div>
+      </aside>
+      <!-- Main Content Area -->
+      <div style="flex:1;display:flex;flex-direction:column;min-width:0;">
+      <!-- Top Header Bar -->
+      <header class="header-bar">
+        <div class="header-logo">
+          <img src="../assets/icons/dl_builtin_trae/sparkles.32f08c.svg" alt="DingRing Logo">
+          <span>DingRing</span>
+        </div>
+
+        <div class="header-search">
+          <img class="header-search-icon" src="../assets/icons/dl_builtin_trae/search.svg" alt="">
+          <input type="text" placeholder="搜索知识库..." id="searchInput">
+        </div>
+
+        <div class="header-actions">
+          <button class="btn btn--primary" id="createKbBtn">
+            <img src="../assets/icons/dl_builtin_trae/plus.svg" alt="" width="14" height="14">
+            新建知识库
+          </button>
+        </div>
+      </header>
+
+      <!-- Filter / Tab Bar -->
+      <nav class="filter-bar" id="filterBar">
+        <button class="filter-tab active" data-filter="all">全部知识库 (4)</button>
+        <button class="filter-tab" data-filter="connected">已连接 (2)</button>
+        <button class="filter-tab" data-filter="disconnected">未连接 (1)</button>
+        <button class="filter-tab" data-filter="syncing">同步中 (1)</button>
+      </nav>
+
+      <!-- Main Content -->
+      <div class="main-content">
+
+        <!-- Statistics Summary Bar -->
+        <div class="stats-bar">
+          <div class="stat-item">
+            <img src="../assets/icons/dl_builtin_trae/layers.svg" alt="">
+            <span class="stat-number">4</span>
+            <span class="stat-label">个知识库</span>
+          </div>
+          <div class="stat-item">
+            <img src="../assets/icons/dl_builtin_trae/file-text.svg" alt="">
+            <span class="stat-number">17</span>
+            <span class="stat-label">条总记录</span>
+          </div>
+          <div class="stat-item">
+            <img src="../assets/icons/dl_builtin_trae/check-circle.svg" alt="">
+            <span class="stat-number">2</span>
+            <span class="stat-label">已连接</span>
+          </div>
+          <div class="stat-item">
+            <img src="../assets/icons/dl_builtin_trae/alert-circle.svg" alt="">
+            <span class="stat-number">1</span>
+            <span class="stat-label">待同步</span>
+          </div>
+        </div>
+
+        <!-- Knowledge Base Card List -->
+        <div class="kb-list" id="kbList">
+
+          <!-- KB Card 1: 408_知识库 (已连接) -->
+          <article class="kb-card" data-status="connected">
+            <div class="kb-avatar kb-avatar--green">
+              <img src="../assets/icons/dl_builtin_trae/layers.svg" alt="">
+            </div>
+            <div class="kb-info">
+              <div class="kb-name">408_知识库</div>
+              <div class="kb-description">计算机408考试相关的核心知识点整理，涵盖数据结构、操作系统、计算机网络和计算机组成原理</div>
+              <div class="kb-tags">
+                <span class="tag tag--brand">408</span>
+                <span class="tag tag--info">考研</span>
+                <span class="tag tag--neutral">综合</span>
+              </div>
+            </div>
+            <div class="kb-right">
+              <div class="kb-status kb-status--connected">
+                <img src="../assets/icons/dl_builtin_trae/check-circle.svg" alt="" width="14" height="14">
+                已连接
+              </div>
+              <div class="kb-meta">
+                <span class="kb-meta-item">
+                  <img src="../assets/icons/dl_builtin_trae/file-text.svg" alt="">
+                  8 条记录
+                </span>
+                <span class="kb-meta-item">
+                  <img src="../assets/icons/dl_builtin_trae/clock.svg" alt="">
+                  最后同步: 2小时前
+                </span>
+                <span class="kb-meta-item">
+                  <img src="../assets/icons/dl_builtin_trae/users.svg" alt="">
+                  关联群组: 408讨论群
+                </span>
+              </div>
+              <div class="kb-actions">
+                <button class="kb-action-link">查看详情</button>
+                <button class="kb-action-link sync-btn">同步</button>
+                <button class="btn-icon open-kb-config-btn" title="设置">
+                  <img src="../assets/icons/dl_builtin_trae/gear.svg" alt="">
+                </button>
+              </div>
+            </div>
+          </article>
+
+          <!-- KB Card 2: 面试题库 (已连接) -->
+          <article class="kb-card" data-status="connected">
+            <div class="kb-avatar kb-avatar--blue">
+              <img src="../assets/icons/dl_builtin_trae/layers.svg" alt="">
+            </div>
+            <div class="kb-info">
+              <div class="kb-name">面试题库</div>
+              <div class="kb-description">软件开发岗位常见面试题目与参考答案，包含算法、系统设计和行为面试题</div>
+              <div class="kb-tags">
+                <span class="tag tag--warning">面试</span>
+                <span class="tag tag--info">算法</span>
+              </div>
+            </div>
+            <div class="kb-right">
+              <div class="kb-status kb-status--connected">
+                <img src="../assets/icons/dl_builtin_trae/check-circle.svg" alt="" width="14" height="14">
+                已连接
+              </div>
+              <div class="kb-meta">
+                <span class="kb-meta-item">
+                  <img src="../assets/icons/dl_builtin_trae/file-text.svg" alt="">
+                  5 条记录
+                </span>
+                <span class="kb-meta-item">
+                  <img src="../assets/icons/dl_builtin_trae/clock.svg" alt="">
+                  最后同步: 30分钟前
+                </span>
+                <span class="kb-meta-item">
+                  <img src="../assets/icons/dl_builtin_trae/users.svg" alt="">
+                  关联群组: 求职交流群
+                </span>
+              </div>
+              <div class="kb-actions">
+                <button class="kb-action-link">查看详情</button>
+                <button class="kb-action-link sync-btn">同步</button>
+                <button class="btn-icon open-kb-config-btn" title="设置">
+                  <img src="../assets/icons/dl_builtin_trae/gear.svg" alt="">
+                </button>
+              </div>
+            </div>
+          </article>
+
+          <!-- KB Card 3: Python基础知识 (未连接) -->
+          <article class="kb-card" data-status="disconnected">
+            <div class="kb-avatar kb-avatar--amber">
+              <img src="../assets/icons/dl_builtin_trae/layers.svg" alt="">
+            </div>
+            <div class="kb-info">
+              <div class="kb-name">Python基础知识</div>
+              <div class="kb-description">Python编程语言基础语法、标准库和常用框架的知识条目</div>
+              <div class="kb-tags">
+                <span class="tag tag--warning">Python</span>
+                <span class="tag tag--neutral">编程语言</span>
+              </div>
+            </div>
+            <div class="kb-right">
+              <div class="kb-status kb-status--disconnected">
+                <img src="../assets/icons/dl_builtin_trae/x.svg" alt="" width="14" height="14">
+                未连接
+              </div>
+              <div class="kb-meta">
+                <span class="kb-meta-item">
+                  <img src="../assets/icons/dl_builtin_trae/file-text.svg" alt="">
+                  2 条记录
+                </span>
+                <span class="kb-meta-item">
+                  <img src="../assets/icons/dl_builtin_trae/clock.svg" alt="">
+                  最后同步: 3天前
+                </span>
+                <span class="kb-meta-item">
+                  <img src="../assets/icons/dl_builtin_trae/users.svg" alt="">
+                  无关联群组
+                </span>
+              </div>
+              <div class="kb-actions">
+                <button class="kb-action-link">查看详情</button>
+                <button class="kb-action-link sync-btn">同步</button>
+                <button class="btn-icon open-kb-config-btn" title="设置">
+                  <img src="../assets/icons/dl_builtin_trae/gear.svg" alt="">
+                </button>
+              </div>
+            </div>
+          </article>
+
+          <!-- KB Card 4: 计算机网络 (同步中) -->
+          <article class="kb-card" data-status="syncing">
+            <div class="kb-avatar kb-avatar--purple">
+              <img src="../assets/icons/dl_builtin_trae/layers.svg" alt="">
+            </div>
+            <div class="kb-info">
+              <div class="kb-name">计算机网络</div>
+              <div class="kb-description">计算机网络协议、网络架构、TCP/IP模型及相关概念的知识库，持续同步群聊内容</div>
+              <div class="kb-tags">
+                <span class="tag tag--brand">408</span>
+                <span class="tag tag--info">网络</span>
+                <span class="tag tag--success">自动同步</span>
+              </div>
+            </div>
+            <div class="kb-right">
+              <div class="kb-status kb-status--syncing">
+                <span class="kb-sync-dot"></span>
+                同步中
+              </div>
+              <div class="kb-meta">
+                <span class="kb-meta-item">
+                  <img src="../assets/icons/dl_builtin_trae/file-text.svg" alt="">
+                  2 条记录
+                </span>
+                <span class="kb-meta-item">
+                  <img src="../assets/icons/dl_builtin_trae/clock.svg" alt="">
+                  正在同步...
+                </span>
+                <span class="kb-meta-item">
+                  <img src="../assets/icons/dl_builtin_trae/users.svg" alt="">
+                  关联群组: 408讨论群
+                </span>
+              </div>
+              <div class="kb-actions">
+                <button class="kb-action-link">查看详情</button>
+                <button class="kb-action-link sync-btn">同步</button>
+                <button class="btn-icon open-kb-config-btn" title="设置">
+                  <img src="../assets/icons/dl_builtin_trae/gear.svg" alt="">
+                </button>
+              </div>
+            </div>
+          </article>
+
+        </div>
+
+        <!-- Empty State -->
+        <div class="empty-state" id="kbEmptyState">
+          <div class="empty-state__icon">
+            <img src="../assets/icons/dl_builtin_trae/search.svg" alt="">
+          </div>
+          <div class="empty-state__title">未找到匹配的知识库</div>
+          <div class="empty-state__desc">尝试调整搜索关键词或切换筛选条件</div>
+          <button class="empty-state__action" id="kbEmptyReset">清除筛选</button>
+        </div>
+      </div>
+      </div>
+    </main>
+
+    <!-- Create KB Modal -->
+    <div class="kb-modal-overlay" id="createKbModal">
+      <div class="kb-modal">
+        <div class="kb-modal-header">
+          <span class="kb-modal-title">新建知识库</span>
+          <button class="kb-modal-close" id="createKbModalClose">
+            <img src="../assets/icons/dl_builtin_trae/x.svg" alt="">
+          </button>
+        </div>
+        <div class="kb-modal-body">
+          <div class="kb-form-group">
+            <label class="kb-form-label">知识库名称</label>
+            <input type="text" class="kb-form-input" id="createKbName" placeholder="请输入知识库名称">
+          </div>
+          <div class="kb-form-group">
+            <label class="kb-form-label">知识库描述</label>
+            <input type="text" class="kb-form-input" id="createKbDesc" placeholder="请输入知识库描述">
+          </div>
+          <div class="kb-form-group">
+            <label class="kb-form-label">数据源类型</label>
+            <select class="kb-form-select" id="createKbSource">
+              <option value="local">本地文件</option>
+              <option value="online">在线文档</option>
+              <option value="api">API 接入</option>
+              <option value="manual">手动录入</option>
+            </select>
+          </div>
+          <div class="kb-form-group">
+            <label class="kb-form-label">存储路径</label>
+            <input type="text" class="kb-form-input" id="createKbPath" placeholder="例如: /data/knowledge/my-kb">
+            <span class="kb-form-hint">指定知识库数据在服务器上的存储路径</span>
+          </div>
+          <div class="kb-form-group">
+            <label class="kb-form-label">关联 Agent</label>
+            <div class="kb-checkbox-group" id="createKbAgents">
+              <label class="kb-checkbox-item" data-agent="deepseek">
+                <input type="checkbox" value="deepseek">
+                <span class="kb-checkbox-label">DeepSeek</span>
+              </label>
+              <label class="kb-checkbox-item" data-agent="kimi">
+                <input type="checkbox" value="kimi">
+                <span class="kb-checkbox-label">Kimi</span>
+              </label>
+              <label class="kb-checkbox-item" data-agent="claude">
+                <input type="checkbox" value="claude">
+                <span class="kb-checkbox-label">Claude</span>
+              </label>
+              <label class="kb-checkbox-item" data-agent="expert">
+                <input type="checkbox" value="expert">
+                <span class="kb-checkbox-label">专家 Agent</span>
+              </label>
+            </div>
+          </div>
+        </div>
+        <div class="kb-modal-footer">
+          <button class="btn btn--ghost" id="createKbCancel">取消</button>
+          <button class="btn btn--primary" id="createKbSubmit">
+            <img src="../assets/icons/dl_builtin_trae/plus.svg" alt="" width="14" height="14">
+            创建
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- KB Config Modal -->
+    <div class="kb-modal-overlay" id="kbConfigModal">
+      <div class="kb-modal">
+        <div class="kb-modal-header">
+          <span class="kb-modal-title">知识库设置</span>
+          <button class="kb-modal-close" id="kbConfigModalClose">
+            <img src="../assets/icons/dl_builtin_trae/x.svg" alt="">
+          </button>
+        </div>
+        <div class="kb-modal-body">
+          <div class="kb-form-group">
+            <label class="kb-form-label">知识库名称</label>
+            <input type="text" class="kb-form-input" id="configKbName" readonly>
+          </div>
+          <div class="kb-form-group">
+            <label class="kb-form-label">连接状态</label>
+            <div class="kb-config-status-text">
+              <span class="kb-config-status-dot" id="configKbStatusDot"></span>
+              <span id="configKbStatusText">已连接</span>
+            </div>
+          </div>
+          <div class="kb-form-group">
+            <label class="kb-form-label">同步频率</label>
+            <select class="kb-form-select" id="configKbSyncFreq">
+              <option value="realtime">实时</option>
+              <option value="hourly">每小时</option>
+              <option value="daily">每天</option>
+              <option value="manual">手动</option>
+            </select>
+          </div>
+          <div class="kb-form-group">
+            <label class="kb-form-label">存储路径</label>
+            <input type="text" class="kb-form-input" id="configKbPath" readonly>
+          </div>
+          <div class="kb-form-group">
+            <label class="kb-form-label">关联 Agent</label>
+            <div class="kb-config-agents" id="configKbAgents">
+              <span class="kb-config-agent-tag">
+                <img src="../assets/icons/dl_builtin_trae/sparkles.svg" alt="">
+                DeepSeek
+              </span>
+              <span class="kb-config-agent-tag">
+                <img src="../assets/icons/dl_builtin_trae/sparkles.svg" alt="">
+                专家 Agent
+              </span>
+            </div>
+          </div>
+          <div class="kb-form-group">
+            <div class="kb-toggle-row">
+              <span class="kb-form-label">自动同步</span>
+              <div class="kb-toggle-switch" id="configKbAutoSync" role="switch" aria-checked="false" tabindex="0"></div>
+            </div>
+          </div>
+        </div>
+        <div class="kb-modal-footer">
+          <button class="btn btn--ghost" id="kbConfigCancel">取消</button>
+          <button class="btn btn--primary" id="kbConfigSave">
+            <img src="../assets/icons/dl_builtin_trae/check.svg" alt="" width="14" height="14">
+            保存
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- KB Detail Modal -->
+    <div class="kb-modal-overlay" id="kbDetailModal">
+      <div class="kb-modal">
+        <div class="kb-modal-header">
+          <span class="kb-modal-title">知识库详情</span>
+          <button class="kb-modal-close" id="kbDetailModalClose">
+            <img src="../assets/icons/dl_builtin_trae/x.svg" alt="">
+          </button>
+        </div>
+        <div class="kb-modal-body">
+          <div class="kb-form-group">
+            <label class="kb-form-label">知识库名称</label>
+            <input type="text" class="kb-form-input" id="detailKbName" readonly>
+          </div>
+          <div class="kb-form-group">
+            <label class="kb-form-label">连接状态</label>
+            <div class="kb-config-status-text">
+              <span class="kb-config-status-dot" id="detailKbStatusDot"></span>
+              <span id="detailKbStatusText">已连接</span>
+            </div>
+          </div>
+          <div class="kb-form-group">
+            <label class="kb-form-label">描述</label>
+            <textarea class="kb-form-input" id="detailKbDesc" readonly rows="3"></textarea>
+          </div>
+          <div class="kb-form-group">
+            <label class="kb-form-label">存储路径</label>
+            <input type="text" class="kb-form-input" id="detailKbPath" readonly>
+          </div>
+          <div class="kb-form-group">
+            <label class="kb-form-label">同步频率</label>
+            <input type="text" class="kb-form-input" id="detailKbSyncFreq" readonly>
+          </div>
+          <div class="kb-form-group">
+            <label class="kb-form-label">关联 Agent</label>
+            <div class="kb-config-agents" id="detailKbAgents"></div>
+          </div>
+          <div class="kb-form-group">
+            <label class="kb-form-label">关联群组</label>
+            <input type="text" class="kb-form-input" id="detailKbGroup" readonly>
+          </div>
+          <div class="kb-form-group">
+            <label class="kb-form-label">元信息</label>
+            <input type="text" class="kb-form-input" id="detailKbMeta" readonly>
+          </div>
+        </div>
+        <div class="kb-modal-footer">
+          <button class="btn btn--primary" id="kbDetailClose">关闭</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div class="kb-toast" id="toast"></div>
+
+    <script>
+      // ===== Toast notification =====
+      function showToast(message) {
+        var toast = document.getElementById('toast');
+        toast.textContent = message;
+        toast.classList.add('kb-toast--visible');
+        clearTimeout(toast._timer);
+        toast._timer = setTimeout(function() {
+          toast.classList.remove('kb-toast--visible');
+        }, 2000);
+      }
+
+      // ===== Tab switching =====
+      var filterBar = document.getElementById('filterBar');
+      var tabs = filterBar.querySelectorAll('.filter-tab');
+      var cards = document.querySelectorAll('.kb-card');
+
+      tabs.forEach(function(tab) {
+        tab.addEventListener('click', function() {
+          tabs.forEach(function(t) { t.classList.remove('active'); });
+          tab.classList.add('active');
+          applyKbFilters();
+        });
+      });
+
+      // ===== Unified filter + search logic =====
+      function applyKbFilters() {
+        var activeTab = filterBar.querySelector('.filter-tab.active');
+        var filter = activeTab ? activeTab.getAttribute('data-filter') : 'all';
+        var query = document.getElementById('searchInput').value.trim().toLowerCase();
+        var visibleCount = 0;
+
+        cards.forEach(function(card) {
+          var status = card.getAttribute('data-status');
+          var name = (card.querySelector('.kb-name') || {}).textContent || '';
+          var desc = (card.querySelector('.kb-description') || {}).textContent || '';
+          var tagEls = card.querySelectorAll('.kb-tags .tag');
+          var tags = '';
+          tagEls.forEach(function(t) { tags += t.textContent + ' '; });
+          var haystack = (name + ' ' + desc + ' ' + tags).toLowerCase();
+
+          var matchesFilter = (filter === 'all' || status === filter);
+          var matchesSearch = !query || haystack.indexOf(query) !== -1;
+
+          if (matchesFilter && matchesSearch) {
+            card.style.display = 'flex';
+            visibleCount++;
+          } else {
+            card.style.display = 'none';
+          }
+        });
+
+        // Show/hide empty state
+        var emptyState = document.getElementById('kbEmptyState');
+        if (emptyState) {
+          emptyState.style.display = visibleCount === 0 ? 'flex' : 'none';
+        }
+      }
+
+      // ===== Reset filters from empty state =====
+      var kbEmptyReset = document.getElementById('kbEmptyReset');
+      if (kbEmptyReset) {
+        kbEmptyReset.addEventListener('click', function() {
+          document.getElementById('searchInput').value = '';
+          tabs.forEach(function(t) { t.classList.remove('active'); });
+          tabs[0].classList.add('active');
+          applyKbFilters();
+        });
+      }
+
+      // ===== "新建知识库" button =====
+      var createKbModal = document.getElementById('createKbModal');
+
+      function openCreateKbModal() {
+        // Reset form fields
+        document.getElementById('createKbName').value = '';
+        document.getElementById('createKbDesc').value = '';
+        document.getElementById('createKbSource').value = 'local';
+        document.getElementById('createKbPath').value = '';
+        // Reset checkbox selections
+        document.querySelectorAll('#createKbAgents .kb-checkbox-item').forEach(function(item) {
+          item.classList.remove('selected');
+          item.querySelector('input[type="checkbox"]').checked = false;
+        });
+        createKbModal.classList.add('open');
+      }
+
+      function closeCreateKbModal() {
+        createKbModal.classList.remove('open');
+      }
+
+      document.getElementById('createKbBtn').addEventListener('click', openCreateKbModal);
+      document.getElementById('createKbModalClose').addEventListener('click', closeCreateKbModal);
+      document.getElementById('createKbCancel').addEventListener('click', closeCreateKbModal);
+      createKbModal.addEventListener('click', function(e) {
+        if (e.target === createKbModal) closeCreateKbModal();
+      });
+
+      // Create KB: checkbox toggle
+      document.querySelectorAll('#createKbAgents .kb-checkbox-item').forEach(function(item) {
+        item.addEventListener('click', function() {
+          var cb = item.querySelector('input[type="checkbox"]');
+          cb.checked = !cb.checked;
+          item.classList.toggle('selected', cb.checked);
+        });
+      });
+
+      // Create KB: submit
+      document.getElementById('createKbSubmit').addEventListener('click', function() {
+        var name = document.getElementById('createKbName').value.trim();
+        if (!name) {
+          showToast('请输入知识库名称');
+          document.getElementById('createKbName').focus();
+          return;
+        }
+        closeCreateKbModal();
+        showToast('知识库创建成功');
+      });
+
+      // ===== KB Config Modal =====
+      var kbConfigModal = document.getElementById('kbConfigModal');
+
+      // Mock data for knowledge bases
+      var kbConfigData = {
+        '408_知识库': { status: 'connected', path: '/data/knowledge/408', agents: ['DeepSeek', 'Kimi'], syncFreq: 'realtime', autoSync: true },
+        '面试题库': { status: 'connected', path: '/data/knowledge/interview', agents: ['Claude', '专家 Agent'], syncFreq: 'hourly', autoSync: true },
+        'Python基础知识': { status: 'disconnected', path: '/data/knowledge/python', agents: ['DeepSeek'], syncFreq: 'manual', autoSync: false },
+        '计算机网络': { status: 'syncing', path: '/data/knowledge/network', agents: ['Kimi', 'Claude', '专家 Agent'], syncFreq: 'realtime', autoSync: true }
+      };
+
+      var statusLabelMap = { connected: '已连接', disconnected: '未连接', syncing: '同步中' };
+
+      function openKbConfigModal(kbName) {
+        var data = kbConfigData[kbName] || { status: 'connected', path: '/data/knowledge/default', agents: [], syncFreq: 'manual', autoSync: false };
+
+        // Fill name
+        document.getElementById('configKbName').value = kbName;
+
+        // Fill status
+        var statusDot = document.getElementById('configKbStatusDot');
+        statusDot.className = 'kb-config-status-dot kb-config-status-dot--' + data.status;
+        document.getElementById('configKbStatusText').textContent = statusLabelMap[data.status] || data.status;
+
+        // Fill sync frequency
+        document.getElementById('configKbSyncFreq').value = data.syncFreq;
+
+        // Fill storage path
+        document.getElementById('configKbPath').value = data.path;
+
+        // Fill agents
+        var agentsContainer = document.getElementById('configKbAgents');
+        agentsContainer.innerHTML = '';
+        data.agents.forEach(function(agentName) {
+          var tag = document.createElement('span');
+          tag.className = 'kb-config-agent-tag';
+          tag.innerHTML = '<img src="../assets/icons/dl_builtin_trae/sparkles.svg" alt="">' + agentName;
+          agentsContainer.appendChild(tag);
+        });
+
+        // Fill auto sync toggle
+        var toggle = document.getElementById('configKbAutoSync');
+        toggle.classList.toggle('active', data.autoSync);
+        toggle.setAttribute('aria-checked', data.autoSync ? 'true' : 'false');
+
+        kbConfigModal.classList.add('open');
+      }
+
+      function closeKbConfigModal() {
+        kbConfigModal.classList.remove('open');
+      }
+
+      // Gear buttons: open config modal
+      document.querySelectorAll('.open-kb-config-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          var card = btn.closest('.kb-card');
+          var kbName = card.querySelector('.kb-name').textContent.trim();
+          openKbConfigModal(kbName);
+        });
+      });
+
+      document.getElementById('kbConfigModalClose').addEventListener('click', closeKbConfigModal);
+      document.getElementById('kbConfigCancel').addEventListener('click', closeKbConfigModal);
+      kbConfigModal.addEventListener('click', function(e) {
+        if (e.target === kbConfigModal) closeKbConfigModal();
+      });
+
+      // Config modal: toggle switch
+      document.getElementById('configKbAutoSync').addEventListener('click', function() {
+        this.classList.toggle('active');
+        var isActive = this.classList.contains('active');
+        this.setAttribute('aria-checked', isActive ? 'true' : 'false');
+      });
+      document.getElementById('configKbAutoSync').addEventListener('keydown', function(e) {
+        if (e.key === ' ' || e.key === 'Enter') {
+          e.preventDefault();
+          this.click();
+        }
+      });
+
+      // Config modal: save
+      document.getElementById('kbConfigSave').addEventListener('click', function() {
+        closeKbConfigModal();
+        showToast('设置已保存');
+      });
+
+      // ===== "同步" button on cards =====
+      document.querySelectorAll('.sync-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          var card = btn.closest('.kb-card');
+          var status = card.getAttribute('data-status');
+          var statusEl = card.querySelector('.kb-status');
+          var metaTimeEl = card.querySelectorAll('.kb-meta-item')[1];
+
+          if (status === 'connected' || status === 'disconnected') {
+            // Switch to syncing
+            card.setAttribute('data-status', 'syncing');
+            statusEl.className = 'kb-status kb-status--syncing';
+            statusEl.innerHTML = '<span class="kb-sync-dot"></span> 同步中';
+            if (metaTimeEl) {
+              metaTimeEl.innerHTML = '<img src="../assets/icons/dl_builtin_trae/clock.svg" alt=""> 正在同步...';
+            }
+            showToast('开始同步知识库...');
+
+            // Auto switch back to connected after 3 seconds
+            setTimeout(function() {
+              card.setAttribute('data-status', 'connected');
+              statusEl.className = 'kb-status kb-status--connected';
+              statusEl.innerHTML = '<img src="../assets/icons/dl_builtin_trae/check-circle.svg" alt="" width="14" height="14"> 已连接';
+              if (metaTimeEl) {
+                metaTimeEl.innerHTML = '<img src="../assets/icons/dl_builtin_trae/clock.svg" alt=""> 最后同步: 刚刚';
+              }
+              showToast('同步完成');
+            }, 3000);
+          } else if (status === 'syncing') {
+            // Cancel sync, go back to connected
+            card.setAttribute('data-status', 'connected');
+            statusEl.className = 'kb-status kb-status--connected';
+            statusEl.innerHTML = '<img src="../assets/icons/dl_builtin_trae/check-circle.svg" alt="" width="14" height="14"> 已连接';
+            if (metaTimeEl) {
+              metaTimeEl.innerHTML = '<img src="../assets/icons/dl_builtin_trae/clock.svg" alt=""> 最后同步: 刚刚';
+            }
+            showToast('已取消同步');
+          }
+        });
+      });
+
+      // ===== Search filter =====
+      document.getElementById('searchInput').addEventListener('input', applyKbFilters);
+
+      // ===== KB Detail Modal =====
+      var kbDetailModal = document.getElementById('kbDetailModal');
+
+      // 同步频率显示文本映射
+      var syncFreqLabelMap = { realtime: '实时', hourly: '每小时', daily: '每天', manual: '手动' };
+
+      // 根据知识库名称找到对应的卡片 DOM
+      function findKbCardByName(kbName) {
+        var target = null;
+        cards.forEach(function(card) {
+          var name = (card.querySelector('.kb-name') || {}).textContent || '';
+          if (name.trim() === kbName) target = card;
+        });
+        return target;
+      }
+
+      function openKbDetailModal(kbName) {
+        var data = kbConfigData[kbName] || { status: 'connected', path: '/data/knowledge/default', agents: [], syncFreq: 'manual', autoSync: false };
+        var card = findKbCardByName(kbName);
+
+        // 名称
+        document.getElementById('detailKbName').value = kbName;
+
+        // 连接状态：优先使用卡片当前 data-status（反映同步过程中的实时状态）
+        var status = card ? card.getAttribute('data-status') : data.status;
+        var statusDot = document.getElementById('detailKbStatusDot');
+        statusDot.className = 'kb-config-status-dot kb-config-status-dot--' + status;
+        document.getElementById('detailKbStatusText').textContent = statusLabelMap[status] || status;
+
+        // 描述：从卡片 DOM 读取
+        var desc = '';
+        if (card) {
+          var descEl = card.querySelector('.kb-description');
+          if (descEl) desc = descEl.textContent.trim();
+        }
+        document.getElementById('detailKbDesc').value = desc;
+
+        // 存储路径
+        document.getElementById('detailKbPath').value = data.path;
+
+        // 同步频率
+        document.getElementById('detailKbSyncFreq').value = syncFreqLabelMap[data.syncFreq] || data.syncFreq;
+
+        // 关联 Agent 列表
+        var agentsContainer = document.getElementById('detailKbAgents');
+        agentsContainer.innerHTML = '';
+        if (data.agents && data.agents.length > 0) {
+          data.agents.forEach(function(agentName) {
+            var tag = document.createElement('span');
+            tag.className = 'kb-config-agent-tag';
+            tag.innerHTML = '<img src="../assets/icons/dl_builtin_trae/sparkles.svg" alt="">' + agentName;
+            agentsContainer.appendChild(tag);
+          });
+        } else {
+          agentsContainer.textContent = '暂无关联 Agent';
+        }
+
+        // 关联群组：从卡片第三个 .kb-meta-item 读取
+        var group = '无关联群组';
+        if (card) {
+          var metaItems = card.querySelectorAll('.kb-meta-item');
+          if (metaItems.length >= 3) {
+            group = metaItems[2].textContent.trim();
+          }
+        }
+        document.getElementById('detailKbGroup').value = group;
+
+        // 元信息：记录数量 + 最后同步时间（来自卡片前两个 .kb-meta-item）
+        var recordCount = '';
+        var lastSync = '';
+        if (card) {
+          var metaItems2 = card.querySelectorAll('.kb-meta-item');
+          if (metaItems2.length >= 1) recordCount = metaItems2[0].textContent.trim();
+          if (metaItems2.length >= 2) lastSync = metaItems2[1].textContent.trim();
+        }
+        var metaText = '';
+        if (recordCount) metaText += recordCount;
+        if (lastSync) metaText += (metaText ? ' · ' : '') + lastSync;
+        if (!metaText) metaText = '暂无元信息';
+        document.getElementById('detailKbMeta').value = metaText;
+
+        kbDetailModal.classList.add('open');
+      }
+
+      function closeKbDetailModal() {
+        kbDetailModal.classList.remove('open');
+      }
+
+      // 给所有"查看详情"按钮（.kb-action-link 但不含 .sync-btn 类）绑定点击事件
+      document.querySelectorAll('.kb-action-link').forEach(function(btn) {
+        if (btn.classList.contains('sync-btn')) return;
+        btn.addEventListener('click', function() {
+          var card = btn.closest('.kb-card');
+          var kbName = card.querySelector('.kb-name').textContent.trim();
+          openKbDetailModal(kbName);
+        });
+      });
+
+      // 关闭按钮、遮罩点击、Escape 键关闭弹窗
+      document.getElementById('kbDetailModalClose').addEventListener('click', closeKbDetailModal);
+      document.getElementById('kbDetailClose').addEventListener('click', closeKbDetailModal);
+      kbDetailModal.addEventListener('click', function(e) {
+        if (e.target === kbDetailModal) closeKbDetailModal();
+      });
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && kbDetailModal.classList.contains('open')) {
+          closeKbDetailModal();
+        }
+      });
+    </script>
+</body>
+</html>

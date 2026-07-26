@@ -1,0 +1,135 @@
+{
+  "data": [
+    {
+      "id": "page-group-chat",
+      "type": "page",
+      "title": "DingRing Group Chat",
+      "version": 1,
+      "createdAt": 1721866200000,
+      "htmlSrc": "pages/group-chat.html",
+      "canvasData": {
+        "x": 12,
+        "y": 0,
+        "group": 0,
+        "deviceType": "freeSize",
+        "windowSize": {
+          "width": 1481,
+          "height": 902
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/group-chat.html",
+        "interactions": [
+          {
+            "domId": "interaction-id-e6kez0h",
+            "targetPageId": "page-knowledge-cards"
+          },
+          {
+            "domId": "interaction-id-iw8zpu7",
+            "targetPageId": "page-knowledge-base"
+          },
+          {
+            "domId": "interaction-id-0cvxw4w",
+            "targetPageId": "page-agent-management"
+          }
+        ]
+      }
+    },
+    {
+      "id": "page-knowledge-cards",
+      "type": "page",
+      "title": "DingRing - 知识卡片管理",
+      "version": 1,
+      "createdAt": 1721866300000,
+      "htmlSrc": "pages/knowledge-cards.html",
+      "canvasData": {
+        "x": 632,
+        "y": 0,
+        "group": 0
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/knowledge-cards.html",
+        "interactions": [
+          {
+            "domId": "interaction-id-xsi5953",
+            "targetPageId": "page-knowledge-base"
+          },
+          {
+            "domId": "interaction-id-1c362e2",
+            "targetPageId": "page-agent-management"
+          },
+          {
+            "domId": "interaction-id-tomiakk",
+            "targetPageId": "page-group-chat"
+          }
+        ]
+      }
+    },
+    {
+      "id": "page-knowledge-base",
+      "type": "page",
+      "title": "DingRing - 知识库管理",
+      "version": 1,
+      "createdAt": 1721866400000,
+      "htmlSrc": "pages/knowledge-base.html",
+      "canvasData": {
+        "x": 632,
+        "y": 377,
+        "group": 0
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/knowledge-base.html",
+        "interactions": [
+          {
+            "domId": "interaction-id-dd2dbhh",
+            "targetPageId": "page-group-chat"
+          },
+          {
+            "domId": "interaction-id-l8jucy0",
+            "targetPageId": "page-knowledge-cards"
+          },
+          {
+            "domId": "interaction-id-zx71ekm",
+            "targetPageId": "page-agent-management"
+          }
+        ]
+      }
+    },
+    {
+      "id": "page-agent-management",
+      "type": "page",
+      "title": "DingRing - Agent 管理",
+      "version": 1,
+      "createdAt": 1721866500000,
+      "htmlSrc": "pages/agent-management.html",
+      "canvasData": {
+        "x": 632,
+        "y": 754,
+        "group": 0
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/agent-management.html",
+        "interactions": [
+          {
+            "domId": "interaction-id-q5jemqy",
+            "targetPageId": "page-knowledge-base"
+          },
+          {
+            "domId": "interaction-id-h0vv12z",
+            "targetPageId": "page-group-chat"
+          },
+          {
+            "domId": "interaction-id-6m2wacf",
+            "targetPageId": "page-knowledge-cards"
+          }
+        ]
+      }
+    }
+  ],
+  "config": {
+    "autoLayout": false,
+    "deviceType": "desktop",
+    "visualEditorEnabled": true,
+    "showEdge": true
+  }
+}

@@ -1,0 +1,2507 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DingRing - 知识卡片管理</title>
+    <style id="theme-vars">
+/**
+ * Trae design library tokens
+ * Dark-only colors and typography tokens.
+ * Source references:
+ * - /workspace/.uploads/c7804cd9-3301-4b42-8895-bb409861b29a_trae.md
+ * - /workspace/.uploads/3164f329-b5a1-42ba-9dcb-5f1b36b48506_trae.css
+ *
+ * Notes:
+ * - Token values are preserved from the source files.
+ * - Grouping is preserved.
+ * - No alias layer is included.
+ * - Invalid source token names that contained spaces were normalized to kebab-case.
+ *   The original source names are kept in comments.
+ */
+
+/* @dark-only */
+/* @group-priority: brand-green, status, brand-blue, brand-purple, brand-yellow */
+
+:root {
+  /* radius */
+  --radius-2: 2px;
+  --radius-4: 4px;
+  --radius-6: 6px;
+  --radius-8: 8px;
+  --radius-10: 10px;
+  --radius-full: 9999px;
+
+  /* spacers */
+  --spacer-0: 0px;
+  --spacer-4: 4px;
+  --spacer-6: 6px;
+  --spacer-8: 8px;
+  --spacer-12: 12px;
+  --spacer-16: 16px;
+  --spacer-24: 24px;
+  --spacer-32: 32px;
+  --spacer-40: 40px;
+
+  /* font */
+  --font-family-default: SF Pro Text;
+  --font-family-heading: SF Pro;
+  --font-family-mono: JetBrains Mono;
+  --font-weight-default: 400;
+  --font-weight-code: 450;
+  --font-weight-medium: 500;
+  --font-weight-strong: 600;
+  --font-family-base: var(--font-family-default);
+  --font-family-heading-alias: var(--font-family-heading);
+  --font-family-mono-alias: var(--font-family-mono);
+
+  /* body */
+  --body-xs-font-family: "SF Pro Text", system-ui, -apple-system, sans-serif;
+  --body-xs-font-size: 10px;
+  --body-xs-font-weight: 400;
+  --body-xs-line-height: 14px;
+  --body-sm-font-family: "SF Pro Text", system-ui, -apple-system, sans-serif;
+  --body-sm-font-size: 11px;
+  --body-sm-font-weight: 400;
+  --body-sm-line-height: 16px;
+  --body-sm-strong-font-family: "SF Pro Text", system-ui, -apple-system, sans-serif;
+  --body-sm-strong-font-size: 11px;
+  --body-sm-strong-font-weight: 500;
+  --body-sm-strong-line-height: 16px;
+  --body-md-font-family: "SF Pro Text", system-ui, -apple-system, sans-serif;
+  --body-md-font-size: 12px;
+  --body-md-font-weight: 400;
+  --body-md-line-height: 18px;
+  --body-md-strong-font-family: "SF Pro Text", system-ui, -apple-system, sans-serif;
+  --body-md-strong-font-size: 12px;
+  --body-md-strong-font-weight: 500;
+  --body-md-strong-line-height: 18px;
+  --body-base-font-family: "SF Pro Text", system-ui, -apple-system, sans-serif;
+  --body-base-font-size: 13px;
+  --body-base-font-weight: 400;
+  --body-base-line-height: 20px;
+  --body-base-strong-font-family: "SF Pro Text", system-ui, -apple-system, sans-serif;
+  --body-base-strong-font-size: 13px;
+  --body-base-strong-font-weight: 500;
+  --body-base-strong-line-height: 20px;
+
+  /* heading */
+  --heading-3xs-font-family: "SF Pro Text", system-ui, -apple-system, sans-serif;
+  --heading-3xs-font-size: 11px;
+  --heading-3xs-font-weight: 600;
+  --heading-3xs-line-height: 16px;
+  --heading-2xs-font-family: "SF Pro Text", system-ui, -apple-system, sans-serif;
+  --heading-2xs-font-size: 12px;
+  --heading-2xs-font-weight: 600;
+  --heading-2xs-line-height: 18px;
+  --heading-xs-font-family: "SF Pro Text", system-ui, -apple-system, sans-serif;
+  --heading-xs-font-size: 13px;
+  --heading-xs-font-weight: 600;
+  --heading-xs-line-height: 20px;
+  --heading-sm-font-family: "SF Pro Text", system-ui, -apple-system, sans-serif;
+  --heading-sm-font-size: 16px;
+  --heading-sm-font-weight: 600;
+  --heading-sm-line-height: 24px;
+  --heading-md-font-family: "SF Pro", system-ui, -apple-system, sans-serif;
+  --heading-md-font-size: 20px;
+  --heading-md-font-weight: 600;
+  --heading-md-line-height: 28px;
+  --heading-lg-font-family: "SF Pro", system-ui, -apple-system, sans-serif;
+  --heading-lg-font-size: 22px;
+  --heading-lg-font-weight: 600;
+  --heading-lg-line-height: 30px;
+  --heading-xl-font-family: "SF Pro", system-ui, -apple-system, sans-serif;
+  --heading-xl-font-size: 24px;
+  --heading-xl-font-weight: 600;
+  --heading-xl-line-height: 32px;
+  --heading-2xl-font-family: "SF Pro", system-ui, -apple-system, sans-serif;
+  --heading-2xl-font-size: 28px;
+  --heading-2xl-font-weight: 600;
+  --heading-2xl-line-height: 36px;
+  --heading-3xl-font-family: "SF Pro", system-ui, -apple-system, sans-serif;
+  --heading-3xl-font-size: 32px;
+  --heading-3xl-font-weight: 600;
+  --heading-3xl-line-height: 40px;
+
+  /* code */
+  --code-editor-font-family: "JetBrains Mono", system-ui, -apple-system, sans-serif;
+  --code-editor-font-size: 13px;
+  --code-editor-font-weight: 450;
+  --code-editor-line-height: 20px;
+  --code-terminal-font-family: "JetBrains Mono", system-ui, -apple-system, sans-serif;
+  --code-terminal-font-size: 12px;
+  --code-terminal-font-weight: 450;
+  --code-terminal-line-height: 18px;
+  --code-text: #E0E3EE;
+  --code-doc: #7F838C;
+  --code-link: #3C7EFF;
+  --code-number: #F48CCA;
+  --code-action: #B38CFF;
+  --code-instruction: #F0D8FF;
+  --code-function: #F29D79;
+  --code-constant: #80BBFF;
+  --code-parameter: #82D99F;
+  --code-attribute: #DED47E;
+  --code-tag: #F2858C;
+
+  /* bg */
+  --bg-base-default: #1A1B1D;
+  --bg-base-secondary: #222427;
+  --bg-base-tertiary: #2A2D31;
+  --bg-overlay-l1: rgba(224, 226, 242, 0.04);
+  --bg-overlay-l2: rgba(224, 226, 242, 0.06);
+  --bg-overlay-l3: rgba(224, 226, 242, 0.08);
+  --bg-overlay-l4: rgba(224, 226, 242, 0.12);
+  --bg-menu: #202123;
+  --bg-tooltip: #1A1B1D;
+  --bg-invert: #DADDE5;
+  --bg-invert-hover: #EDEFF2;
+  --bg-invert-active: #979AA4;
+  --bg-invert-disabled: rgba(224, 226, 242, 0.12);
+  --color-background: var(--bg-base-default);
+  --color-surface: var(--bg-base-secondary);
+  --color-surface-variant: var(--bg-base-tertiary);
+  --color-overlay-1: var(--bg-overlay-l1);
+  --color-overlay-2: var(--bg-overlay-l2);
+  --color-overlay-3: var(--bg-overlay-l3);
+  --color-overlay-4: var(--bg-overlay-l4);
+  --color-card: var(--bg-base-secondary);
+  --color-tooltip: var(--bg-tooltip);
+  --color-menu: var(--bg-menu);
+
+  /* bg-brand */
+  --bg-brand: #32F08C;
+  --bg-brand-hover: #0FDC78;
+  --bg-brand-disabled: rgba(50, 240, 140, 0.2);
+  --bg-brand-popup: rgba(50, 240, 140, 0.12);
+  --color-primary: var(--bg-brand);
+  --color-primary-hover: var(--bg-brand-hover);
+  --color-primary-disabled: var(--bg-brand-disabled);
+  --color-primary-soft: var(--bg-brand-popup);
+  --color-accent: var(--bg-brand);
+
+  /* text */
+  --text-default: #D1D3DB;
+  --text-default-hover: #F5F9FE;
+  --text-default-active: #F5F9FE;
+  --text-secondary: #9599A6;
+  --text-secondary-hover: #D1D3DB;
+  --text-secondary-active: #D1D3DB;
+  --text-tertiary: #666B75;
+  --text-disabled: #666B75;
+  --text-onbrand: #0C0C0D;
+  --text-onaccent: #0C0C0D;
+  --color-foreground: var(--text-default);
+  --color-foreground-hover: var(--text-default-hover);
+  --color-on-surface: var(--text-default);
+  --color-on-surface-variant: var(--text-secondary);
+  --color-muted-foreground: var(--text-secondary);
+  --color-disabled-foreground: var(--text-disabled);
+  --color-on-primary: var(--text-onbrand);
+
+  /* text-brand */
+  --text-brand: #32F08C;
+  --text-brand-hover: #0FDC78;
+
+  /* icon */
+  --icon-default: #D1D3DB;
+  --icon-default-hover: #F5F9FE;
+  --icon-default-active: #F5F9FE;
+  --icon-secondary: #9599A6;
+  --icon-secondary-hover: #D1D3DB;
+  --icon-secondary-active: #D1D3DB;
+  --icon-tertiary: #666B75;
+  --icon-disabled: #666B75;
+  --icon-onbrand: #0C0C0D;
+  --icon-onaccent: #0C0C0D;
+
+  /* icon-brand */
+  --icon-brand: #32F08C;
+  --icon-brand-hover: #0FDC78;
+
+  /* border */
+  --border-neutral-l1: rgba(224, 226, 242, 0.1);
+  --border-neutral-l2: rgba(224, 226, 242, 0.16);
+  --border-neutral-l3: rgba(224, 226, 242, 0.2);
+  --border-contrast: #FFFFFF;
+  --border-brand: #32F08C;
+  --color-border: var(--border-neutral-l1);
+  --color-border-strong: var(--border-neutral-l2);
+  --color-border-stronger: var(--border-neutral-l3);
+  --color-border-contrast: var(--border-contrast);
+  --color-outline: var(--border-neutral-l1);
+
+  /* accent */
+  --accent-teal: #2DD288;
+  --accent-coral: #FF9392;
+  --accent-amber: #DCB364;
+  --accent-lime: #8ACB3A;
+  --accent-cyan: #04CBE5;
+  --accent-blue: #7BB8FF;
+  --accent-magenta: #EC93FF;
+  --accent-violet: #BFA5FF;
+  --accent-slate: #AFB9CF;
+
+  /* status */
+  --status-primary-default: #387BFF;
+  --status-primary-hover: #4C88FF;
+  --status-primary-active: #1759DD;
+  --status-primary-surface-l1: rgba(53, 121, 255, 0.18);
+  --status-primary-surface-l2: rgba(53, 121, 255, 0.28);
+  --status-primary-surface-l3: rgba(53, 121, 255, 0.36);
+  --status-success-default: #33C192;
+  --status-success-hover: #5ED4AD;
+  --status-success-active: #27B082;
+  --status-success-surface-l1: rgba(0, 165, 110, 0.18);
+  --status-success-surface-l2: rgba(0, 165, 110, 0.28);
+  --status-success-surface-l3: rgba(0, 165, 110, 0.36);
+  --status-alert-default: #D29D00;
+  --status-alert-hover: #DFB949;
+  --status-alert-active: #AB8820;
+  --status-alert-surface-l1: rgba(210, 157, 0, 0.16);
+  --status-alert-surface-l2: rgba(210, 157, 0, 0.28);
+  --status-alert-surface-l3: rgba(210, 157, 0, 0.36);
+  --status-warning-default: #D27E24;
+  --status-warning-hover: #D78B28;
+  --status-warning-active: #B46510;
+  --status-warning-surface-l1: rgba(210, 126, 36, 0.16);
+  --status-warning-surface-l2: rgba(210, 126, 36, 0.28);
+  --status-warning-surface-l3: rgba(210, 126, 36, 0.36);
+  --status-error-default: #F65A5A;
+  --status-error-hover: #F86262;
+  --status-error-active: #B33636;
+  --status-error-surface-l1: rgba(246, 70, 70, 0.18);
+  --status-error-surface-l2: rgba(246, 70, 70, 0.28);
+  --status-error-surface-l3: rgba(246, 70, 70, 0.36);
+  --color-info: var(--status-primary-default);
+  --color-success: var(--status-success-default);
+  --color-warning: var(--status-warning-default);
+  --color-error: var(--status-error-default);
+  --color-error-soft: var(--status-error-surface-l1);
+
+  /* brand */
+  --brand-green-100: #E5FFF2;
+  --brand-green-200: #B4FDD9;
+  --brand-green-300: #85FABF;
+  --brand-green-400: #5CF5A8;
+  --brand-green-500: #32F08C;
+  --brand-green-600: #0FDC78;
+  --brand-green-700: #0AB861;
+  --brand-green-800: #05994F;
+  --brand-green-900: #02743B;
+  --brand-green-1000: #004D26;
+  --brand-red-100: #FFE5E5;
+  --brand-red-200: #FFCCCC;
+  --brand-red-300: #FFB2B2;
+  --brand-red-400: #FF9999;
+  --brand-red-500: #FF8080;
+  --brand-red-600: #FF6464;
+  --brand-red-700: #E63737;
+  --brand-red-800: #CB1010;
+  --brand-red-900: #8F0505;
+  --brand-red-1000: #4D0000;
+  --brand-yellow-100: #FFF6E5;
+  --brand-yellow-200: #FFECCC;
+  --brand-yellow-300: #FFE3B2;
+  --brand-yellow-400: #FFDA99;
+  --brand-yellow-500: #FFD080;
+  --brand-yellow-600: #FFC864;
+  --brand-yellow-700: #E6A637;
+  --brand-yellow-800: #CB8710;
+  --brand-yellow-900: #8F5C05;
+  --brand-yellow-1000: #4D3000;
+  --brand-blue-100: #E5F3FF;
+  --brand-blue-200: #CCE6FF;
+  --brand-blue-300: #B2DAFF;
+  --brand-blue-400: #99CEFF;
+  --brand-blue-500: #80C1FF;
+  --brand-blue-600: #64B4FF;
+  --brand-blue-700: #3792E6;
+  --brand-blue-800: #1071CB;
+  --brand-blue-900: #054C8F;
+  --brand-blue-1000: #00284D;
+  --brand-purple-100: #E8E5FF;
+  --brand-purple-200: #D2CCFF;
+  --brand-purple-300: #BBB2FF;
+  --brand-purple-400: #A599FF;
+  --brand-purple-500: #8E80FF;
+  --brand-purple-600: #7864FF;
+  --brand-purple-700: #4C37E6;
+  --brand-purple-800: #2610CB;
+  --brand-purple-900: #15058F;
+  --brand-purple-1000: #09004D;
+  /* original source token: --brand-neutral grey-100 */
+  --brand-neutral-grey-100: #F2F2F2;
+  /* original source token: --brand-neutral grey-200 */
+  --brand-neutral-grey-200: #E3E3E3;
+  /* original source token: --brand-neutral grey-300 */
+  --brand-neutral-grey-300: #D6D6D6;
+  /* original source token: --brand-neutral grey-400 */
+  --brand-neutral-grey-400: #C7C7C7;
+  /* original source token: --brand-neutral grey-500 */
+  --brand-neutral-grey-500: #BABABA;
+  /* original source token: --brand-neutral grey-600 */
+  --brand-neutral-grey-600: #ABABAB;
+  /* original source token: --brand-neutral grey-700 */
+  --brand-neutral-grey-700: #8A8A8A;
+  /* original source token: --brand-neutral grey-800 */
+  --brand-neutral-grey-800: #686868;
+  /* original source token: --brand-neutral grey-900 */
+  --brand-neutral-grey-900: #474747;
+  /* original source token: --brand-neutral grey-1000 */
+  --brand-neutral-grey-1000: #262626;
+  /* original source token: --brand-blue grey-100 */
+  --brand-blue-grey-100: #F1EFF4;
+  /* original source token: --brand-blue grey-200 */
+  --brand-blue-grey-200: #E0E1E6;
+  /* original source token: --brand-blue grey-300 */
+  --brand-blue-grey-300: #CFD3D8;
+  /* original source token: --brand-blue grey-400 */
+  --brand-blue-grey-400: #BFC5CA;
+  /* original source token: --brand-blue grey-500 */
+  --brand-blue-grey-500: #B0B5BA;
+  /* original source token: --brand-blue grey-600 */
+  --brand-blue-grey-600: #A0A6AB;
+  /* original source token: --brand-blue grey-700 */
+  --brand-blue-grey-700: #80898E;
+  /* original source token: --brand-blue grey-800 */
+  --brand-blue-grey-800: #5E696E;
+  /* original source token: --brand-blue grey-900 */
+  --brand-blue-grey-900: #404A4F;
+  /* original source token: --brand-blue grey-1000 */
+  --brand-blue-grey-1000: #21262B;
+  /* original source token: --brand-green grey-100 */
+  --brand-green-grey-100: #F1F4F4;
+  /* original source token: --brand-green grey-200 */
+  --brand-green-grey-200: #E0E6E6;
+  /* original source token: --brand-green grey-300 */
+  --brand-green-grey-300: #CFD8D8;
+  /* original source token: --brand-green grey-400 */
+  --brand-green-grey-400: #BFCACA;
+  /* original source token: --brand-green grey-500 */
+  --brand-green-grey-500: #B0BABA;
+  /* original source token: --brand-green grey-600 */
+  --brand-green-grey-600: #A0ABAB;
+  /* original source token: --brand-green grey-700 */
+  --brand-green-grey-700: #808E8E;
+  /* original source token: --brand-green grey-800 */
+  --brand-green-grey-800: #5E6E6E;
+  /* original source token: --brand-green grey-900 */
+  --brand-green-grey-900: #404F4F;
+  /* original source token: --brand-green grey-1000 */
+  --brand-green-grey-1000: #212B2B;
+
+  /* font (generic fallback — used by a few preview sections) */
+  --font-family: "SF Pro Text", system-ui, -apple-system, sans-serif;
+  --font-size: 10px;
+  --font-weight: 400;
+  --line-height: 14px;
+
+  /* viz */
+  --viz-series-coral: #F87454;
+  --viz-series-amber: #EDAA45;
+  --viz-series-mint: #1DC981;
+  --viz-series-teal: #78F2F2;
+  --viz-series-sky: #22A5F7;
+  --viz-series-violet: #B655FC;
+  --viz-series-magenta: #FB9DD7;
+  --viz-series-indigo: #B6A3FF;
+  --viz-series-lime: #A6EA39;
+  --viz-series-slate: #859EAD;
+  --viz-ui-bg-chart: #202123;
+  --viz-ui-bg-tooltip: #1A1B1D;
+  --viz-ui-chart-title: #D1D3DB;
+  --viz-ui-chart-subtitle: #9599A6;
+  --viz-ui-chart-axis: rgba(224, 226, 242, 0.16);
+  --viz-ui-chart-tick: #9599A6;
+  --viz-ui-legend-label: #9599A6;
+  --viz-ui-legend-value: #D1D3DB;
+
+  /* special */
+  --special-white: #FFFFFF;
+  --special-black: #000000;
+  --special-bgtabsoverlay: rgba(0, 0, 0, 0.2);
+
+  /* layout aliases (originally fallback in _preview.css) */
+  --brand-1: #32f08c;
+  --brand-2: #3ee1a3;
+  --brand-3: #60f2bd;
+  --brand-4: #a0fde7;
+  --site-canvas: #1A1B1D;
+  --bg-layout-1: var(--bg-base-secondary);
+  --bg-layout-2: var(--bg-overlay-l1);
+  --border-1: var(--border-neutral-l1);
+
+  /* semantic aliases for head contract */
+  --color-muted: var(--text-secondary);
+  --color-radius-sm: var(--radius-6);
+  --color-radius-md: var(--radius-8);
+  --color-radius-lg: var(--radius-10);
+}
+
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.1/dist/index.global.js"></script>
+    <script src="https://unpkg.com/lucide@1.8.0/dist/umd/lucide.min.js"></script>
+    <style type="text/tailwindcss">
+  @theme inline {
+    --color-background: var(--color-background);
+    --color-foreground: var(--color-foreground);
+    --color-card: var(--color-card);
+    --color-primary: var(--color-primary);
+    --color-muted: var(--color-muted);
+    --color-muted-foreground: var(--color-muted-foreground);
+    --color-accent: var(--color-accent);
+    --color-border: var(--color-border);
+    --radius-sm: var(--color-radius-sm);
+    --radius-md: var(--color-radius-md);
+    --radius-lg: var(--color-radius-lg);
+  }
+  @layer base {
+    body { background: var(--color-background); color: var(--color-foreground); }
+    td, th { @apply break-words; word-break: break-all; word-break: auto-phrase; }
+    th { @apply whitespace-nowrap; }
+  }
+    </style>
+    <style id="semantic-token-fallback">
+      .bg-background { background-color: var(--color-background); }
+      .text-background { color: var(--color-background); }
+      .border-background { border-color: var(--color-background); }
+      .ring-background { --tw-ring-color: var(--color-background); }
+      .bg-foreground { background-color: var(--color-foreground); }
+      .text-foreground { color: var(--color-foreground); }
+      .border-foreground { border-color: var(--color-foreground); }
+      .ring-foreground { --tw-ring-color: var(--color-foreground); }
+      .bg-card { background-color: var(--color-card); }
+      .text-card { color: var(--color-card); }
+      .border-card { border-color: var(--color-card); }
+      .ring-card { --tw-ring-color: var(--color-card); }
+      .bg-primary { background-color: var(--color-primary); }
+      .text-primary { color: var(--color-primary); }
+      .border-primary { border-color: var(--color-primary); }
+      .ring-primary { --tw-ring-color: var(--color-primary); }
+      .bg-muted { background-color: var(--color-muted); }
+      .text-muted { color: var(--color-muted); }
+      .border-muted { border-color: var(--color-muted); }
+      .ring-muted { --tw-ring-color: var(--color-muted); }
+      .bg-muted-foreground { background-color: var(--color-muted-foreground); }
+      .text-muted-foreground { color: var(--color-muted-foreground); }
+      .border-muted-foreground { border-color: var(--color-muted-foreground); }
+      .ring-muted-foreground { --tw-ring-color: var(--color-muted-foreground); }
+      .bg-accent { background-color: var(--color-accent); }
+      .text-accent { color: var(--color-accent); }
+      .border-accent { border-color: var(--color-accent); }
+      .ring-accent { --tw-ring-color: var(--color-accent); }
+      .bg-border { background-color: var(--color-border); }
+      .text-border { color: var(--color-border); }
+      .border-border { border-color: var(--color-border); }
+      .ring-border { --tw-ring-color: var(--color-border); }
+    </style>
+    <style>
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      [data-icon] {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        -webkit-mask-size: contain;
+        mask-size: contain;
+        -webkit-mask-repeat: no-repeat;
+        mask-repeat: no-repeat;
+        -webkit-mask-position: center;
+        mask-position: center;
+        background-color: currentColor;
+      }
+    </style>
+</head>
+<body>
+    <style>
+      /* ===== Page-level reset & base ===== */
+      *, *::before, *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        font-family: var(--body-base-font-family);
+        font-size: var(--body-base-font-size);
+        font-weight: var(--body-base-font-weight);
+        line-height: var(--body-base-line-height);
+        color: var(--text-default);
+        background: var(--bg-base-default);
+        min-height: 100vh;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      /* ===== Reusable: Avatar ===== */
+      .ds-avatar {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: var(--radius-full);
+        color: var(--text-default);
+        font-weight: var(--font-weight-medium);
+        flex-shrink: 0;
+      }
+      .ds-avatar--sm { width: 24px; height: 24px; font-size: 10px; }
+
+      /* ===== Reusable: Tag ===== */
+      .tag {
+        display: inline-flex;
+        align-items: center;
+        height: 20px;
+        padding: 0 6px;
+        border-radius: var(--radius-full);
+        font-size: 10px;
+        font-weight: var(--font-weight-medium);
+        gap: 4px;
+      }
+      .tag--brand { background: rgba(50, 240, 140, 0.12); color: var(--bg-brand); }
+      .tag--success { background: var(--status-success-surface-l1); color: var(--status-success-default); }
+      .tag--warning { background: var(--status-warning-surface-l1); color: var(--status-warning-default); }
+      .tag--neutral { background: var(--bg-overlay-l2); color: var(--text-secondary); }
+
+      /* ===== Top Header Bar ===== */
+      .header-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: var(--spacer-12) var(--spacer-24);
+        border-bottom: 1px solid var(--border-neutral-l1);
+        background: var(--bg-base-default);
+        position: sticky;
+        top: 0;
+        z-index: 50;
+      }
+
+      .header-logo {
+        display: flex;
+        align-items: center;
+        gap: var(--spacer-8);
+        font-family: var(--heading-md-font-family);
+        font-size: var(--heading-md-font-size);
+        font-weight: var(--heading-md-font-weight);
+        color: var(--bg-brand);
+        flex-shrink: 0;
+      }
+
+      .header-logo img {
+        width: 28px;
+        height: 28px;
+      }
+
+      .header-search {
+        flex: 1;
+        max-width: 420px;
+        position: relative;
+      }
+
+      .header-search input {
+        width: 100%;
+        height: 36px;
+        padding: 0 var(--spacer-12) 0 36px;
+        background: var(--bg-base-secondary);
+        border: 1px solid var(--border-neutral-l1);
+        border-radius: var(--radius-8);
+        color: var(--text-default);
+        font-size: var(--body-base-font-size);
+        font-family: var(--body-base-font-family);
+        outline: none;
+        transition: border-color 0.15s ease;
+      }
+
+      .header-search input::placeholder {
+        color: var(--text-tertiary);
+      }
+
+      .header-search input:focus {
+        border-color: var(--bg-brand);
+      }
+
+      .header-search-icon {
+        position: absolute;
+        left: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--text-tertiary);
+        width: 16px;
+        height: 16px;
+        pointer-events: none;
+      }
+
+      .header-actions {
+        display: flex;
+        align-items: center;
+        gap: var(--spacer-8);
+        flex-shrink: 0;
+      }
+
+      /* ===== Buttons ===== */
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: var(--spacer-6);
+        height: 36px;
+        padding: 0 var(--spacer-16);
+        border-radius: var(--radius-8);
+        font-size: var(--body-md-font-size);
+        font-weight: var(--font-weight-medium);
+        font-family: var(--body-md-font-family);
+        border: none;
+        cursor: pointer;
+        transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+        white-space: nowrap;
+        line-height: 1;
+      }
+
+      .btn--primary {
+        background: var(--bg-brand);
+        color: var(--text-onbrand);
+      }
+      .btn--primary:hover {
+        background: var(--bg-brand-hover);
+      }
+
+      .btn--secondary {
+        background: var(--bg-overlay-l2);
+        color: var(--text-default);
+        border: 1px solid var(--border-neutral-l1);
+      }
+      .btn--secondary:hover {
+        background: var(--bg-overlay-l3);
+        border-color: var(--border-neutral-l2);
+      }
+
+      .btn--ghost {
+        background: transparent;
+        color: var(--text-secondary);
+        border: 1px solid var(--border-neutral-l1);
+      }
+      .btn--ghost:hover {
+        background: var(--bg-overlay-l2);
+        color: var(--text-default);
+      }
+      .btn--ghost--active {
+        background: var(--status-success-surface-l1);
+        color: var(--status-success-default);
+        border-color: var(--status-success-default);
+      }
+      .btn--ghost--active:hover {
+        background: var(--status-success-surface-l1);
+        color: var(--status-success-default);
+      }
+
+      .btn--sm {
+        height: 28px;
+        padding: 0 var(--spacer-12);
+        font-size: var(--body-sm-font-size);
+      }
+
+      .btn--danger {
+        background: var(--status-error-surface-l1);
+        color: var(--status-error-default);
+        border: 1px solid rgba(246, 70, 70, 0.2);
+      }
+      .btn--danger:hover {
+        background: var(--status-error-surface-l2);
+      }
+
+      .btn--warning {
+        background: var(--status-alert-surface-l1);
+        color: var(--status-alert-default);
+        border: 1px solid rgba(210, 157, 0, 0.2);
+      }
+      .btn--warning:hover {
+        background: var(--status-alert-surface-l2);
+      }
+
+      .btn--success {
+        background: var(--status-success-surface-l1);
+        color: var(--status-success-default);
+        border: 1px solid rgba(0, 165, 110, 0.2);
+      }
+      .btn--success:hover {
+        background: var(--status-success-surface-l2);
+      }
+
+      /* ===== Filter / Tab Bar ===== */
+      .filter-bar {
+        display: flex;
+        align-items: center;
+        gap: var(--spacer-4);
+        padding: var(--spacer-12) var(--spacer-24);
+        border-bottom: 1px solid var(--border-neutral-l1);
+        background: var(--bg-base-default);
+        overflow-x: auto;
+      }
+
+      .filter-tab {
+        display: inline-flex;
+        align-items: center;
+        height: 32px;
+        padding: 0 var(--spacer-12);
+        border-radius: var(--radius-full);
+        font-size: var(--body-md-font-size);
+        font-weight: var(--font-weight-medium);
+        font-family: var(--body-md-font-family);
+        color: var(--text-secondary);
+        background: transparent;
+        border: 1px solid transparent;
+        cursor: pointer;
+        transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+        white-space: nowrap;
+      }
+
+      .filter-tab:hover {
+        background: var(--bg-overlay-l2);
+        color: var(--text-default);
+      }
+
+      .filter-tab.active {
+        background: var(--bg-brand-popup);
+        color: var(--bg-brand);
+        border-color: rgba(50, 240, 140, 0.2);
+      }
+
+      /* ===== Main Content ===== */
+      .main-content {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: var(--spacer-24);
+      }
+
+      /* ===== Card Grid ===== */
+      .card-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: var(--spacer-16);
+      }
+
+      @media (max-width: 900px) {
+        .card-grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+      }
+
+      @media (max-width: 600px) {
+        .card-grid {
+          grid-template-columns: 1fr;
+        }
+        .header-bar {
+          flex-wrap: wrap;
+          gap: var(--spacer-8);
+        }
+        .header-search {
+          order: 3;
+          max-width: 100%;
+          flex-basis: 100%;
+        }
+      }
+
+      /* ===== Knowledge Card ===== */
+      .knowledge-card {
+        background: var(--bg-base-secondary);
+        border: 1px solid var(--border-neutral-l1);
+        border-radius: var(--radius-8);
+        padding: var(--spacer-16);
+        display: flex;
+        flex-direction: column;
+        gap: var(--spacer-12);
+        transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+        cursor: pointer;
+        position: relative;
+      }
+
+      .knowledge-card:hover {
+        border-color: var(--border-neutral-l2);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+        transform: translateY(-2px);
+      }
+
+      .knowledge-card:active {
+        transform: translateY(0);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+      }
+
+      .knowledge-card[data-status="整理中"] {
+        border-left: 3px solid var(--status-alert-default);
+      }
+
+      .knowledge-card[data-status="已收录"] {
+        border-left: 3px solid var(--status-success-default);
+      }
+
+      /* Quick-action corner icons (favorite / mastered) */
+      .card-quick-actions {
+        position: absolute;
+        top: var(--spacer-12);
+        right: var(--spacer-16);
+        display: flex;
+        gap: var(--spacer-4);
+        opacity: 0;
+        transition: opacity 0.15s ease;
+        z-index: 2;
+      }
+      .knowledge-card:hover .card-quick-actions {
+        opacity: 1;
+      }
+      .card-quick-btn {
+        width: 26px;
+        height: 26px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border: none;
+        border-radius: var(--radius-6);
+        background: var(--bg-overlay-l1);
+        color: var(--text-tertiary);
+        cursor: pointer;
+        transition: background 0.12s ease, color 0.12s ease;
+      }
+      .card-quick-btn:hover {
+        background: var(--bg-overlay-l2, var(--bg-brand-popup));
+        color: var(--text-default);
+      }
+      .card-quick-btn img {
+        width: 14px;
+        height: 14px;
+      }
+      .card-quick-btn--active {
+        color: var(--status-warning-default);
+      }
+      .card-quick-btn--active.card-quick-btn--mastered {
+        color: var(--status-success-default);
+      }
+
+      /* Push status tag left when quick actions visible to avoid overlap */
+      .knowledge-card:hover .card-header .tag {
+        margin-right: 60px;
+      }
+
+      .card-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: var(--spacer-8);
+      }
+
+      .card-title {
+        font-family: var(--heading-xs-font-family);
+        font-size: var(--heading-xs-font-size);
+        font-weight: var(--heading-xs-font-weight);
+        line-height: var(--heading-xs-line-height);
+        color: var(--text-default);
+      }
+
+      .card-description {
+        font-size: var(--body-sm-font-size);
+        font-weight: var(--body-sm-font-weight);
+        line-height: var(--body-sm-line-height);
+        color: var(--text-secondary);
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+
+      .card-tags {
+        display: flex;
+        align-items: center;
+        gap: var(--spacer-6);
+        flex-wrap: wrap;
+      }
+
+      .card-meta {
+        display: flex;
+        align-items: center;
+        gap: var(--spacer-12);
+        flex-wrap: wrap;
+      }
+
+      .card-meta-item {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--spacer-4);
+        font-size: var(--body-xs-font-size);
+        color: var(--text-tertiary);
+      }
+
+      .card-meta-item img {
+        width: 12px;
+        height: 12px;
+      }
+
+      .card-actions {
+        display: flex;
+        align-items: center;
+        gap: var(--spacer-8);
+        margin-top: auto;
+        padding-top: var(--spacer-12);
+        border-top: 1px solid var(--border-neutral-l1);
+        transition: border-color 0.2s ease;
+      }
+
+      .knowledge-card:hover .card-actions {
+        border-top-color: var(--border-neutral-l2);
+      }
+
+      /* ===== Review Overlay ===== */
+      .review-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 100;
+        background: var(--bg-base-default);
+        display: none;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .review-overlay.visible {
+        display: flex;
+      }
+
+      .review-top-bar {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: var(--spacer-16) var(--spacer-24);
+        border-bottom: 1px solid var(--border-neutral-l1);
+      }
+
+      .review-progress {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: var(--spacer-6);
+      }
+
+      .review-progress-text {
+        font-size: var(--body-md-font-size);
+        font-weight: var(--font-weight-medium);
+        color: var(--text-secondary);
+        font-variant-numeric: tabular-nums;
+      }
+
+      .review-progress-bar {
+        width: 200px;
+        height: 6px;
+        background: var(--fill-neutral);
+        border-radius: var(--radius-99);
+        overflow: hidden;
+      }
+
+      .review-progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, var(--bg-brand) 0%, var(--bg-brand-hover) 100%);
+        border-radius: var(--radius-99);
+        transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+
+      /* Keyboard hint chips */
+      .review-keyhint {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--spacer-4);
+        font-size: var(--body-xs-font-size);
+        color: var(--text-tertiary);
+      }
+
+      .review-keyhint kbd {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 20px;
+        height: 20px;
+        padding: 0 6px;
+        font-family: var(--font-family-mono, monospace);
+        font-size: 11px;
+        font-weight: var(--font-weight-medium);
+        color: var(--text-secondary);
+        background: var(--fill-neutral);
+        border: 1px solid var(--border-neutral-l2);
+        border-radius: var(--radius-4);
+        line-height: 1;
+      }
+
+      .review-keyhint-divider {
+        width: 1px;
+        height: 14px;
+        background: var(--border-neutral-l2);
+        margin: 0 var(--spacer-4);
+      }
+
+      /* Difficulty button active states */
+      .difficulty-group .btn.is-selected {
+        box-shadow: 0 0 0 2px var(--bg-base-secondary), 0 0 0 4px currentColor;
+      }
+
+      .difficulty-group .btn--danger.is-selected { color: var(--functional-danger); }
+      .difficulty-group .btn--warning.is-selected { color: var(--functional-warning); }
+      .difficulty-group .btn--success.is-selected { color: var(--functional-success); }
+
+      /* ===== Review Summary ===== */
+      .review-summary {
+        display: none;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding: var(--spacer-32);
+        max-width: 520px;
+        width: 100%;
+        margin: 0 auto;
+        animation: reviewSummaryFadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+      }
+
+      .review-summary.visible {
+        display: flex;
+      }
+
+      @keyframes reviewSummaryFadeIn {
+        from { opacity: 0; transform: translateY(16px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+
+      .review-summary__icon {
+        width: 64px;
+        height: 64px;
+        border-radius: var(--radius-99);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: var(--spacer-16);
+        background: var(--bg-brand-secondary);
+      }
+
+      .review-summary__title {
+        font-family: var(--heading-lg-font-family);
+        font-size: var(--heading-lg-font-size);
+        font-weight: var(--heading-lg-font-weight);
+        line-height: var(--heading-lg-line-height);
+        color: var(--text-default);
+        margin-bottom: var(--spacer-8);
+      }
+
+      .review-summary__desc {
+        font-size: var(--body-md-font-size);
+        color: var(--text-secondary);
+        margin-bottom: var(--spacer-24);
+      }
+
+      .review-summary__stats {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: var(--spacer-12);
+        width: 100%;
+        margin-bottom: var(--spacer-24);
+      }
+
+      .review-summary__stat {
+        background: var(--bg-base-secondary);
+        border: 1px solid var(--border-neutral-l1);
+        border-radius: var(--radius-8);
+        padding: var(--spacer-16) var(--spacer-8);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: var(--spacer-4);
+      }
+
+      .review-summary__stat-num {
+        font-family: var(--heading-md-font-family);
+        font-size: var(--heading-md-font-size);
+        font-weight: var(--heading-md-font-weight);
+        line-height: 1;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .review-summary__stat--remember .review-summary__stat-num { color: var(--functional-success); }
+      .review-summary__stat--blur .review-summary__stat-num { color: var(--functional-warning); }
+      .review-summary__stat--forgot .review-summary__stat-num { color: var(--functional-danger); }
+
+      .review-summary__stat-label {
+        font-size: var(--body-xs-font-size);
+        color: var(--text-tertiary);
+      }
+
+      .review-summary__actions {
+        display: flex;
+        gap: var(--spacer-8);
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+
+      /* ===== Flashcard ===== */
+      .flashcard-container {
+        width: 100%;
+        max-width: 560px;
+        perspective: 1000px;
+        margin: 0 auto;
+      }
+
+      .flashcard {
+        width: 100%;
+        min-height: 320px;
+        position: relative;
+        cursor: pointer;
+        transform-style: preserve-3d;
+        transition: transform 0.5s ease;
+      }
+
+      .flashcard.flipped {
+        transform: rotateY(180deg);
+      }
+
+      .flashcard-front,
+      .flashcard-back {
+        position: absolute;
+        inset: 0;
+        backface-visibility: hidden;
+        -webkit-backface-visibility: hidden;
+        background: var(--bg-base-secondary);
+        border: 1px solid var(--border-neutral-l2);
+        border-radius: var(--radius-10);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: var(--spacer-32);
+        text-align: center;
+      }
+
+      .flashcard-front {
+        z-index: 2;
+      }
+
+      .flashcard-back {
+        transform: rotateY(180deg);
+        align-items: flex-start;
+        text-align: left;
+      }
+
+      .flashcard-title {
+        font-family: var(--heading-lg-font-family);
+        font-size: var(--heading-lg-font-size);
+        font-weight: var(--heading-lg-font-weight);
+        line-height: var(--heading-lg-line-height);
+        color: var(--text-default);
+        margin-bottom: var(--spacer-16);
+      }
+
+      .flashcard-hint {
+        font-size: var(--body-sm-font-size);
+        color: var(--text-tertiary);
+      }
+
+      .flashcard-content {
+        font-size: var(--body-base-font-size);
+        font-weight: var(--body-base-font-weight);
+        line-height: var(--body-base-line-height);
+        color: var(--text-default);
+        width: 100%;
+        max-height: 240px;
+        overflow-y: auto;
+        overflow-x: hidden;
+        padding-right: var(--spacer-8);
+        scrollbar-width: thin;
+      }
+
+      .flashcard-content::-webkit-scrollbar { width: 4px; }
+      .flashcard-content::-webkit-scrollbar-thumb { background: var(--border-neutral-l2); border-radius: var(--radius-99); }
+      .flashcard-content::-webkit-scrollbar-track { background: transparent; }
+
+      /* Rich HTML content rendering inside flashcard & detail modal */
+      .flashcard-content p, .detail-modal__content p { margin: 0 0 var(--spacer-8); }
+      .flashcard-content p:last-child, .detail-modal__content p:last-child { margin-bottom: 0; }
+      .flashcard-content b, .flashcard-content strong,
+      .detail-modal__content b, .detail-modal__content strong { font-weight: var(--font-weight-semibold); color: var(--text-default); }
+      .flashcard-content ul, .flashcard-content ol,
+      .detail-modal__content ul, .detail-modal__content ol {
+        margin: 0 0 var(--spacer-8);
+        padding-left: var(--spacer-20);
+      }
+      .flashcard-content li, .detail-modal__content li { margin-bottom: var(--spacer-4); }
+      .flashcard-content code, .detail-modal__content code {
+        font-family: var(--font-family-mono, ui-monospace, monospace);
+        font-size: 0.875em;
+        background: var(--fill-neutral);
+        padding: 2px 6px;
+        border-radius: var(--radius-4);
+        color: var(--text-default);
+      }
+      .flashcard-content pre, .detail-modal__content pre {
+        background: var(--fill-neutral);
+        padding: var(--spacer-12);
+        border-radius: var(--radius-6);
+        overflow-x: auto;
+        margin: 0 0 var(--spacer-8);
+        font-size: var(--body-sm-font-size);
+        line-height: var(--body-sm-line-height);
+      }
+      .flashcard-content pre code, .detail-modal__content pre code {
+        background: transparent;
+        padding: 0;
+      }
+      .flashcard-content blockquote, .detail-modal__content blockquote {
+        border-left: 3px solid var(--bg-brand);
+        padding-left: var(--spacer-12);
+        margin: 0 0 var(--spacer-8);
+        color: var(--text-secondary);
+        font-style: italic;
+      }
+      .flashcard-content em, .flashcard-content i,
+      .detail-modal__content em, .detail-modal__content i { color: var(--text-tertiary); }
+
+      .flashcard-content-label {
+        font-family: var(--heading-2xs-font-family);
+        font-size: var(--heading-2xs-font-size);
+        font-weight: var(--heading-2xs-font-weight);
+        color: var(--bg-brand);
+        margin-bottom: var(--spacer-12);
+      }
+
+      /* ===== Review Bottom Bar ===== */
+      .review-bottom-bar {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: var(--spacer-8);
+        padding: var(--spacer-16) var(--spacer-24);
+        border-top: 1px solid var(--border-neutral-l1);
+        flex-wrap: wrap;
+      }
+
+      .review-nav-group {
+        display: flex;
+        align-items: center;
+        gap: var(--spacer-8);
+      }
+
+      .difficulty-group {
+        display: flex;
+        align-items: center;
+        gap: var(--spacer-6);
+      }
+
+      .review-spacer {
+        flex: 1;
+      }
+
+      /* ===== Scrollbar ===== */
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+      /* ===== Empty State ===== */
+      .empty-state {
+        display: none;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: var(--spacer-48) var(--spacer-24);
+        text-align: center;
+      }
+      .empty-state__icon {
+        width: 48px;
+        height: 48px;
+        margin-bottom: var(--spacer-16);
+        opacity: 0.4;
+      }
+      .empty-state__title {
+        font-family: var(--heading-sm-font-family);
+        font-size: var(--heading-sm-font-size);
+        font-weight: var(--heading-sm-font-weight);
+        color: var(--text-secondary);
+        margin-bottom: var(--spacer-4);
+      }
+      .empty-state__desc {
+        font-size: var(--body-sm-font-size);
+        color: var(--text-tertiary);
+      }
+      .empty-state__action {
+        margin-top: var(--spacer-16);
+        padding: 6px var(--spacer-12);
+        border: 1px solid var(--border-neutral-l2);
+        border-radius: var(--radius-6);
+        background: transparent;
+        color: var(--text-default);
+        font-size: var(--body-sm-font-size);
+        cursor: pointer;
+        transition: background 0.15s ease, border-color 0.15s ease;
+      }
+      .empty-state__action:hover {
+        background: var(--bg-base-tertiary);
+        border-color: var(--border-neutral-l3);
+      }
+
+      /* ===== Detail Modal ===== */
+      .detail-modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.6);
+        backdrop-filter: blur(4px);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 200;
+        opacity: 0;
+        transition: opacity 0.2s ease;
+      }
+
+      .detail-modal-overlay--visible {
+        display: flex;
+        opacity: 1;
+      }
+
+      .detail-modal {
+        width: 520px;
+        max-height: 80vh;
+        background: var(--bg-base-secondary);
+        border: 1px solid var(--border-neutral-l2);
+        border-radius: var(--radius-10);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 24px 48px rgba(0, 0, 0, 0.4);
+        transform: scale(0.92) translateY(12px);
+        opacity: 0;
+        transition: transform 0.24s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease;
+      }
+
+      .detail-modal-overlay--visible .detail-modal {
+        transform: scale(1) translateY(0);
+        opacity: 1;
+      }
+
+      @keyframes detailSectionFadeIn {
+        from { opacity: 0; transform: translateY(6px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      .detail-modal-overlay--visible .detail-modal__section {
+        animation: detailSectionFadeIn 0.3s ease backwards;
+      }
+      .detail-modal-overlay--visible .detail-modal__section:nth-child(1) { animation-delay: 0.08s; }
+      .detail-modal-overlay--visible .detail-modal__section:nth-child(2) { animation-delay: 0.14s; }
+      .detail-modal-overlay--visible .detail-modal__section:nth-child(3) { animation-delay: 0.2s; }
+      .detail-modal-overlay--visible .detail-modal__section:nth-child(4) { animation-delay: 0.26s; }
+
+      .detail-modal__header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        padding: var(--spacer-16) var(--spacer-16) var(--spacer-12);
+        border-bottom: 1px solid var(--border-neutral-l1);
+      }
+
+      .detail-modal__title-group {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        min-width: 0;
+      }
+
+      .detail-modal__title {
+        font-family: var(--heading-sm-font-family);
+        font-size: var(--heading-sm-font-size);
+        font-weight: var(--heading-sm-font-weight);
+        line-height: var(--heading-sm-line-height);
+        color: var(--text-default);
+      }
+
+      .detail-modal__source {
+        font-size: var(--body-sm-font-size);
+        font-weight: var(--body-sm-font-weight);
+        line-height: var(--body-sm-line-height);
+        color: var(--text-secondary);
+      }
+
+      .detail-modal__close {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        border: none;
+        border-radius: var(--radius-6);
+        background: transparent;
+        cursor: pointer;
+        color: var(--text-secondary);
+        transition: all 0.12s ease;
+        flex-shrink: 0;
+      }
+
+      .detail-modal__close:hover {
+        background: var(--bg-overlay-l2);
+        color: var(--text-default);
+      }
+
+      .detail-modal__close img { width: 16px; height: 16px; }
+
+      .detail-modal__body {
+        flex: 1;
+        overflow-y: auto;
+        padding: var(--spacer-16);
+      }
+
+      .detail-modal__section-label {
+        font-family: var(--heading-3xs-font-family);
+        font-size: var(--heading-3xs-font-size);
+        font-weight: var(--heading-3xs-font-weight);
+        line-height: var(--heading-3xs-line-height);
+        color: var(--bg-brand);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: var(--spacer-8);
+      }
+
+      .detail-modal__section {
+        margin-bottom: var(--spacer-16);
+      }
+
+      .detail-modal__content {
+        font-size: var(--body-base-font-size);
+        font-weight: var(--body-base-font-weight);
+        line-height: var(--body-base-line-height);
+        color: var(--text-default);
+      }
+
+      .detail-modal__content p {
+        margin-bottom: var(--spacer-8);
+      }
+
+      .detail-modal__content b {
+        color: var(--text-default-hover);
+        font-weight: var(--font-weight-medium);
+      }
+
+      .detail-modal__tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--spacer-4);
+        margin-top: var(--spacer-8);
+      }
+
+      .detail-modal__info-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: var(--spacer-12);
+      }
+
+      .detail-modal__info-item {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+
+      .detail-modal__info-label {
+        font-size: var(--body-xs-font-size);
+        font-weight: var(--body-xs-font-weight);
+        line-height: var(--body-xs-line-height);
+        color: var(--text-tertiary);
+      }
+
+      .detail-modal__info-value {
+        font-size: var(--body-base-font-size);
+        font-weight: var(--font-weight-medium);
+        color: var(--text-default);
+      }
+
+      .detail-modal__mastery {
+        display: flex;
+        align-items: center;
+        gap: var(--spacer-8);
+      }
+
+      .detail-modal__mastery-bar {
+        flex: 1;
+        height: 6px;
+        background: var(--bg-overlay-l2);
+        border-radius: var(--radius-full);
+        overflow: hidden;
+      }
+
+      .detail-modal__mastery-fill {
+        height: 100%;
+        border-radius: var(--radius-full);
+        background: var(--bg-brand);
+        transition: width 0.3s ease;
+      }
+
+      .detail-modal__mastery-text {
+        font-size: var(--body-sm-font-size);
+        font-weight: var(--font-weight-medium);
+        color: var(--bg-brand);
+        flex-shrink: 0;
+      }
+
+      .detail-modal__footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: var(--spacer-12) var(--spacer-16) var(--spacer-16);
+        border-top: 1px solid var(--border-neutral-l1);
+      }
+
+      .detail-modal__meta {
+        font-size: var(--body-sm-font-size);
+        font-weight: var(--body-sm-font-weight);
+        color: var(--text-tertiary);
+      }
+
+      .detail-modal__actions {
+        display: flex;
+        gap: var(--spacer-8);
+      }
+
+      .detail-modal__btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: var(--spacer-4);
+        height: 32px;
+        padding: 0 var(--spacer-12);
+        border-radius: var(--radius-6);
+        font-size: var(--body-sm-font-size);
+        font-weight: var(--font-weight-medium);
+        cursor: pointer;
+        transition: all 0.15s ease;
+      }
+
+      .detail-modal__btn img { width: 14px; height: 14px; }
+
+      .detail-modal__btn--primary {
+        border: none;
+        background: var(--bg-brand);
+        color: var(--text-onbrand);
+      }
+
+      .detail-modal__btn--primary:hover {
+        background: var(--bg-brand-hover);
+      }
+
+      .detail-modal__btn--secondary {
+        border: 1px solid var(--border-neutral-l2);
+        background: transparent;
+        color: var(--text-secondary);
+      }
+
+      .detail-modal__btn--secondary:hover {
+        background: var(--bg-overlay-l1);
+        color: var(--text-default);
+      }
+    </style>
+
+    <main style="display:flex;min-height:100vh;">
+      <!-- Left Sidebar Nav -->
+      <aside style="width:220px;flex-shrink:0;display:flex;flex-direction:column;background:var(--bg-base-secondary);border-right:1px solid var(--border-neutral-l1);padding:var(--spacer-16) 0;">
+        <div style="display:flex;align-items:center;gap:var(--spacer-8);padding:0 var(--spacer-16) var(--spacer-16);">
+          <div style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:var(--radius-6);background:var(--bg-brand);flex-shrink:0;">
+            <img src="../assets/icons/dl_builtin_trae/zap.0c0c0d.svg" width="16" height="16" alt="">
+          </div>
+          <span style="font-size:var(--heading-sm-font-size);font-weight:var(--font-weight-strong);color:var(--text-default);">Ding<span style="color:var(--bg-brand);">Ring</span></span>
+        </div>
+        <nav style="padding:0 var(--spacer-8);display:flex;flex-direction:column;gap:2px;">
+          <a href="group-chat.html" style="display:flex;align-items:center;gap:var(--spacer-8);padding:var(--spacer-8);border-radius:var(--radius-6);color:var(--text-secondary);text-decoration:none;font-size:var(--body-base-font-size);font-weight:var(--font-weight-medium);transition:background 0.12s ease;" data-dom-id="interaction-id-tomiakk">
+            <img src="../assets/icons/dl_builtin_trae/message-circle.svg" width="16" height="16" alt="" style="color:var(--text-tertiary);flex-shrink:0;">
+            <span>群聊</span>
+          </a>
+          <div style="display:flex;align-items:center;gap:var(--spacer-8);padding:var(--spacer-8);border-radius:var(--radius-6);background:rgba(50,240,140,0.1);font-size:var(--body-base-font-size);font-weight:var(--font-weight-medium);color:var(--text-default);">
+            <img src="../assets/icons/dl_builtin_trae/file-text.svg" width="16" height="16" alt="" style="color:var(--bg-brand);flex-shrink:0;">
+            <span>知识卡片管理</span>
+          </div>
+          <a href="knowledge-base.html" style="display:flex;align-items:center;gap:var(--spacer-8);padding:var(--spacer-8);border-radius:var(--radius-6);color:var(--text-secondary);text-decoration:none;font-size:var(--body-base-font-size);font-weight:var(--font-weight-medium);transition:background 0.12s ease;" data-dom-id="interaction-id-xsi5953">
+            <img src="../assets/icons/dl_builtin_trae/layers.svg" width="16" height="16" alt="" style="color:var(--text-tertiary);flex-shrink:0;">
+            <span>知识库管理</span>
+          </a>
+          <a href="agent-management.html" style="display:flex;align-items:center;gap:var(--spacer-8);padding:var(--spacer-8);border-radius:var(--radius-6);color:var(--text-secondary);text-decoration:none;font-size:var(--body-base-font-size);font-weight:var(--font-weight-medium);transition:background 0.12s ease;" data-dom-id="interaction-id-1c362e2">
+            <img src="../assets/icons/dl_builtin_trae/sparkles.svg" width="16" height="16" alt="" style="color:var(--text-tertiary);flex-shrink:0;">
+            <span>Agent 管理</span>
+          </a>
+        </nav>
+      </aside>
+      <!-- Main Content Area -->
+      <div style="flex:1;display:flex;flex-direction:column;min-width:0;">
+      <!-- Top Header Bar -->
+      <header class="header-bar">
+        <div class="header-logo">
+          <img src="../assets/icons/dl_builtin_trae/sparkles.32f08c.svg" alt="DingRing Logo">
+          <span>DingRing</span>
+        </div>
+
+        <div class="header-search">
+          <img class="header-search-icon" src="../assets/icons/dl_builtin_trae/search.svg" alt="">
+          <input type="text" placeholder="搜索知识卡片..." id="searchInput">
+        </div>
+
+        <div class="header-actions">
+          <button class="btn btn--primary" id="startReviewBtn">
+            <img src="../assets/icons/dl_builtin_trae/zap.0c0c0d.svg" alt="" width="14" height="14">
+            开始复习
+          </button>
+        </div>
+      </header>
+
+      <!-- Filter / Tab Bar -->
+      <nav class="filter-bar" id="filterBar">
+        <button class="filter-tab active" data-filter="all">全部卡片 (12)</button>
+        <button class="filter-tab" data-filter="review">待复习 (5)</button>
+        <button class="filter-tab" data-filter="mastered">已掌握 (4)</button>
+        <button class="filter-tab" data-filter="pending">待整理 (3)</button>
+      </nav>
+
+      <!-- Main Card Grid -->
+      <div class="main-content">
+        <div class="card-grid" id="cardGrid">
+
+          <!-- Card 1: 进程调度算法 -->
+          <article class="knowledge-card" data-card-id="card-1" data-status="已收录" data-category="review">
+            <div class="card-quick-actions">
+              <button class="card-quick-btn card-quick-btn--favorite" title="收藏" aria-label="收藏" data-action="favorite">
+                <img src="../assets/icons/dl_builtin_trae/star.svg" alt="">
+              </button>
+              <button class="card-quick-btn card-quick-btn--mastered" title="标记已掌握" aria-label="标记已掌握" data-action="mastered">
+                <img src="../assets/icons/dl_builtin_trae/check.svg" alt="">
+              </button>
+            </div>
+            <div class="card-header">
+              <div class="card-title">进程调度算法</div>
+              <span class="tag tag--success">已收录</span>
+            </div>
+            <p class="card-description">操作系统中的进程调度算法包括先来先服务(FCFS)、短作业优先(SJF)、优先级调度和时间片轮转等策略，用于决定CPU下一个执行的进程。</p>
+            <div class="card-tags">
+              <span class="tag tag--brand">操作系统</span>
+              <span class="tag tag--neutral">408核心</span>
+            </div>
+            <div class="card-meta">
+              <span class="card-meta-item">
+                <img src="../assets/icons/dl_builtin_trae/refresh.svg" alt="">已复习 3 次
+              </span>
+              <span class="card-meta-item">
+                <img src="../assets/icons/dl_builtin_trae/clock.svg" alt="">2025-01-15
+              </span>
+            </div>
+            <div class="card-actions">
+              <button class="btn btn--secondary btn--sm open-detail-btn">查看详情</button>
+              <button class="btn btn--ghost btn--sm">加入复习</button>
+            </div>
+          </article>
+
+          <!-- Card 2: 死锁检测与预防 -->
+          <article class="knowledge-card" data-card-id="card-2" data-status="已收录" data-category="mastered">
+            <div class="card-quick-actions">
+              <button class="card-quick-btn card-quick-btn--favorite" title="收藏" aria-label="收藏" data-action="favorite">
+                <img src="../assets/icons/dl_builtin_trae/star.svg" alt="">
+              </button>
+              <button class="card-quick-btn card-quick-btn--mastered" title="标记已掌握" aria-label="标记已掌握" data-action="mastered">
+                <img src="../assets/icons/dl_builtin_trae/check.svg" alt="">
+              </button>
+            </div>
+            <div class="card-header">
+              <div class="card-title">死锁检测与预防</div>
+              <span class="tag tag--success">已收录</span>
+            </div>
+            <p class="card-description">死锁是多个进程因竞争资源而造成的互相等待的现象。预防策略包括破坏互斥、破坏请求与保持、破坏不可抢占、破坏循环等待四个条件。</p>
+            <div class="card-tags">
+              <span class="tag tag--brand">操作系统</span>
+              <span class="tag tag--neutral">408核心</span>
+            </div>
+            <div class="card-meta">
+              <span class="card-meta-item">
+                <img src="../assets/icons/dl_builtin_trae/refresh.svg" alt="">已复习 5 次
+              </span>
+              <span class="card-meta-item">
+                <img src="../assets/icons/dl_builtin_trae/clock.svg" alt="">2025-01-12
+              </span>
+            </div>
+            <div class="card-actions">
+              <button class="btn btn--secondary btn--sm open-detail-btn">查看详情</button>
+              <button class="btn btn--ghost btn--sm">加入复习</button>
+            </div>
+          </article>
+
+          <!-- Card 3: 虚拟内存机制 -->
+          <article class="knowledge-card" data-card-id="card-3" data-status="已收录" data-category="review">
+            <div class="card-quick-actions">
+              <button class="card-quick-btn card-quick-btn--favorite" title="收藏" aria-label="收藏" data-action="favorite">
+                <img src="../assets/icons/dl_builtin_trae/star.svg" alt="">
+              </button>
+              <button class="card-quick-btn card-quick-btn--mastered" title="标记已掌握" aria-label="标记已掌握" data-action="mastered">
+                <img src="../assets/icons/dl_builtin_trae/check.svg" alt="">
+              </button>
+            </div>
+            <div class="card-header">
+              <div class="card-title">虚拟内存机制</div>
+              <span class="tag tag--success">已收录</span>
+            </div>
+            <p class="card-description">虚拟内存将程序使用的地址空间与物理内存分离，通过页表映射实现按需加载，使每个进程拥有独立的地址空间。</p>
+            <div class="card-tags">
+              <span class="tag tag--brand">操作系统</span>
+              <span class="tag tag--neutral">408核心</span>
+            </div>
+            <div class="card-meta">
+              <span class="card-meta-item">
+                <img src="../assets/icons/dl_builtin_trae/refresh.svg" alt="">已复习 2 次
+              </span>
+              <span class="card-meta-item">
+                <img src="../assets/icons/dl_builtin_trae/clock.svg" alt="">2025-01-10
+              </span>
+            </div>
+            <div class="card-actions">
+              <button class="btn btn--secondary btn--sm open-detail-btn">查看详情</button>
+              <button class="btn btn--ghost btn--sm">加入复习</button>
+            </div>
+          </article>
+
+          <!-- Card 4: 页面置换算法 -->
+          <article class="knowledge-card" data-card-id="card-4" data-status="待整理" data-category="pending">
+            <div class="card-quick-actions">
+              <button class="card-quick-btn card-quick-btn--favorite" title="收藏" aria-label="收藏" data-action="favorite">
+                <img src="../assets/icons/dl_builtin_trae/star.svg" alt="">
+              </button>
+              <button class="card-quick-btn card-quick-btn--mastered" title="标记已掌握" aria-label="标记已掌握" data-action="mastered">
+                <img src="../assets/icons/dl_builtin_trae/check.svg" alt="">
+              </button>
+            </div>
+            <div class="card-header">
+              <div class="card-title">页面置换算法</div>
+              <span class="tag tag--warning">待整理</span>
+            </div>
+            <p class="card-description">当物理内存不足时需要选择页面换出，常见算法包括FIFO、LRU、Clock算法和OPT最优置换算法，各有不同的性能特征。</p>
+            <div class="card-tags">
+              <span class="tag tag--brand">操作系统</span>
+              <span class="tag tag--neutral">408核心</span>
+            </div>
+            <div class="card-meta">
+              <span class="card-meta-item">
+                <img src="../assets/icons/dl_builtin_trae/refresh.svg" alt="">已复习 1 次
+              </span>
+              <span class="card-meta-item">
+                <img src="../assets/icons/dl_builtin_trae/clock.svg" alt="">2025-01-08
+              </span>
+            </div>
+            <div class="card-actions">
+              <button class="btn btn--secondary btn--sm open-detail-btn">查看详情</button>
+              <button class="btn btn--ghost btn--sm">加入复习</button>
+            </div>
+          </article>
+
+          <!-- Card 5: 银行家算法 -->
+          <article class="knowledge-card" data-card-id="card-5" data-status="已收录" data-category="review">
+            <div class="card-quick-actions">
+              <button class="card-quick-btn card-quick-btn--favorite" title="收藏" aria-label="收藏" data-action="favorite">
+                <img src="../assets/icons/dl_builtin_trae/star.svg" alt="">
+              </button>
+              <button class="card-quick-btn card-quick-btn--mastered" title="标记已掌握" aria-label="标记已掌握" data-action="mastered">
+                <img src="../assets/icons/dl_builtin_trae/check.svg" alt="">
+              </button>
+            </div>
+            <div class="card-header">
+              <div class="card-title">银行家算法</div>
+              <span class="tag tag--success">已收录</span>
+            </div>
+            <p class="card-description">银行家算法是一种避免死锁的资源分配算法，通过模拟资源分配检查系统是否处于安全状态，确保每次分配后仍能找到安全序列。</p>
+            <div class="card-tags">
+              <span class="tag tag--brand">操作系统</span>
+              <span class="tag tag--neutral">408核心</span>
+            </div>
+            <div class="card-meta">
+              <span class="card-meta-item">
+                <img src="../assets/icons/dl_builtin_trae/refresh.svg" alt="">已复习 4 次
+              </span>
+              <span class="card-meta-item">
+                <img src="../assets/icons/dl_builtin_trae/clock.svg" alt="">2025-01-05
+              </span>
+            </div>
+            <div class="card-actions">
+              <button class="btn btn--secondary btn--sm open-detail-btn">查看详情</button>
+              <button class="btn btn--ghost btn--sm">加入复习</button>
+            </div>
+          </article>
+
+          <!-- Card 6: 文件系统 -->
+          <article class="knowledge-card" data-card-id="card-6" data-status="待整理" data-category="pending">
+            <div class="card-quick-actions">
+              <button class="card-quick-btn card-quick-btn--favorite" title="收藏" aria-label="收藏" data-action="favorite">
+                <img src="../assets/icons/dl_builtin_trae/star.svg" alt="">
+              </button>
+              <button class="card-quick-btn card-quick-btn--mastered" title="标记已掌握" aria-label="标记已掌握" data-action="mastered">
+                <img src="../assets/icons/dl_builtin_trae/check.svg" alt="">
+              </button>
+            </div>
+            <div class="card-header">
+              <div class="card-title">文件系统</div>
+              <span class="tag tag--warning">待整理</span>
+            </div>
+            <p class="card-description">文件系统负责数据的组织、存储和检索，涉及目录结构、文件分配方式(FAT、索引分配)、空闲空间管理和磁盘调度等内容。</p>
+            <div class="card-tags">
+              <span class="tag tag--brand">操作系统</span>
+              <span class="tag tag--neutral">408核心</span>
+            </div>
+            <div class="card-meta">
+              <span class="card-meta-item">
+                <img src="../assets/icons/dl_builtin_trae/refresh.svg" alt="">已复习 0 次
+              </span>
+              <span class="card-meta-item">
+                <img src="../assets/icons/dl_builtin_trae/clock.svg" alt="">2025-01-02
+              </span>
+            </div>
+            <div class="card-actions">
+              <button class="btn btn--secondary btn--sm open-detail-btn">查看详情</button>
+              <button class="btn btn--ghost btn--sm">加入复习</button>
+            </div>
+          </article>
+
+        </div>
+
+        <!-- Empty State -->
+         <div class="empty-state" id="emptyState">
+           <img class="empty-state__icon" src="../assets/icons/dl_builtin_trae/search.svg" alt="">
+           <div class="empty-state__title">未找到匹配的知识卡片</div>
+           <div class="empty-state__desc">尝试调整搜索关键词或切换筛选条件</div>
+           <button class="empty-state__action" id="cardEmptyReset">清除筛选</button>
+         </div>
+      </div>
+
+      <!-- Review Mode Overlay -->
+      <div class="review-overlay" id="reviewOverlay">
+        <!-- Top bar -->
+        <div class="review-top-bar">
+          <div style="display:flex;align-items:center;gap:var(--spacer-8);">
+            <span style="font-family:var(--heading-sm-font-family);font-size:var(--heading-sm-font-size);font-weight:var(--heading-sm-font-weight);color:var(--text-default);">复习模式</span>
+          </div>
+          <div class="review-progress" id="reviewProgress">
+            <span class="review-progress-text" id="reviewProgressText">1 / 5</span>
+            <div class="review-progress-bar">
+              <div class="review-progress-fill" id="reviewProgressFill" style="width:20%"></div>
+            </div>
+          </div>
+          <button class="btn btn--ghost btn--sm" id="endReviewBtn">
+            <img src="../assets/icons/dl_builtin_trae/x.svg" alt="" width="14" height="14">
+            结束复习
+          </button>
+        </div>
+
+        <!-- Flashcard -->
+        <div class="flashcard-container" id="flashcardContainer">
+          <div class="flashcard" id="flashcard">
+            <div class="flashcard-front">
+              <div class="flashcard-title" id="flashcardTitle">进程调度算法</div>
+              <div class="flashcard-hint">点击翻转查看答案 <span style="color:var(--text-quaternary);margin-left:var(--spacer-8);">Space</span></div>
+            </div>
+            <div class="flashcard-back">
+              <div class="flashcard-content-label">详细内容</div>
+              <div class="flashcard-content" id="flashcardContent">
+                操作系统中的进程调度算法包括先来先服务(FCFS)、短作业优先(SJF)、优先级调度和时间片轮转等策略，用于决定CPU下一个执行的进程。FCFS按照请求顺序调度，可能产生护航效应；SJF选择执行时间最短的进程，但可能导致饥饿。
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Review Summary (hidden by default, shown on completion) -->
+        <div class="review-summary" id="reviewSummary">
+          <div class="review-summary__icon">
+            <img src="../assets/icons/dl_builtin_trae/check.svg" alt="" width="32" height="32" style="filter: brightness(0) saturate(100%) invert(30%) sepia(98%) saturate(2000%) hue-rotate(120deg);">
+          </div>
+          <div class="review-summary__title">复习完成</div>
+          <div class="review-summary__desc" id="reviewSummaryDesc">你已完成本轮 5 张卡片的复习，继续加油！</div>
+          <div class="review-summary__stats">
+            <div class="review-summary__stat review-summary__stat--remember">
+              <span class="review-summary__stat-num" id="summaryRemember">0</span>
+              <span class="review-summary__stat-label">记住</span>
+            </div>
+            <div class="review-summary__stat review-summary__stat--blur">
+              <span class="review-summary__stat-num" id="summaryBlur">0</span>
+              <span class="review-summary__stat-label">模糊</span>
+            </div>
+            <div class="review-summary__stat review-summary__stat--forgot">
+              <span class="review-summary__stat-num" id="summaryForgot">0</span>
+              <span class="review-summary__stat-label">忘记</span>
+            </div>
+          </div>
+          <div class="review-summary__actions">
+            <button class="btn btn--primary btn--md" id="restartReviewBtn">再复习一次</button>
+            <button class="btn btn--ghost btn--md" id="exitReviewBtn">返回卡片列表</button>
+          </div>
+        </div>
+
+        <!-- Bottom bar -->
+        <div class="review-bottom-bar" id="reviewBottomBar">
+          <div class="review-nav-group">
+            <button class="btn btn--ghost btn--sm" id="prevCardBtn">
+              <img src="../assets/icons/dl_builtin_trae/arrow-left.svg" alt="" width="14" height="14">
+              上一个
+              <span class="review-keyhint-divider"></span>
+              <span class="review-keyhint"><kbd>←</kbd></span>
+            </button>
+            <button class="btn btn--ghost btn--sm" id="nextCardBtn">
+              <span class="review-keyhint"><kbd>→</kbd></span>
+              <span class="review-keyhint-divider"></span>
+              下一个
+              <img src="../assets/icons/dl_builtin_trae/arrow-right.svg" alt="" width="14" height="14">
+            </button>
+          </div>
+          <div class="review-spacer"></div>
+          <div class="difficulty-group">
+            <button class="btn btn--danger btn--sm" id="diffForgot">
+              忘记
+              <span class="review-keyhint-divider"></span>
+              <span class="review-keyhint"><kbd>1</kbd></span>
+            </button>
+            <button class="btn btn--warning btn--sm" id="diffBlur">
+              模糊
+              <span class="review-keyhint-divider"></span>
+              <span class="review-keyhint"><kbd>2</kbd></span>
+            </button>
+            <button class="btn btn--success btn--sm" id="diffRemember">
+              记住
+              <span class="review-keyhint-divider"></span>
+              <span class="review-keyhint"><kbd>3</kbd></span>
+            </button>
+          </div>
+        </div>
+      </div>
+      </div>
+    </main>
+
+    <!-- Knowledge Card Detail Modal -->
+    <div class="detail-modal-overlay" id="detailModalOverlay">
+      <div class="detail-modal" id="detailModal">
+        <div class="detail-modal__header">
+          <div class="detail-modal__title-group">
+            <span class="detail-modal__title" id="detailModalTitle"></span>
+            <span class="detail-modal__source" id="detailModalSource"></span>
+          </div>
+          <button class="detail-modal__close" id="detailModalClose">
+            <img src="../assets/icons/dl_builtin_trae/x.svg" width="16" height="16" alt="">
+          </button>
+        </div>
+        <div class="detail-modal__body">
+          <!-- Tags -->
+          <div class="detail-modal__section">
+            <div class="detail-modal__section-label">分类标签</div>
+            <div class="detail-modal__tags" id="detailModalTags"></div>
+          </div>
+          <!-- Front content -->
+          <div class="detail-modal__section">
+            <div class="detail-modal__section-label">正面内容</div>
+            <div class="detail-modal__content" id="detailModalFront"></div>
+          </div>
+          <!-- Back content -->
+          <div class="detail-modal__section">
+            <div class="detail-modal__section-label">背面内容</div>
+            <div class="detail-modal__content" id="detailModalBack"></div>
+          </div>
+          <!-- Info grid -->
+          <div class="detail-modal__section">
+            <div class="detail-modal__section-label">学习信息</div>
+            <div class="detail-modal__info-grid">
+              <div class="detail-modal__info-item">
+                <span class="detail-modal__info-label">创建时间</span>
+                <span class="detail-modal__info-value" id="detailModalCreated"></span>
+              </div>
+              <div class="detail-modal__info-item">
+                <span class="detail-modal__info-label">复习次数</span>
+                <span class="detail-modal__info-value" id="detailModalReviews"></span>
+              </div>
+              <div class="detail-modal__info-item" style="grid-column: 1 / -1;">
+                <span class="detail-modal__info-label">掌握程度</span>
+                <div class="detail-modal__mastery">
+                  <div class="detail-modal__mastery-bar">
+                    <div class="detail-modal__mastery-fill" id="detailModalMasteryFill"></div>
+                  </div>
+                  <span class="detail-modal__mastery-text" id="detailModalMasteryText"></span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="detail-modal__footer">
+          <span class="detail-modal__meta" id="detailModalMeta"></span>
+          <div class="detail-modal__actions">
+            <button class="detail-modal__btn detail-modal__btn--secondary" id="detailModalEditBtn">
+              <img src="../assets/icons/dl_builtin_trae/edit.svg" width="14" height="14" alt="">
+              编辑
+            </button>
+            <button class="detail-modal__btn detail-modal__btn--primary" id="detailModalReviewBtn">
+              <img src="../assets/icons/dl_builtin_trae/sparkles.32f08c.svg" width="14" height="14" alt="">
+              加入复习
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // ===== Card data for review mode =====
+      const reviewCards = [
+        {
+          title: '进程调度算法',
+          content: '<p>操作系统中的进程调度算法包括<b>先来先服务(FCFS)</b>、<b>短作业优先(SJF)</b>、<b>优先级调度</b>和<b>时间片轮转</b>等策略，用于决定CPU下一个执行的进程。</p><ul><li>FCFS 按照请求顺序调度，可能产生"护航效应"</li><li>SJF 选择执行时间最短的进程，但可能导致饥饿</li><li>时间片轮转适合分时系统</li></ul>'
+        },
+        {
+          title: '死锁检测与预防',
+          content: '<p>死锁是多个进程因竞争资源而造成的互相等待的现象。</p><p><b>预防策略：</b>破坏以下四个条件之一</p><ol><li>互斥条件</li><li>请求与保持</li><li>不可抢占</li><li>循环等待</li></ol><blockquote>银行家算法通过安全性序列判断避免死锁。</blockquote>'
+        },
+        {
+          title: '虚拟内存机制',
+          content: '<p>虚拟内存将程序使用的<b>地址空间</b>与<b>物理内存</b>分离，通过页表映射实现按需加载。</p><ul><li><code>TLB</code> 加速地址转换</li><li><code>缺页中断</code> 触发页面调入</li></ul><p><b>优点：</b>更大地址空间、内存隔离、共享内存、内存超分配。</p>'
+        },
+        {
+          title: '页面置换算法',
+          content: '<p>当物理内存不足时需要选择页面换出。</p><ul><li><b>FIFO</b> 先入先出，可能产生 <code>Belady异常</code></li><li><b>LRU</b> 最近最少使用，性能好但开销大</li><li><b>Clock</b> 近似LRU，使用访问位优化</li><li><b>OPT</b> 最优置换（理论最优，不可实现）</li></ul>'
+        },
+        {
+          title: '银行家算法',
+          content: '<p>银行家算法是一种<b>避免死锁</b>的资源分配算法。</p><p><b>核心思想：</b>在分配资源前先模拟分配，检查系统是否仍处于安全状态（能找到安全序列）。</p><pre><code>Need矩阵 = Max矩阵 - Allocation矩阵</code></pre><blockquote>逐个检查进程，若 Need[i] ≤ Available，则假定分配并更新 Available。</blockquote>'
+        }
+      ];
+
+      let currentReviewIndex = 0;
+      let reviewDifficulty = []; // 'forgot' | 'blur' | 'remember'
+      let reviewFinished = false;
+
+      // ===== DOM references =====
+      const filterBar = document.getElementById('filterBar');
+      const cardGrid = document.getElementById('cardGrid');
+      const startReviewBtn = document.getElementById('startReviewBtn');
+      const reviewOverlay = document.getElementById('reviewOverlay');
+      const endReviewBtn = document.getElementById('endReviewBtn');
+      const flashcard = document.getElementById('flashcard');
+      const flashcardContainer = document.getElementById('flashcardContainer');
+      const flashcardTitle = document.getElementById('flashcardTitle');
+      const flashcardContent = document.getElementById('flashcardContent');
+      const reviewProgress = document.getElementById('reviewProgress');
+      const reviewProgressText = document.getElementById('reviewProgressText');
+      const reviewProgressFill = document.getElementById('reviewProgressFill');
+      const reviewSummary = document.getElementById('reviewSummary');
+      const reviewSummaryDesc = document.getElementById('reviewSummaryDesc');
+      const reviewBottomBar = document.getElementById('reviewBottomBar');
+      const prevCardBtn = document.getElementById('prevCardBtn');
+      const nextCardBtn = document.getElementById('nextCardBtn');
+      const diffForgot = document.getElementById('diffForgot');
+      const diffBlur = document.getElementById('diffBlur');
+      const diffRemember = document.getElementById('diffRemember');
+      const restartReviewBtn = document.getElementById('restartReviewBtn');
+      const exitReviewBtn = document.getElementById('exitReviewBtn');
+
+      // ===== Tab switching =====
+      filterBar.addEventListener('click', function(e) {
+        const tab = e.target.closest('.filter-tab');
+        if (!tab) return;
+
+        // Update active state
+        filterBar.querySelectorAll('.filter-tab').forEach(function(t) {
+          t.classList.remove('active');
+        });
+        tab.classList.add('active');
+
+        applyFilters();
+      });
+
+      // ===== Search filter =====
+      document.getElementById('searchInput').addEventListener('input', applyFilters);
+
+      // ===== Unified filter + search logic =====
+      function applyFilters() {
+        var activeTab = filterBar.querySelector('.filter-tab.active');
+        var filter = activeTab ? activeTab.getAttribute('data-filter') : 'all';
+        var query = document.getElementById('searchInput').value.trim().toLowerCase();
+        var cards = cardGrid.querySelectorAll('.knowledge-card');
+        var visibleCount = 0;
+
+        cards.forEach(function(card) {
+          // Category filter
+          var category = card.getAttribute('data-category');
+          var matchesFilter = (filter === 'all' || category === filter);
+
+          // Search: match title, description, tags
+          var title = (card.querySelector('.card-title') || {}).textContent || '';
+          var desc = (card.querySelector('.card-description') || {}).textContent || '';
+          var tagEls = card.querySelectorAll('.card-tags .tag');
+          var tags = '';
+          tagEls.forEach(function(t) { tags += t.textContent + ' '; });
+          var haystack = (title + ' ' + desc + ' ' + tags).toLowerCase();
+          var matchesSearch = !query || haystack.indexOf(query) !== -1;
+
+          if (matchesFilter && matchesSearch) {
+            card.style.display = '';
+            visibleCount++;
+          } else {
+            card.style.display = 'none';
+          }
+        });
+
+        // Show/hide empty state
+        var emptyState = document.getElementById('emptyState');
+        if (emptyState) {
+          emptyState.style.display = visibleCount === 0 ? 'flex' : 'none';
+        }
+      }
+
+      // ===== Reset filters from empty state =====
+      var cardEmptyReset = document.getElementById('cardEmptyReset');
+      if (cardEmptyReset) {
+        cardEmptyReset.addEventListener('click', function() {
+          document.getElementById('searchInput').value = '';
+          filterBar.querySelectorAll('.filter-tab').forEach(function(t) {
+            t.classList.remove('active');
+          });
+          filterBar.querySelector('.filter-tab').classList.add('active');
+          applyFilters();
+        });
+      }
+
+      // ===== Review mode toggle =====
+      function startReview() {
+        currentReviewIndex = 0;
+        reviewDifficulty = new Array(reviewCards.length).fill(null);
+        reviewFinished = false;
+        flashcardContainer.style.display = '';
+        reviewBottomBar.style.display = '';
+        reviewSummary.classList.remove('visible');
+        clearDifficultySelection();
+        updateFlashcard();
+        reviewOverlay.classList.add('visible');
+      }
+
+      function endReview() {
+        reviewOverlay.classList.remove('visible');
+        flashcard.classList.remove('flipped');
+        reviewFinished = false;
+      }
+
+      function clearDifficultySelection() {
+        [diffForgot, diffBlur, diffRemember].forEach(function(b) {
+          b.classList.remove('is-selected');
+        });
+      }
+
+      function setDifficultySelection(level) {
+        clearDifficultySelection();
+        var btn = level === 'forgot' ? diffForgot : (level === 'blur' ? diffBlur : diffRemember);
+        btn.classList.add('is-selected');
+      }
+
+      startReviewBtn.addEventListener('click', startReview);
+      endReviewBtn.addEventListener('click', endReview);
+      exitReviewBtn.addEventListener('click', endReview);
+
+      restartReviewBtn.addEventListener('click', function() {
+        startReview();
+      });
+
+      // ===== Flashcard flip =====
+      flashcard.addEventListener('click', function() {
+        flashcard.classList.toggle('flipped');
+      });
+
+      // ===== Flashcard navigation =====
+      function updateFlashcard() {
+        const card = reviewCards[currentReviewIndex];
+        flashcardTitle.textContent = card.title;
+        flashcardContent.innerHTML = card.content;
+        reviewProgressText.textContent = (currentReviewIndex + 1) + ' / ' + reviewCards.length;
+        var pct = Math.round(((currentReviewIndex + 1) / reviewCards.length) * 100);
+        reviewProgressFill.style.width = pct + '%';
+        flashcard.classList.remove('flipped');
+        // Restore previous difficulty selection for this card
+        var prev = reviewDifficulty[currentReviewIndex];
+        if (prev) {
+          setDifficultySelection(prev);
+        } else {
+          clearDifficultySelection();
+        }
+      }
+
+      prevCardBtn.addEventListener('click', function() {
+        if (currentReviewIndex > 0) {
+          currentReviewIndex--;
+          updateFlashcard();
+        }
+      });
+
+      nextCardBtn.addEventListener('click', function() {
+        if (currentReviewIndex < reviewCards.length - 1) {
+          currentReviewIndex++;
+          updateFlashcard();
+        }
+      });
+
+      // ===== Difficulty buttons =====
+      function recordDifficulty(level) {
+        reviewDifficulty[currentReviewIndex] = level;
+        setDifficultySelection(level);
+        // Auto-advance after short delay
+        setTimeout(function() {
+          if (currentReviewIndex < reviewCards.length - 1) {
+            currentReviewIndex++;
+            updateFlashcard();
+          } else {
+            showReviewSummary();
+          }
+        }, 220);
+      }
+
+      function showReviewSummary() {
+        reviewFinished = true;
+        var remember = reviewDifficulty.filter(function(d){ return d === 'remember'; }).length;
+        var blur = reviewDifficulty.filter(function(d){ return d === 'blur'; }).length;
+        var forgot = reviewDifficulty.filter(function(d){ return d === 'forgot'; }).length;
+        document.getElementById('summaryRemember').textContent = remember;
+        document.getElementById('summaryBlur').textContent = blur;
+        document.getElementById('summaryForgot').textContent = forgot;
+        // Adaptive description
+        var total = reviewCards.length;
+        var desc;
+        if (remember >= total * 0.8) {
+          desc = '出色！大部分卡片你已熟练掌握，可以挑战更难的内容。';
+        } else if (remember + blur >= total * 0.6) {
+          desc = '整体掌握不错，建议把「模糊」的卡片再过一遍加深记忆。';
+        } else {
+          desc = '这些内容还需多加复习，建议针对「忘记」的卡片重点学习。';
+        }
+        reviewSummaryDesc.textContent = desc + '（本轮 ' + total + ' 张）';
+        // Hide flashcard & bottom bar, show summary
+        flashcardContainer.style.display = 'none';
+        reviewBottomBar.style.display = 'none';
+        reviewSummary.classList.add('visible');
+      }
+
+      diffForgot.addEventListener('click', function() { recordDifficulty('forgot'); });
+      diffBlur.addEventListener('click', function() { recordDifficulty('blur'); });
+      diffRemember.addEventListener('click', function() { recordDifficulty('remember'); });
+
+      // ===== Keyboard shortcuts (review mode only) =====
+      document.addEventListener('keydown', function(e) {
+        if (!reviewOverlay.classList.contains('visible')) return;
+        // Don't interfere with modifiers
+        if (e.ctrlKey || e.metaKey || e.altKey) return;
+
+        switch (e.key) {
+          case 'ArrowLeft':
+            e.preventDefault();
+            if (currentReviewIndex > 0) {
+              currentReviewIndex--;
+              updateFlashcard();
+            }
+            break;
+          case 'ArrowRight':
+            e.preventDefault();
+            if (currentReviewIndex < reviewCards.length - 1) {
+              currentReviewIndex++;
+              updateFlashcard();
+            }
+            break;
+          case ' ':
+          case 'Spacebar':
+            e.preventDefault();
+            if (!reviewFinished) {
+              flashcard.classList.toggle('flipped');
+            }
+            break;
+          case '1':
+            e.preventDefault();
+            if (!reviewFinished) recordDifficulty('forgot');
+            break;
+          case '2':
+            e.preventDefault();
+            if (!reviewFinished) recordDifficulty('blur');
+            break;
+          case '3':
+            e.preventDefault();
+            if (!reviewFinished) recordDifficulty('remember');
+            break;
+          case 'Escape':
+            e.preventDefault();
+            if (reviewFinished) {
+              endReview();
+            }
+            break;
+        }
+      });
+
+      // ===== Detail modal data =====
+      var detailCardData = {
+        'card-1': {
+          title: '进程调度算法',
+          source: '来源：408 讨论群 · DeepSeek, Kimi, Claude',
+          tags: ['操作系统', '进程管理', '408核心'],
+          front: '<p>操作系统中的进程调度算法包括先来先服务(FCFS)、短作业优先(SJF)、优先级调度和时间片轮转等策略，用于决定CPU下一个执行的进程。</p>',
+          back: '<p><b>主要算法：</b></p><p>1. <b>先来先服务 (FCFS)</b> — 按进程到达顺序调度，简单但可能导致"护航效应"。</p><p>2. <b>短作业优先 (SJF)</b> — 选择预计运行时间最短的进程，理论上能获得最短平均等待时间，但可能导致长进程"饥饿"。</p><p>3. <b>优先级调度</b> — 根据进程优先级分配 CPU，可分为抢占式和非抢占式。静态优先级可能导致低优先级进程饥饿。</p><p>4. <b>时间片轮转 (RR)</b> — 每个进程分配固定时间片，适合分时系统。</p><p>5. <b>多级反馈队列 (MLFQ)</b> — 综合上述算法优点，动态调整优先级，是实际操作系统广泛采用的方案。</p>',
+          createdAt: '2025-01-15',
+          reviewCount: 3,
+          mastery: 60
+        },
+        'card-2': {
+          title: '死锁检测与预防',
+          source: '来源：408 讨论群 · Claude',
+          tags: ['操作系统', '死锁', '408核心'],
+          front: '<p>死锁是多个进程因竞争资源而造成的互相等待的现象。预防策略包括破坏互斥、破坏请求与保持、破坏不可抢占、破坏循环等待四个条件。</p>',
+          back: '<p><b>死锁产生的四个必要条件：</b></p><p>1. <b>互斥条件</b> — 资源在任一时刻只能被一个进程使用。</p><p>2. <b>占有并等待</b> — 进程持有至少一个资源，同时在等待获取其他资源。</p><p>3. <b>不可抢占</b> — 资源不能被强行从持有它的进程中夺走。</p><p>4. <b>循环等待</b> — 存在进程的循环等待链。</p><p><b>死锁预防策略：</b>破坏上述四个条件之一即可。常用银行家算法进行死锁避免。</p><p><b>死锁检测：</b>通过资源分配图检测是否存在环路。检测到死锁后可通过进程终止或资源抢占进行恢复。</p>',
+          createdAt: '2025-01-12',
+          reviewCount: 5,
+          mastery: 80
+        },
+        'card-3': {
+          title: '虚拟内存机制',
+          source: '来源：408 讨论群 · Kimi, Claude',
+          tags: ['操作系统', '内存管理', '408核心'],
+          front: '<p>虚拟内存将程序使用的地址空间与物理内存分离，通过页表映射实现按需加载，使每个进程拥有独立的地址空间。</p>',
+          back: '<p><b>核心概念：</b></p><p>1. <b>页表</b> — 实现虚拟地址到物理地址的映射。</p><p>2. <b>TLB（快表）</b> — 加速地址翻译的缓存。</p><p>3. <b>缺页中断</b> — 访问不在内存的页面时触发，将页面从磁盘调入内存。</p><p><b>优点：</b>更大地址空间、内存隔离、共享内存、内存超分配。</p>',
+          createdAt: '2025-01-10',
+          reviewCount: 2,
+          mastery: 40
+        },
+        'card-4': {
+          title: '页面置换算法',
+          source: '来源：408 讨论群 · 待整理',
+          tags: ['操作系统', '内存管理', '待整理'],
+          front: '<p>当物理内存不足时需要选择页面换出，常见算法包括FIFO、LRU、Clock算法和OPT最优置换算法，各有不同的性能特征。</p>',
+          back: '<p>1. <b>FIFO（先进先出）</b> — 淘汰最早进入内存的页面，可能产生Belady异常。</p><p>2. <b>LRU（最近最少使用）</b> — 淘汰最长时间未被访问的页面，性能好但开销大。</p><p>3. <b>Clock算法</b> — 近似LRU，使用访问位和修改位优化实现。</p><p>4. <b>OPT（最优置换）</b> — 淘汰将来最长时间不会被访问的页面，理论最优但不可实现。</p><p><i>内容待补充完善...</i></p>',
+          createdAt: '2025-01-08',
+          reviewCount: 1,
+          mastery: 20
+        },
+        'card-5': {
+          title: '银行家算法',
+          source: '来源：408 讨论群 · DeepSeek, Claude',
+          tags: ['操作系统', '死锁', '408核心'],
+          front: '<p>银行家算法是一种避免死锁的资源分配算法，通过模拟资源分配检查系统是否处于安全状态，确保每次分配后仍能找到安全序列。</p>',
+          back: '<p><b>核心思想：</b>在分配资源前先模拟分配，检查系统是否仍处于安全状态（能找到安全序列）。</p><p><b>关键数据结构：</b></p><p>• <b>Available</b> — 可用资源向量</p><p>• <b>Max</b> — 进程最大需求矩阵</p><p>• <b>Allocation</b> — 已分配矩阵</p><p>• <b>Need</b> = Max - Allocation</p><p><b>安全性算法：</b>逐个检查进程，若 Need[i] <= Available，则假定分配，更新 Available，重复直到所有进程完成或无法继续。</p>',
+          createdAt: '2025-01-05',
+          reviewCount: 4,
+          mastery: 70
+        },
+        'card-6': {
+          title: '文件系统',
+          source: '来源：408 讨论群 · 待整理',
+          tags: ['操作系统', '文件管理', '待整理'],
+          front: '<p>文件系统负责数据的组织、存储和检索，涉及目录结构、文件分配方式(FAT、索引分配)、空闲空间管理和磁盘调度等内容。</p>',
+          back: '<p><b>主要内容：</b></p><p>1. <b>目录结构</b> — 单级、两级、树形、无环图、通用图目录。</p><p>2. <b>文件分配方式</b> — 连续分配、链接分配、索引分配。</p><p>3. <b>空闲空间管理</b> — 位图、链表、索引。</p><p>4. <b>磁盘调度</b> — FCFS、SSTF、SCAN、C-SCAN。</p><p><i>内容待补充完善...</i></p>',
+          createdAt: '2025-01-02',
+          reviewCount: 0,
+          mastery: 10
+        }
+      };
+
+      // ===== Detail modal logic =====
+      var detailModalOverlay = document.getElementById('detailModalOverlay');
+      var detailModal = document.getElementById('detailModal');
+      var detailModalClose = document.getElementById('detailModalClose');
+
+      function openDetailModal(cardId) {
+        var card = detailCardData[cardId];
+        if (!card) return;
+
+        document.getElementById('detailModalTitle').textContent = card.title;
+        document.getElementById('detailModalSource').textContent = card.source;
+        document.getElementById('detailModalFront').innerHTML = card.front;
+        document.getElementById('detailModalBack').innerHTML = card.back;
+        document.getElementById('detailModalCreated').textContent = card.createdAt;
+        document.getElementById('detailModalReviews').textContent = card.reviewCount + ' 次';
+        document.getElementById('detailModalMeta').textContent = '创建于 ' + card.createdAt + ' · 复习 ' + card.reviewCount + ' 次';
+
+        // Mastery bar
+        document.getElementById('detailModalMasteryFill').style.width = card.mastery + '%';
+        document.getElementById('detailModalMasteryText').textContent = card.mastery + '%';
+
+        // Tags
+        var tagsEl = document.getElementById('detailModalTags');
+        tagsEl.innerHTML = card.tags.map(function(t) {
+          if (t === '待整理') {
+            return '<span class="tag tag--warning">' + t + '</span>';
+          }
+          return '<span class="tag tag--neutral">' + t + '</span>';
+        }).join('');
+
+        detailModalOverlay.classList.add('detail-modal-overlay--visible');
+      }
+
+      function closeDetailModal() {
+        detailModalOverlay.classList.remove('detail-modal-overlay--visible');
+      }
+
+      // Close on overlay click (outside modal)
+      detailModalOverlay.addEventListener('click', function(e) {
+        if (e.target === detailModalOverlay) {
+          closeDetailModal();
+        }
+      });
+
+      // Close button
+      detailModalClose.addEventListener('click', closeDetailModal);
+
+      // Close on Escape key
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+          closeDetailModal();
+        }
+      });
+
+      // Event delegation for card interactions
+      cardGrid.addEventListener('click', function(e) {
+        // 1. Quick action buttons (favorite / mastered) — highest priority, stop propagation
+        var quickBtn = e.target.closest('.card-quick-btn');
+        if (quickBtn) {
+          e.stopPropagation();
+          var action = quickBtn.getAttribute('data-action');
+          var cardEl = quickBtn.closest('.knowledge-card');
+          if (!cardEl) return;
+          var cardTitle = (cardEl.querySelector('.card-title') || {}).textContent || '该卡片';
+          if (action === 'favorite') {
+            var favActive = quickBtn.classList.toggle('card-quick-btn--active');
+            showToast(favActive ? (cardTitle + ' 已收藏') : ('已取消收藏 ' + cardTitle));
+          } else if (action === 'mastered') {
+            var masActive = quickBtn.classList.toggle('card-quick-btn--active');
+            showToast(masActive ? (cardTitle + ' 已标记为掌握') : ('已取消掌握标记 ' + cardTitle));
+          }
+          return;
+        }
+
+        // 2. "查看详情" button
+        var detailBtn = e.target.closest('.open-detail-btn');
+        if (detailBtn) {
+          var card = detailBtn.closest('.knowledge-card');
+          if (!card) return;
+          var cardId = card.getAttribute('data-card-id');
+          openDetailModal(cardId);
+          return;
+        }
+
+        // 3. "加入复习" toggle button
+        var reviewBtn = e.target.closest('.btn--ghost');
+        if (reviewBtn && reviewBtn.textContent.trim() === '加入复习') {
+          var cardEl = reviewBtn.closest('.knowledge-card');
+          if (!cardEl) return;
+          var cardTitle = (cardEl.querySelector('.card-title') || {}).textContent || '该卡片';
+          if (reviewBtn.classList.contains('btn--ghost--active')) {
+            reviewBtn.classList.remove('btn--ghost--active');
+            reviewBtn.textContent = '加入复习';
+            showToast('已从复习列表移除');
+          } else {
+            reviewBtn.classList.add('btn--ghost--active');
+            reviewBtn.textContent = '已加入';
+            showToast(cardTitle + ' 已加入复习列表');
+          }
+          return;
+        }
+
+        // 4. Whole card click → open detail (fallback)
+        var card = e.target.closest('.knowledge-card');
+        if (card && !e.target.closest('.card-actions')) {
+          var cardId = card.getAttribute('data-card-id');
+          openDetailModal(cardId);
+        }
+      });
+    </script>
+</body>
+</html>

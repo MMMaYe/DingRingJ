@@ -1,0 +1,2345 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DingRing - Agent 管理</title>
+    <style id="theme-vars">
+/**
+ * Trae design library tokens
+ * Dark-only colors and typography tokens.
+ * Source references:
+ * - /workspace/.uploads/c7804cd9-3301-4b42-8895-bb409861b29a_trae.md
+ * - /workspace/.uploads/3164f329-b5a1-42ba-9dcb-5f1b36b48506_trae.css
+ *
+ * Notes:
+ * - Token values are preserved from the source files.
+ * - Grouping is preserved.
+ * - No alias layer is included.
+ * - Invalid source token names that contained spaces were normalized to kebab-case.
+ *   The original source names are kept in comments.
+ */
+
+/* @dark-only */
+/* @group-priority: brand-green, status, brand-blue, brand-purple, brand-yellow */
+
+:root {
+  /* radius */
+  --radius-2: 2px;
+  --radius-4: 4px;
+  --radius-6: 6px;
+  --radius-8: 8px;
+  --radius-10: 10px;
+  --radius-full: 9999px;
+
+  /* spacers */
+  --spacer-0: 0px;
+  --spacer-4: 4px;
+  --spacer-6: 6px;
+  --spacer-8: 8px;
+  --spacer-12: 12px;
+  --spacer-16: 16px;
+  --spacer-24: 24px;
+  --spacer-32: 32px;
+  --spacer-40: 40px;
+
+  /* font */
+  --font-family-default: SF Pro Text;
+  --font-family-heading: SF Pro;
+  --font-family-mono: JetBrains Mono;
+  --font-weight-default: 400;
+  --font-weight-code: 450;
+  --font-weight-medium: 500;
+  --font-weight-strong: 600;
+  --font-family-base: var(--font-family-default);
+  --font-family-heading-alias: var(--font-family-heading);
+  --font-family-mono-alias: var(--font-family-mono);
+
+  /* body */
+  --body-xs-font-family: "SF Pro Text", system-ui, -apple-system, sans-serif;
+  --body-xs-font-size: 10px;
+  --body-xs-font-weight: 400;
+  --body-xs-line-height: 14px;
+  --body-sm-font-family: "SF Pro Text", system-ui, -apple-system, sans-serif;
+  --body-sm-font-size: 11px;
+  --body-sm-font-weight: 400;
+  --body-sm-line-height: 16px;
+  --body-sm-strong-font-family: "SF Pro Text", system-ui, -apple-system, sans-serif;
+  --body-sm-strong-font-size: 11px;
+  --body-sm-strong-font-weight: 500;
+  --body-sm-strong-line-height: 16px;
+  --body-md-font-family: "SF Pro Text", system-ui, -apple-system, sans-serif;
+  --body-md-font-size: 12px;
+  --body-md-font-weight: 400;
+  --body-md-line-height: 18px;
+  --body-md-strong-font-family: "SF Pro Text", system-ui, -apple-system, sans-serif;
+  --body-md-strong-font-size: 12px;
+  --body-md-strong-font-weight: 500;
+  --body-md-strong-line-height: 18px;
+  --body-base-font-family: "SF Pro Text", system-ui, -apple-system, sans-serif;
+  --body-base-font-size: 13px;
+  --body-base-font-weight: 400;
+  --body-base-line-height: 20px;
+  --body-base-strong-font-family: "SF Pro Text", system-ui, -apple-system, sans-serif;
+  --body-base-strong-font-size: 13px;
+  --body-base-strong-font-weight: 500;
+  --body-base-strong-line-height: 20px;
+
+  /* heading */
+  --heading-3xs-font-family: "SF Pro Text", system-ui, -apple-system, sans-serif;
+  --heading-3xs-font-size: 11px;
+  --heading-3xs-font-weight: 600;
+  --heading-3xs-line-height: 16px;
+  --heading-2xs-font-family: "SF Pro Text", system-ui, -apple-system, sans-serif;
+  --heading-2xs-font-size: 12px;
+  --heading-2xs-font-weight: 600;
+  --heading-2xs-line-height: 18px;
+  --heading-xs-font-family: "SF Pro Text", system-ui, -apple-system, sans-serif;
+  --heading-xs-font-size: 13px;
+  --heading-xs-font-weight: 600;
+  --heading-xs-line-height: 20px;
+  --heading-sm-font-family: "SF Pro Text", system-ui, -apple-system, sans-serif;
+  --heading-sm-font-size: 16px;
+  --heading-sm-font-weight: 600;
+  --heading-sm-line-height: 24px;
+  --heading-md-font-family: "SF Pro", system-ui, -apple-system, sans-serif;
+  --heading-md-font-size: 20px;
+  --heading-md-font-weight: 600;
+  --heading-md-line-height: 28px;
+  --heading-lg-font-family: "SF Pro", system-ui, -apple-system, sans-serif;
+  --heading-lg-font-size: 22px;
+  --heading-lg-font-weight: 600;
+  --heading-lg-line-height: 30px;
+  --heading-xl-font-family: "SF Pro", system-ui, -apple-system, sans-serif;
+  --heading-xl-font-size: 24px;
+  --heading-xl-font-weight: 600;
+  --heading-xl-line-height: 32px;
+  --heading-2xl-font-family: "SF Pro", system-ui, -apple-system, sans-serif;
+  --heading-2xl-font-size: 28px;
+  --heading-2xl-font-weight: 600;
+  --heading-2xl-line-height: 36px;
+  --heading-3xl-font-family: "SF Pro", system-ui, -apple-system, sans-serif;
+  --heading-3xl-font-size: 32px;
+  --heading-3xl-font-weight: 600;
+  --heading-3xl-line-height: 40px;
+
+  /* code */
+  --code-editor-font-family: "JetBrains Mono", system-ui, -apple-system, sans-serif;
+  --code-editor-font-size: 13px;
+  --code-editor-font-weight: 450;
+  --code-editor-line-height: 20px;
+  --code-terminal-font-family: "JetBrains Mono", system-ui, -apple-system, sans-serif;
+  --code-terminal-font-size: 12px;
+  --code-terminal-font-weight: 450;
+  --code-terminal-line-height: 18px;
+  --code-text: #E0E3EE;
+  --code-doc: #7F838C;
+  --code-link: #3C7EFF;
+  --code-number: #F48CCA;
+  --code-action: #B38CFF;
+  --code-instruction: #F0D8FF;
+  --code-function: #F29D79;
+  --code-constant: #80BBFF;
+  --code-parameter: #82D99F;
+  --code-attribute: #DED47E;
+  --code-tag: #F2858C;
+
+  /* bg */
+  --bg-base-default: #1A1B1D;
+  --bg-base-secondary: #222427;
+  --bg-base-tertiary: #2A2D31;
+  --bg-overlay-l1: rgba(224, 226, 242, 0.04);
+  --bg-overlay-l2: rgba(224, 226, 242, 0.06);
+  --bg-overlay-l3: rgba(224, 226, 242, 0.08);
+  --bg-overlay-l4: rgba(224, 226, 242, 0.12);
+  --bg-menu: #202123;
+  --bg-tooltip: #1A1B1D;
+  --bg-invert: #DADDE5;
+  --bg-invert-hover: #EDEFF2;
+  --bg-invert-active: #979AA4;
+  --bg-invert-disabled: rgba(224, 226, 242, 0.12);
+  --color-background: var(--bg-base-default);
+  --color-surface: var(--bg-base-secondary);
+  --color-surface-variant: var(--bg-base-tertiary);
+  --color-overlay-1: var(--bg-overlay-l1);
+  --color-overlay-2: var(--bg-overlay-l2);
+  --color-overlay-3: var(--bg-overlay-l3);
+  --color-overlay-4: var(--bg-overlay-l4);
+  --color-card: var(--bg-base-secondary);
+  --color-tooltip: var(--bg-tooltip);
+  --color-menu: var(--bg-menu);
+
+  /* bg-brand */
+  --bg-brand: #32F08C;
+  --bg-brand-hover: #0FDC78;
+  --bg-brand-disabled: rgba(50, 240, 140, 0.2);
+  --bg-brand-popup: rgba(50, 240, 140, 0.12);
+  --color-primary: var(--bg-brand);
+  --color-primary-hover: var(--bg-brand-hover);
+  --color-primary-disabled: var(--bg-brand-disabled);
+  --color-primary-soft: var(--bg-brand-popup);
+  --color-accent: var(--bg-brand);
+
+  /* text */
+  --text-default: #D1D3DB;
+  --text-default-hover: #F5F9FE;
+  --text-default-active: #F5F9FE;
+  --text-secondary: #9599A6;
+  --text-secondary-hover: #D1D3DB;
+  --text-secondary-active: #D1D3DB;
+  --text-tertiary: #666B75;
+  --text-disabled: #666B75;
+  --text-onbrand: #0C0C0D;
+  --text-onaccent: #0C0C0D;
+  --color-foreground: var(--text-default);
+  --color-foreground-hover: var(--text-default-hover);
+  --color-on-surface: var(--text-default);
+  --color-on-surface-variant: var(--text-secondary);
+  --color-muted-foreground: var(--text-secondary);
+  --color-disabled-foreground: var(--text-disabled);
+  --color-on-primary: var(--text-onbrand);
+
+  /* text-brand */
+  --text-brand: #32F08C;
+  --text-brand-hover: #0FDC78;
+
+  /* icon */
+  --icon-default: #D1D3DB;
+  --icon-default-hover: #F5F9FE;
+  --icon-default-active: #F5F9FE;
+  --icon-secondary: #9599A6;
+  --icon-secondary-hover: #D1D3DB;
+  --icon-secondary-active: #D1D3DB;
+  --icon-tertiary: #666B75;
+  --icon-disabled: #666B75;
+  --icon-onbrand: #0C0C0D;
+  --icon-onaccent: #0C0C0D;
+
+  /* icon-brand */
+  --icon-brand: #32F08C;
+  --icon-brand-hover: #0FDC78;
+
+  /* border */
+  --border-neutral-l1: rgba(224, 226, 242, 0.1);
+  --border-neutral-l2: rgba(224, 226, 242, 0.16);
+  --border-neutral-l3: rgba(224, 226, 242, 0.2);
+  --border-contrast: #FFFFFF;
+  --border-brand: #32F08C;
+  --color-border: var(--border-neutral-l1);
+  --color-border-strong: var(--border-neutral-l2);
+  --color-border-stronger: var(--border-neutral-l3);
+  --color-border-contrast: var(--border-contrast);
+  --color-outline: var(--border-neutral-l1);
+
+  /* accent */
+  --accent-teal: #2DD288;
+  --accent-coral: #FF9392;
+  --accent-amber: #DCB364;
+  --accent-lime: #8ACB3A;
+  --accent-cyan: #04CBE5;
+  --accent-blue: #7BB8FF;
+  --accent-magenta: #EC93FF;
+  --accent-violet: #BFA5FF;
+  --accent-slate: #AFB9CF;
+
+  /* status */
+  --status-primary-default: #387BFF;
+  --status-primary-hover: #4C88FF;
+  --status-primary-active: #1759DD;
+  --status-primary-surface-l1: rgba(53, 121, 255, 0.18);
+  --status-primary-surface-l2: rgba(53, 121, 255, 0.28);
+  --status-primary-surface-l3: rgba(53, 121, 255, 0.36);
+  --status-success-default: #33C192;
+  --status-success-hover: #5ED4AD;
+  --status-success-active: #27B082;
+  --status-success-surface-l1: rgba(0, 165, 110, 0.18);
+  --status-success-surface-l2: rgba(0, 165, 110, 0.28);
+  --status-success-surface-l3: rgba(0, 165, 110, 0.36);
+  --status-alert-default: #D29D00;
+  --status-alert-hover: #DFB949;
+  --status-alert-active: #AB8820;
+  --status-alert-surface-l1: rgba(210, 157, 0, 0.16);
+  --status-alert-surface-l2: rgba(210, 157, 0, 0.28);
+  --status-alert-surface-l3: rgba(210, 157, 0, 0.36);
+  --status-warning-default: #D27E24;
+  --status-warning-hover: #D78B28;
+  --status-warning-active: #B46510;
+  --status-warning-surface-l1: rgba(210, 126, 36, 0.16);
+  --status-warning-surface-l2: rgba(210, 126, 36, 0.28);
+  --status-warning-surface-l3: rgba(210, 126, 36, 0.36);
+  --status-error-default: #F65A5A;
+  --status-error-hover: #F86262;
+  --status-error-active: #B33636;
+  --status-error-surface-l1: rgba(246, 70, 70, 0.18);
+  --status-error-surface-l2: rgba(246, 70, 70, 0.28);
+  --status-error-surface-l3: rgba(246, 70, 70, 0.36);
+  --color-info: var(--status-primary-default);
+  --color-success: var(--status-success-default);
+  --color-warning: var(--status-warning-default);
+  --color-error: var(--status-error-default);
+  --color-error-soft: var(--status-error-surface-l1);
+
+  /* brand */
+  --brand-green-100: #E5FFF2;
+  --brand-green-200: #B4FDD9;
+  --brand-green-300: #85FABF;
+  --brand-green-400: #5CF5A8;
+  --brand-green-500: #32F08C;
+  --brand-green-600: #0FDC78;
+  --brand-green-700: #0AB861;
+  --brand-green-800: #05994F;
+  --brand-green-900: #02743B;
+  --brand-green-1000: #004D26;
+  --brand-red-100: #FFE5E5;
+  --brand-red-200: #FFCCCC;
+  --brand-red-300: #FFB2B2;
+  --brand-red-400: #FF9999;
+  --brand-red-500: #FF8080;
+  --brand-red-600: #FF6464;
+  --brand-red-700: #E63737;
+  --brand-red-800: #CB1010;
+  --brand-red-900: #8F0505;
+  --brand-red-1000: #4D0000;
+  --brand-yellow-100: #FFF6E5;
+  --brand-yellow-200: #FFECCC;
+  --brand-yellow-300: #FFE3B2;
+  --brand-yellow-400: #FFDA99;
+  --brand-yellow-500: #FFD080;
+  --brand-yellow-600: #FFC864;
+  --brand-yellow-700: #E6A637;
+  --brand-yellow-800: #CB8710;
+  --brand-yellow-900: #8F5C05;
+  --brand-yellow-1000: #4D3000;
+  --brand-blue-100: #E5F3FF;
+  --brand-blue-200: #CCE6FF;
+  --brand-blue-300: #B2DAFF;
+  --brand-blue-400: #99CEFF;
+  --brand-blue-500: #80C1FF;
+  --brand-blue-600: #64B4FF;
+  --brand-blue-700: #3792E6;
+  --brand-blue-800: #1071CB;
+  --brand-blue-900: #054C8F;
+  --brand-blue-1000: #00284D;
+  --brand-purple-100: #E8E5FF;
+  --brand-purple-200: #D2CCFF;
+  --brand-purple-300: #BBB2FF;
+  --brand-purple-400: #A599FF;
+  --brand-purple-500: #8E80FF;
+  --brand-purple-600: #7864FF;
+  --brand-purple-700: #4C37E6;
+  --brand-purple-800: #2610CB;
+  --brand-purple-900: #15058F;
+  --brand-purple-1000: #09004D;
+  /* original source token: --brand-neutral grey-100 */
+  --brand-neutral-grey-100: #F2F2F2;
+  /* original source token: --brand-neutral grey-200 */
+  --brand-neutral-grey-200: #E3E3E3;
+  /* original source token: --brand-neutral grey-300 */
+  --brand-neutral-grey-300: #D6D6D6;
+  /* original source token: --brand-neutral grey-400 */
+  --brand-neutral-grey-400: #C7C7C7;
+  /* original source token: --brand-neutral grey-500 */
+  --brand-neutral-grey-500: #BABABA;
+  /* original source token: --brand-neutral grey-600 */
+  --brand-neutral-grey-600: #ABABAB;
+  /* original source token: --brand-neutral grey-700 */
+  --brand-neutral-grey-700: #8A8A8A;
+  /* original source token: --brand-neutral grey-800 */
+  --brand-neutral-grey-800: #686868;
+  /* original source token: --brand-neutral grey-900 */
+  --brand-neutral-grey-900: #474747;
+  /* original source token: --brand-neutral grey-1000 */
+  --brand-neutral-grey-1000: #262626;
+  /* original source token: --brand-blue grey-100 */
+  --brand-blue-grey-100: #F1EFF4;
+  /* original source token: --brand-blue grey-200 */
+  --brand-blue-grey-200: #E0E1E6;
+  /* original source token: --brand-blue grey-300 */
+  --brand-blue-grey-300: #CFD3D8;
+  /* original source token: --brand-blue grey-400 */
+  --brand-blue-grey-400: #BFC5CA;
+  /* original source token: --brand-blue grey-500 */
+  --brand-blue-grey-500: #B0B5BA;
+  /* original source token: --brand-blue grey-600 */
+  --brand-blue-grey-600: #A0A6AB;
+  /* original source token: --brand-blue grey-700 */
+  --brand-blue-grey-700: #80898E;
+  /* original source token: --brand-blue grey-800 */
+  --brand-blue-grey-800: #5E696E;
+  /* original source token: --brand-blue grey-900 */
+  --brand-blue-grey-900: #404A4F;
+  /* original source token: --brand-blue grey-1000 */
+  --brand-blue-grey-1000: #21262B;
+  /* original source token: --brand-green grey-100 */
+  --brand-green-grey-100: #F1F4F4;
+  /* original source token: --brand-green grey-200 */
+  --brand-green-grey-200: #E0E6E6;
+  /* original source token: --brand-green grey-300 */
+  --brand-green-grey-300: #CFD8D8;
+  /* original source token: --brand-green grey-400 */
+  --brand-green-grey-400: #BFCACA;
+  /* original source token: --brand-green grey-500 */
+  --brand-green-grey-500: #B0BABA;
+  /* original source token: --brand-green grey-600 */
+  --brand-green-grey-600: #A0ABAB;
+  /* original source token: --brand-green grey-700 */
+  --brand-green-grey-700: #808E8E;
+  /* original source token: --brand-green grey-800 */
+  --brand-green-grey-800: #5E6E6E;
+  /* original source token: --brand-green grey-900 */
+  --brand-green-grey-900: #404F4F;
+  /* original source token: --brand-green grey-1000 */
+  --brand-green-grey-1000: #212B2B;
+
+  /* font (generic fallback — used by a few preview sections) */
+  --font-family: "SF Pro Text", system-ui, -apple-system, sans-serif;
+  --font-size: 10px;
+  --font-weight: 400;
+  --line-height: 14px;
+
+  /* viz */
+  --viz-series-coral: #F87454;
+  --viz-series-amber: #EDAA45;
+  --viz-series-mint: #1DC981;
+  --viz-series-teal: #78F2F2;
+  --viz-series-sky: #22A5F7;
+  --viz-series-violet: #B655FC;
+  --viz-series-magenta: #FB9DD7;
+  --viz-series-indigo: #B6A3FF;
+  --viz-series-lime: #A6EA39;
+  --viz-series-slate: #859EAD;
+  --viz-ui-bg-chart: #202123;
+  --viz-ui-bg-tooltip: #1A1B1D;
+  --viz-ui-chart-title: #D1D3DB;
+  --viz-ui-chart-subtitle: #9599A6;
+  --viz-ui-chart-axis: rgba(224, 226, 242, 0.16);
+  --viz-ui-chart-tick: #9599A6;
+  --viz-ui-legend-label: #9599A6;
+  --viz-ui-legend-value: #D1D3DB;
+
+  /* special */
+  --special-white: #FFFFFF;
+  --special-black: #000000;
+  --special-bgtabsoverlay: rgba(0, 0, 0, 0.2);
+
+  /* layout aliases (originally fallback in _preview.css) */
+  --brand-1: #32f08c;
+  --brand-2: #3ee1a3;
+  --brand-3: #60f2bd;
+  --brand-4: #a0fde7;
+  --site-canvas: #1A1B1D;
+  --bg-layout-1: var(--bg-base-secondary);
+  --bg-layout-2: var(--bg-overlay-l1);
+  --border-1: var(--border-neutral-l1);
+
+  /* semantic aliases for head contract */
+  --color-muted: var(--text-secondary);
+  --color-radius-sm: var(--radius-6);
+  --color-radius-md: var(--radius-8);
+  --color-radius-lg: var(--radius-10);
+}
+
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.1/dist/index.global.js"></script>
+    <script src="https://unpkg.com/lucide@1.8.0/dist/umd/lucide.min.js"></script>
+    <style type="text/tailwindcss">
+  @theme inline {
+    --color-background: var(--color-background);
+    --color-foreground: var(--color-foreground);
+    --color-card: var(--color-card);
+    --color-primary: var(--color-primary);
+    --color-muted: var(--color-muted);
+    --color-muted-foreground: var(--color-muted-foreground);
+    --color-accent: var(--color-accent);
+    --color-border: var(--color-border);
+    --radius-sm: var(--color-radius-sm);
+    --radius-md: var(--color-radius-md);
+    --radius-lg: var(--color-radius-lg);
+  }
+  @layer base {
+    body { background: var(--color-background); color: var(--color-foreground); }
+    td, th { @apply break-words; word-break: break-all; word-break: auto-phrase; }
+    th { @apply whitespace-nowrap; }
+  }
+    </style>
+    <style id="semantic-token-fallback">
+      .bg-background { background-color: var(--color-background); }
+      .text-background { color: var(--color-background); }
+      .border-background { border-color: var(--color-background); }
+      .ring-background { --tw-ring-color: var(--color-background); }
+      .bg-foreground { background-color: var(--color-foreground); }
+      .text-foreground { color: var(--color-foreground); }
+      .border-foreground { border-color: var(--color-foreground); }
+      .ring-foreground { --tw-ring-color: var(--color-foreground); }
+      .bg-card { background-color: var(--color-card); }
+      .text-card { color: var(--color-card); }
+      .border-card { border-color: var(--color-card); }
+      .ring-card { --tw-ring-color: var(--color-card); }
+      .bg-primary { background-color: var(--color-primary); }
+      .text-primary { color: var(--color-primary); }
+      .border-primary { border-color: var(--color-primary); }
+      .ring-primary { --tw-ring-color: var(--color-primary); }
+      .bg-muted { background-color: var(--color-muted); }
+      .text-muted { color: var(--color-muted); }
+      .border-muted { border-color: var(--color-muted); }
+      .ring-muted { --tw-ring-color: var(--color-muted); }
+      .bg-muted-foreground { background-color: var(--color-muted-foreground); }
+      .text-muted-foreground { color: var(--color-muted-foreground); }
+      .border-muted-foreground { border-color: var(--color-muted-foreground); }
+      .ring-muted-foreground { --tw-ring-color: var(--color-muted-foreground); }
+      .bg-accent { background-color: var(--color-accent); }
+      .text-accent { color: var(--color-accent); }
+      .border-accent { border-color: var(--color-accent); }
+      .ring-accent { --tw-ring-color: var(--color-accent); }
+      .bg-border { background-color: var(--color-border); }
+      .text-border { color: var(--color-border); }
+      .border-border { border-color: var(--color-border); }
+      .ring-border { --tw-ring-color: var(--color-border); }
+    </style>
+    <style>
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      [data-icon] {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        -webkit-mask-size: contain;
+        mask-size: contain;
+        -webkit-mask-repeat: no-repeat;
+        mask-repeat: no-repeat;
+        -webkit-mask-position: center;
+        mask-position: center;
+        background-color: currentColor;
+      }
+    </style>
+</head>
+<body>
+    <style>
+      /* ===== Page-level reset & base ===== */
+      *, *::before, *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        font-family: var(--body-base-font-family);
+        font-size: var(--body-base-font-size);
+        font-weight: var(--body-base-font-weight);
+        line-height: var(--body-base-line-height);
+        color: var(--text-default);
+        background: var(--bg-base-default);
+        min-height: 100vh;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      /* ===== App Shell (Sidebar + Main) ===== */
+      .app-shell {
+        display: flex;
+        min-height: 100vh;
+      }
+
+      /* ===== Left Sidebar (from group-chat.html) ===== */
+      .sidebar {
+        width: 220px;
+        flex-shrink: 0;
+        display: flex;
+        flex-direction: column;
+        background: var(--bg-base-secondary);
+        border-right: 1px solid var(--border-neutral-l1);
+      }
+
+      .sidebar__header {
+        display: flex;
+        align-items: center;
+        gap: var(--spacer-8);
+        padding: var(--spacer-16) var(--spacer-16) var(--spacer-12);
+      }
+
+      .sidebar__logo {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        border-radius: var(--radius-6);
+        background: var(--bg-brand);
+        flex-shrink: 0;
+      }
+
+      .sidebar__logo img {
+        width: 16px;
+        height: 16px;
+      }
+
+      .sidebar__title {
+        font-family: var(--heading-sm-font-family);
+        font-size: var(--heading-sm-font-size);
+        font-weight: var(--heading-sm-font-weight);
+        color: var(--text-default);
+        letter-spacing: -0.01em;
+      }
+
+      .sidebar__title-accent {
+        color: var(--bg-brand);
+      }
+
+      .sidebar__nav {
+        padding: 0 var(--spacer-8);
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        margin-bottom: var(--spacer-4);
+      }
+
+      .sidebar__nav-item {
+        display: flex;
+        align-items: center;
+        gap: var(--spacer-8);
+        padding: var(--spacer-8);
+        border-radius: var(--radius-6);
+        cursor: pointer;
+        transition: background 0.12s ease;
+        text-decoration: none;
+      }
+
+      .sidebar__nav-item:hover {
+        background: var(--bg-overlay-l1);
+      }
+
+      .sidebar__nav-item--active {
+        background: rgba(50, 240, 140, 0.1);
+      }
+
+      .sidebar__nav-item--active .sidebar__nav-icon {
+        color: var(--bg-brand);
+      }
+
+      .sidebar__nav-item--active .sidebar__nav-text {
+        color: var(--text-default);
+      }
+
+      .sidebar__nav-item--disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+        pointer-events: none;
+      }
+
+      .sidebar__nav-icon {
+        color: var(--text-tertiary);
+        flex-shrink: 0;
+      }
+
+      .sidebar__nav-icon img { width: 16px; height: 16px; }
+
+      .sidebar__nav-text {
+        font-size: var(--body-base-font-size);
+        font-weight: var(--font-weight-medium);
+        color: var(--text-secondary);
+      }
+
+      /* ===== Main Panel ===== */
+      .main-panel {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+        background: var(--bg-base-default);
+      }
+
+      /* ===== Top Header Bar ===== */
+      .header-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: var(--spacer-12) var(--spacer-24);
+        border-bottom: 1px solid var(--border-neutral-l1);
+        background: var(--bg-base-default);
+        position: sticky;
+        top: 0;
+        z-index: 50;
+      }
+
+      .header-logo {
+        display: flex;
+        align-items: center;
+        gap: var(--spacer-8);
+        font-family: var(--heading-md-font-family);
+        font-size: var(--heading-md-font-size);
+        font-weight: var(--heading-md-font-weight);
+        color: var(--bg-brand);
+        flex-shrink: 0;
+      }
+
+      .header-logo img {
+        width: 28px;
+        height: 28px;
+      }
+
+      .header-search {
+        flex: 1;
+        max-width: 420px;
+        position: relative;
+      }
+
+      .header-search input {
+        width: 100%;
+        height: 36px;
+        padding: 0 var(--spacer-12) 0 36px;
+        background: var(--bg-base-secondary);
+        border: 1px solid var(--border-neutral-l1);
+        border-radius: var(--radius-8);
+        color: var(--text-default);
+        font-size: var(--body-base-font-size);
+        font-family: var(--body-base-font-family);
+        outline: none;
+        transition: border-color 0.15s ease;
+      }
+
+      .header-search input::placeholder {
+        color: var(--text-tertiary);
+      }
+
+      .header-search input:focus {
+        border-color: var(--bg-brand);
+      }
+
+      .header-search-icon {
+        position: absolute;
+        left: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--text-tertiary);
+        width: 16px;
+        height: 16px;
+        pointer-events: none;
+      }
+
+      .header-actions {
+        display: flex;
+        align-items: center;
+        gap: var(--spacer-8);
+        flex-shrink: 0;
+      }
+
+      /* ===== Buttons ===== */
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: var(--spacer-6);
+        height: 36px;
+        padding: 0 var(--spacer-16);
+        border-radius: var(--radius-8);
+        font-size: var(--body-md-font-size);
+        font-weight: var(--font-weight-medium);
+        font-family: var(--body-md-font-family);
+        border: none;
+        cursor: pointer;
+        transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+        white-space: nowrap;
+        line-height: 1;
+      }
+
+      .btn--primary {
+        background: var(--bg-brand);
+        color: var(--text-onbrand);
+      }
+      .btn--primary:hover {
+        background: var(--bg-brand-hover);
+      }
+
+      .btn-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        border-radius: var(--radius-6);
+        background: transparent;
+        border: 1px solid var(--border-neutral-l1);
+        cursor: pointer;
+        color: var(--text-secondary);
+        transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+      }
+
+      .btn-icon:hover {
+        background: var(--bg-overlay-l2);
+        color: var(--text-default);
+        border-color: var(--border-neutral-l2);
+      }
+
+      .btn-icon img {
+        width: 14px;
+        height: 14px;
+      }
+
+      /* ===== Filter / Tab Bar ===== */
+      .filter-bar {
+        display: flex;
+        align-items: center;
+        gap: var(--spacer-4);
+        padding: var(--spacer-12) var(--spacer-24);
+        border-bottom: 1px solid var(--border-neutral-l1);
+        background: var(--bg-base-default);
+        overflow-x: auto;
+      }
+
+      .filter-tab {
+        display: inline-flex;
+        align-items: center;
+        height: 32px;
+        padding: 0 var(--spacer-12);
+        border-radius: var(--radius-full);
+        font-size: var(--body-md-font-size);
+        font-weight: var(--font-weight-medium);
+        font-family: var(--body-md-font-family);
+        color: var(--text-secondary);
+        background: var(--bg-overlay-l2);
+        border: 1px solid transparent;
+        cursor: pointer;
+        transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+        white-space: nowrap;
+      }
+
+      .filter-tab:hover {
+        background: var(--bg-overlay-l3);
+        color: var(--text-default);
+      }
+
+      .filter-tab.active {
+        background: var(--bg-brand);
+        color: var(--text-onbrand);
+        border-color: var(--bg-brand);
+      }
+
+      /* ===== Main Content ===== */
+      .main-content {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: var(--spacer-24);
+        width: 100%;
+      }
+
+      /* ===== Tag Component ===== */
+      .tag {
+        display: inline-flex;
+        align-items: center;
+        height: 20px;
+        padding: 0 6px;
+        border-radius: var(--radius-full);
+        font-size: 10px;
+        font-weight: var(--font-weight-medium);
+        gap: 4px;
+      }
+      .tag--brand { background: rgba(50, 240, 140, 0.12); color: var(--bg-brand); }
+      .tag--success { background: var(--status-success-surface-l1); color: var(--status-success-default); }
+      .tag--warning { background: var(--status-warning-surface-l1); color: var(--status-warning-default); }
+      .tag--neutral { background: var(--bg-overlay-l2); color: var(--text-secondary); }
+      .tag--info { background: var(--status-primary-surface-l1); color: var(--status-primary-default); }
+      .tag--error { background: var(--status-error-surface-l1); color: var(--status-error-default); }
+
+      /* ===== Statistics Summary Bar ===== */
+      .stats-bar {
+        display: flex;
+        align-items: center;
+        gap: var(--spacer-16);
+        padding: var(--spacer-16) 0;
+        margin-bottom: var(--spacer-8);
+        border-bottom: 1px solid var(--border-neutral-l1);
+        flex-wrap: wrap;
+      }
+
+      .stat-item {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--spacer-8);
+        background: var(--bg-base-secondary);
+        border: 1px solid var(--border-neutral-l1);
+        border-radius: var(--radius-8);
+        padding: var(--spacer-8) var(--spacer-16);
+        transition: border-color 0.15s ease;
+      }
+
+      .stat-item:hover {
+        border-color: var(--border-neutral-l2);
+      }
+
+      .stat-item img {
+        width: 16px;
+        height: 16px;
+        color: var(--text-secondary);
+      }
+
+      .stat-number {
+        font-family: var(--heading-xs-font-family);
+        font-size: var(--heading-xs-font-size);
+        font-weight: var(--heading-xs-font-weight);
+        color: var(--text-default);
+        line-height: var(--heading-xs-line-height);
+      }
+
+      .stat-label {
+        font-size: var(--body-sm-font-size);
+        font-weight: var(--body-sm-font-weight);
+        color: var(--text-secondary);
+        line-height: var(--body-sm-line-height);
+      }
+
+      /* ===== View Toggle ===== */
+      .view-toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 2px;
+        background: var(--bg-overlay-l1);
+        border-radius: var(--radius-6);
+        padding: 2px;
+        margin-left: auto;
+        flex-shrink: 0;
+      }
+
+      .view-toggle__btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        border-radius: var(--radius-4);
+        background: transparent;
+        border: none;
+        cursor: pointer;
+        color: var(--text-tertiary);
+        transition: all 0.12s ease;
+      }
+
+      .view-toggle__btn:hover {
+        color: var(--text-secondary);
+      }
+
+      .view-toggle__btn--active {
+        background: var(--bg-base-tertiary);
+        color: var(--text-default);
+      }
+
+      .view-toggle__btn img {
+        width: 16px;
+        height: 16px;
+      }
+
+      /* ===== Agent Card List ===== */
+      .agent-list {
+        display: flex;
+        flex-direction: column;
+        gap: var(--spacer-8);
+      }
+
+      /* Card Grid View */
+      .agent-list.view-card {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+        gap: var(--spacer-16);
+      }
+
+      /* ===== Empty State ===== */
+      .empty-state {
+        display: none;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: var(--spacer-40) var(--spacer-24);
+        text-align: center;
+      }
+
+      .empty-state__icon {
+        width: 56px;
+        height: 56px;
+        border-radius: var(--radius-full);
+        background: var(--bg-base-tertiary);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: var(--spacer-16);
+        opacity: 0.6;
+      }
+
+      .empty-state__icon img { width: 24px; height: 24px; }
+
+      .empty-state__title {
+        font-size: var(--body-base-font-size);
+        font-weight: var(--font-weight-medium);
+        color: var(--text-default);
+        margin-bottom: var(--spacer-4);
+      }
+
+      .empty-state__desc {
+        font-size: var(--body-sm-font-size);
+        color: var(--text-tertiary);
+      }
+
+      .empty-state__action {
+        margin-top: var(--spacer-16);
+        padding: 6px var(--spacer-12);
+        border: 1px solid var(--border-neutral-l2);
+        border-radius: var(--radius-6);
+        background: transparent;
+        color: var(--text-default);
+        font-size: var(--body-sm-font-size);
+        cursor: pointer;
+        transition: background 0.15s ease, border-color 0.15s ease;
+      }
+
+      .empty-state__action:hover {
+        background: var(--bg-base-tertiary);
+        border-color: var(--border-neutral-l3);
+      }
+
+      .agent-card {
+        background: var(--bg-base-secondary);
+        border: 1px solid var(--border-neutral-l1);
+        border-radius: var(--radius-8);
+        padding: var(--spacer-16) var(--spacer-24);
+        display: flex;
+        align-items: center;
+        gap: var(--spacer-16);
+        transition: border-color 0.2s ease, background-color 0.2s ease;
+        cursor: default;
+      }
+
+      .agent-card:hover {
+        border-color: var(--border-neutral-l2);
+        background: var(--bg-base-tertiary);
+      }
+
+      /* Card grid mode overrides */
+      .view-card .agent-card {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: var(--spacer-24);
+        gap: var(--spacer-16);
+      }
+
+      .view-card .agent-avatar {
+        width: 56px;
+        height: 56px;
+        font-size: var(--heading-md-font-size);
+      }
+
+      .view-card .agent-description {
+        white-space: normal;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        line-height: var(--body-base-line-height);
+        font-size: var(--body-base-font-size);
+      }
+
+      .view-card .agent-right {
+        width: 100%;
+        align-items: flex-start;
+        flex-shrink: 0;
+        min-width: 0;
+        padding-top: var(--spacer-12);
+        border-top: 1px solid var(--border-neutral-l1);
+      }
+
+      .view-card .agent-meta {
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: var(--spacer-12);
+        width: 100%;
+      }
+
+      .view-card .agent-actions {
+        width: 100%;
+        border-top: none;
+        padding-top: 0;
+        margin-top: var(--spacer-8);
+        justify-content: flex-end;
+      }
+
+      /* ===== Agent Card: Avatar ===== */
+      .agent-avatar {
+        width: 48px;
+        height: 48px;
+        border-radius: var(--radius-full);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        font-family: var(--heading-sm-font-family);
+        font-size: var(--heading-sm-font-size);
+        font-weight: var(--heading-sm-font-weight);
+        color: #FFFFFF;
+      }
+
+      /* ===== Agent Card: Middle Section ===== */
+      .agent-info {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: var(--spacer-6);
+      }
+
+      .agent-name {
+        font-family: var(--heading-xs-font-family);
+        font-size: var(--heading-xs-font-size);
+        font-weight: var(--heading-xs-font-weight);
+        line-height: var(--heading-xs-line-height);
+        color: var(--text-default);
+      }
+
+      .agent-description {
+        font-size: var(--body-sm-font-size);
+        font-weight: var(--body-sm-font-weight);
+        line-height: var(--body-sm-line-height);
+        color: var(--text-secondary);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .agent-tags {
+        display: flex;
+        align-items: center;
+        gap: var(--spacer-6);
+        flex-wrap: wrap;
+      }
+
+      /* ===== Agent Card: Right Section ===== */
+      .agent-right {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: var(--spacer-8);
+        flex-shrink: 0;
+        min-width: 200px;
+      }
+
+      .agent-status {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--spacer-6);
+        font-size: var(--body-md-font-size);
+        font-weight: var(--body-md-strong-font-weight);
+        line-height: var(--body-md-strong-line-height);
+      }
+
+      .agent-status img {
+        width: 14px;
+        height: 14px;
+      }
+
+      .agent-status--running {
+        color: var(--status-success-default);
+      }
+
+      .agent-status--paused {
+        color: var(--status-error-default);
+      }
+
+      .agent-meta {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: var(--spacer-4);
+      }
+
+      .agent-meta-text {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--spacer-4);
+        font-size: var(--body-xs-font-size);
+        color: var(--text-tertiary);
+        line-height: var(--body-xs-line-height);
+      }
+
+      .agent-actions {
+        display: flex;
+        align-items: center;
+        gap: var(--spacer-8);
+        padding-top: var(--spacer-8);
+        border-top: 1px solid var(--border-neutral-l1);
+      }
+
+      .agent-action-link {
+        font-size: var(--body-sm-strong-font-size);
+        font-weight: var(--body-sm-strong-font-weight);
+        color: var(--text-brand);
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 0;
+        font-family: var(--body-sm-strong-font-family);
+        transition: color 0.15s ease;
+      }
+
+      .agent-action-link:hover {
+        color: var(--text-brand-hover);
+      }
+
+      /* ===== Config Modal ===== */
+      .config-modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.6);
+        z-index: 300;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.2s ease, visibility 0.2s ease;
+      }
+
+      .config-modal-overlay--visible {
+        opacity: 1;
+        visibility: visible;
+      }
+
+      .config-modal {
+        background: var(--bg-base-secondary);
+        border: 1px solid var(--border-neutral-l2);
+        border-radius: var(--radius-10);
+        width: 560px;
+        max-width: 92vw;
+        max-height: 85vh;
+        display: flex;
+        flex-direction: column;
+        transform: translateY(12px) scale(0.97);
+        transition: transform 0.25s ease;
+        box-shadow: 0 24px 80px rgba(0, 0, 0, 0.4);
+      }
+
+      .config-modal-overlay--visible .config-modal {
+        transform: translateY(0) scale(1);
+      }
+
+      .config-modal__header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: var(--spacer-16) var(--spacer-24);
+        border-bottom: 1px solid var(--border-neutral-l1);
+      }
+
+      .config-modal__title {
+        font-family: var(--heading-xs-font-family);
+        font-size: var(--heading-xs-font-size);
+        font-weight: var(--heading-xs-font-weight);
+        color: var(--text-default);
+        line-height: var(--heading-xs-line-height);
+      }
+
+      .config-modal__close {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        border-radius: var(--radius-6);
+        background: transparent;
+        border: none;
+        cursor: pointer;
+        color: var(--text-tertiary);
+        transition: background-color 0.12s ease, color 0.12s ease;
+      }
+
+      .config-modal__close:hover {
+        background: var(--bg-overlay-l3);
+        color: var(--text-default);
+      }
+
+      .config-modal__close img {
+        width: 16px;
+        height: 16px;
+      }
+
+      .config-modal__body {
+        padding: var(--spacer-24);
+        overflow-y: auto;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: var(--spacer-24);
+      }
+
+      .config-section {
+        display: flex;
+        flex-direction: column;
+        gap: var(--spacer-12);
+      }
+
+      .config-section__label {
+        font-family: var(--heading-3xs-font-family);
+        font-size: var(--heading-3xs-font-size);
+        font-weight: var(--heading-3xs-font-weight);
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+
+      .config-field {
+        display: flex;
+        flex-direction: column;
+        gap: var(--spacer-6);
+      }
+
+      .config-field__label {
+        font-size: var(--body-md-font-size);
+        font-weight: var(--font-weight-medium);
+        color: var(--text-default);
+      }
+
+      .config-field__desc {
+        font-size: var(--body-sm-font-size);
+        color: var(--text-tertiary);
+        line-height: var(--body-sm-line-height);
+      }
+
+      .config-input {
+        width: 100%;
+        height: 36px;
+        padding: 0 var(--spacer-12);
+        background: var(--bg-base-default);
+        border: 1px solid var(--border-neutral-l1);
+        border-radius: var(--radius-6);
+        color: var(--text-default);
+        font-size: var(--body-md-font-size);
+        font-family: var(--body-md-font-family);
+        outline: none;
+        transition: border-color 0.15s ease;
+      }
+
+      .config-input:focus {
+        border-color: var(--bg-brand);
+      }
+
+      .config-input::placeholder {
+        color: var(--text-disabled);
+      }
+
+      .config-textarea {
+        width: 100%;
+        min-height: 80px;
+        padding: var(--spacer-8) var(--spacer-12);
+        background: var(--bg-base-default);
+        border: 1px solid var(--border-neutral-l1);
+        border-radius: var(--radius-6);
+        color: var(--text-default);
+        font-size: var(--body-md-font-size);
+        font-family: var(--body-md-font-family);
+        outline: none;
+        resize: vertical;
+        transition: border-color 0.15s ease;
+        line-height: var(--body-md-line-height);
+      }
+
+      .config-textarea:focus {
+        border-color: var(--bg-brand);
+      }
+
+      .config-select {
+        width: 100%;
+        height: 36px;
+        padding: 0 var(--spacer-12);
+        background: var(--bg-base-default);
+        border: 1px solid var(--border-neutral-l1);
+        border-radius: var(--radius-6);
+        color: var(--text-default);
+        font-size: var(--body-md-font-size);
+        font-family: var(--body-md-font-family);
+        outline: none;
+        appearance: none;
+        cursor: pointer;
+        transition: border-color 0.15s ease;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' stroke='%239599A6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 5l3 3 3-3'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 12px center;
+        padding-right: 32px;
+      }
+
+      .config-select:focus {
+        border-color: var(--bg-brand);
+      }
+
+      .config-toggle-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .config-toggle {
+        position: relative;
+        width: 40px;
+        height: 22px;
+        background: var(--bg-overlay-l3);
+        border-radius: var(--radius-full);
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+        border: none;
+        flex-shrink: 0;
+      }
+
+      .config-toggle--active {
+        background: var(--bg-brand);
+      }
+
+      .config-toggle::after {
+        content: '';
+        position: absolute;
+        top: 3px;
+        left: 3px;
+        width: 16px;
+        height: 16px;
+        background: #fff;
+        border-radius: 50%;
+        transition: transform 0.2s ease;
+      }
+
+      .config-toggle--active::after {
+        transform: translateX(18px);
+      }
+
+      .config-modal__footer {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: var(--spacer-8);
+        padding: var(--spacer-16) var(--spacer-24);
+        border-top: 1px solid var(--border-neutral-l1);
+      }
+
+      .btn--secondary {
+        background: var(--bg-overlay-l2);
+        color: var(--text-default);
+        border: 1px solid var(--border-neutral-l1);
+      }
+
+      .btn--secondary:hover {
+        background: var(--bg-overlay-l3);
+        border-color: var(--border-neutral-l2);
+      }
+
+      /* ===== Toast Notification ===== */
+      .agent-toast {
+        position: fixed;
+        bottom: 24px;
+        left: 50%;
+        transform: translateX(-50%) translateY(20px);
+        background: var(--bg-base-tertiary);
+        border: 1px solid var(--border-neutral-l2);
+        border-radius: var(--radius-8);
+        padding: var(--spacer-12) var(--spacer-16);
+        color: var(--text-default);
+        font-size: var(--body-base-font-size);
+        opacity: 0;
+        transition: all 0.3s ease;
+        z-index: 200;
+        pointer-events: none;
+      }
+
+      .agent-toast--visible {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+      }
+
+      /* ===== Scrollbar ===== */
+      ::-webkit-scrollbar {
+        width: 6px;
+      }
+
+      ::-webkit-scrollbar-track {
+        background: transparent;
+      }
+
+      ::-webkit-scrollbar-thumb {
+        background: var(--border-neutral-l2);
+        border-radius: 3px;
+      }
+
+      ::-webkit-scrollbar-thumb:hover {
+        background: var(--border-neutral-l3);
+      }
+
+      /* ===== Responsive ===== */
+      @media (max-width: 900px) {
+        .sidebar {
+          display: none;
+        }
+        .agent-card {
+          flex-wrap: wrap;
+        }
+        .agent-right {
+          min-width: auto;
+          flex-direction: row;
+          align-items: center;
+          flex-wrap: wrap;
+          gap: var(--spacer-12);
+          padding-top: var(--spacer-12);
+          border-top: 1px solid var(--border-neutral-l1);
+          width: 100%;
+          justify-content: flex-end;
+        }
+        .agent-meta {
+          flex-direction: row;
+          align-items: center;
+        }
+        .agent-actions {
+          border-top: none;
+          padding-top: 0;
+        }
+        .stats-bar {
+          gap: var(--spacer-8);
+        }
+      }
+
+      @media (max-width: 600px) {
+        .header-bar {
+          flex-wrap: wrap;
+          gap: var(--spacer-8);
+        }
+        .header-search {
+          order: 3;
+          max-width: 100%;
+          flex-basis: 100%;
+        }
+        .header-logo {
+          font-size: var(--heading-sm-font-size);
+        }
+        .header-logo img {
+          width: 24px;
+          height: 24px;
+        }
+        .agent-card {
+          padding: var(--spacer-12) var(--spacer-16);
+          gap: var(--spacer-12);
+        }
+        .stat-item {
+          padding: var(--spacer-6) var(--spacer-12);
+        }
+      }
+
+      /* ===== Create Agent Knowledge Base ===== */
+      .create-agent-kb-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--spacer-8);
+      }
+
+      .create-agent-kb-item {
+        display: flex;
+        align-items: center;
+        gap: var(--spacer-6);
+        padding: var(--spacer-6) var(--spacer-12);
+        border: 1px solid var(--border-neutral-l1);
+        border-radius: var(--radius-6);
+        cursor: pointer;
+        transition: all 0.12s ease;
+        background: transparent;
+      }
+
+      .create-agent-kb-item:hover {
+        border-color: var(--border-neutral-l2);
+        background: var(--bg-overlay-l1);
+      }
+
+      .create-agent-kb-item--checked {
+        border-color: var(--border-brand);
+        background: rgba(50, 240, 140, 0.08);
+      }
+
+      .create-agent-kb-check {
+        width: 16px;
+        height: 16px;
+        border-radius: var(--radius-4);
+        border: 1.5px solid var(--border-neutral-l2);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        transition: all 0.12s ease;
+        opacity: 0;
+      }
+
+      .create-agent-kb-item--checked .create-agent-kb-check {
+        opacity: 1;
+        border-color: var(--border-brand);
+        background: var(--bg-brand);
+      }
+
+      .create-agent-kb-check img {
+        width: 10px;
+        height: 10px;
+      }
+
+      .create-agent-kb-name {
+        font-size: var(--body-md-font-size);
+        font-weight: var(--font-weight-medium);
+        color: var(--text-default);
+      }
+    </style>
+
+    <main>
+      <div class="app-shell">
+
+        <!-- ===== LEFT SIDEBAR ===== -->
+        <aside class="sidebar" id="sidebar">
+          <div class="sidebar__header">
+            <div class="sidebar__logo">
+              <img src="../assets/icons/dl_builtin_trae/zap.0c0c0d.svg" width="16" height="16" alt="">
+            </div>
+            <span class="sidebar__title">Ding<span class="sidebar__title-accent">Ring</span></span>
+          </div>
+
+          <div class="sidebar__nav">
+            <a class="sidebar__nav-item" href="group-chat.html" data-dom-id="interaction-id-h0vv12z">
+              <span class="sidebar__nav-icon">
+                <img src="../assets/icons/dl_builtin_trae/message-circle.svg" width="16" height="16" alt="">
+              </span>
+              <span class="sidebar__nav-text">群聊</span>
+            </a>
+            <a class="sidebar__nav-item" href="knowledge-cards.html" data-dom-id="interaction-id-6m2wacf">
+              <span class="sidebar__nav-icon">
+                <img src="../assets/icons/dl_builtin_trae/file-text.svg" width="16" height="16" alt="">
+              </span>
+              <span class="sidebar__nav-text">知识卡片管理</span>
+            </a>
+            <a class="sidebar__nav-item" href="knowledge-base.html" data-dom-id="interaction-id-q5jemqy">
+              <span class="sidebar__nav-icon">
+                <img src="../assets/icons/dl_builtin_trae/layers.svg" width="16" height="16" alt="">
+              </span>
+              <span class="sidebar__nav-text">知识库管理</span>
+            </a>
+            <a class="sidebar__nav-item sidebar__nav-item--active" href="agent-management.html">
+              <span class="sidebar__nav-icon">
+                <img src="../assets/icons/dl_builtin_trae/sparkles.32f08c.svg" width="16" height="16" alt="">
+              </span>
+              <span class="sidebar__nav-text">Agent 管理</span>
+            </a>
+          </div>
+        </aside>
+
+        <!-- ===== MAIN PANEL ===== -->
+        <div class="main-panel">
+
+          <!-- Top Header Bar -->
+          <header class="header-bar">
+            <div class="header-logo">
+              <img src="../assets/icons/dl_builtin_trae/sparkles.32f08c.svg" alt="DingRing Logo">
+              <span>DingRing</span>
+            </div>
+
+            <div class="header-search">
+              <img class="header-search-icon" src="../assets/icons/dl_builtin_trae/search.svg" alt="">
+              <input type="text" placeholder="搜索 Agent..." id="searchInput">
+            </div>
+
+            <div class="header-actions">
+              <button class="btn btn--primary" id="createAgentBtn">
+                <img src="../assets/icons/dl_builtin_trae/plus.svg" alt="" width="14" height="14">
+                新建 Agent
+              </button>
+            </div>
+          </header>
+
+          <!-- Filter / Tab Bar -->
+          <nav class="filter-bar" id="filterBar">
+            <button class="filter-tab active" data-filter="all">全部 Agent (4)</button>
+            <button class="filter-tab" data-filter="running">运行中 (3)</button>
+            <button class="filter-tab" data-filter="paused">已暂停 (1)</button>
+          </nav>
+
+          <!-- Main Content -->
+          <div class="main-content">
+
+            <!-- Statistics Summary Bar -->
+            <div class="stats-bar">
+              <div class="stat-item">
+                <img src="../assets/icons/dl_builtin_trae/layers.svg" alt="">
+                <span class="stat-number">4</span>
+                <span class="stat-label">个 Agent</span>
+              </div>
+              <div class="stat-item">
+                <img src="../assets/icons/dl_builtin_trae/check-circle.svg" alt="">
+                <span class="stat-number">3</span>
+                <span class="stat-label">运行中</span>
+              </div>
+              <div class="stat-item">
+                <img src="../assets/icons/dl_builtin_trae/alert-circle.svg" alt="">
+                <span class="stat-number">1</span>
+                <span class="stat-label">已暂停</span>
+              </div>
+              <div class="stat-item">
+                <img src="../assets/icons/dl_builtin_trae/users.svg" alt="">
+                <span class="stat-number">5</span>
+                <span class="stat-label">关联群组</span>
+              </div>
+
+              <!-- View Toggle -->
+              <div class="view-toggle" id="viewToggle">
+                <button class="view-toggle__btn view-toggle__btn--active" id="viewListBtn" title="列表视图">
+                  <img src="../assets/icons/dl_builtin_trae/list.svg" alt="" width="16" height="16">
+                </button>
+                <button class="view-toggle__btn" id="viewCardBtn" title="卡片视图">
+                  <img src="../assets/icons/dl_builtin_trae/grid-2x2.svg" alt="" width="16" height="16">
+                </button>
+              </div>
+            </div>
+
+            <!-- Agent Card List -->
+            <div class="agent-list" id="agentList">
+
+              <!-- Agent Card 1: DeepSeek -->
+              <article class="agent-card" data-status="running">
+                <div class="agent-avatar" style="background: #4A6CF7;">D</div>
+                <div class="agent-info">
+                  <div class="agent-name">DeepSeek</div>
+                  <div class="agent-description">基于深度学习的通用大语言模型，擅长逻辑推理、代码生成和知识问答，在408考试相关领域表现优秀</div>
+                  <div class="agent-tags">
+                    <span class="tag tag--brand">LLM</span>
+                    <span class="tag tag--neutral">通用</span>
+                    <span class="tag tag--info">推理</span>
+                  </div>
+                </div>
+                <div class="agent-right">
+                  <div class="agent-status agent-status--running">
+                    <img src="../assets/icons/dl_builtin_trae/check-circle.svg" alt="" width="14" height="14">
+                    运行中
+                  </div>
+                  <div class="agent-meta">
+                    <span class="agent-meta-text">API调用量 1,234次</span>
+                    <span class="agent-meta-text">最后活跃 刚刚</span>
+                    <span class="agent-meta-text">关联群组 408讨论群</span>
+                  </div>
+                  <div class="agent-actions">
+                    <button class="btn-icon open-config-btn" title="配置">
+                      <img src="../assets/icons/dl_builtin_trae/gear.svg" alt="">
+                    </button>
+                  </div>
+                </div>
+              </article>
+
+              <!-- Agent Card 2: Kimi -->
+              <article class="agent-card" data-status="running">
+                <div class="agent-avatar" style="background: #6C5CE7;">K</div>
+                <div class="agent-info">
+                  <div class="agent-name">Kimi</div>
+                  <div class="agent-description">Moonshot AI 开发的长文本处理专家，支持超长上下文理解，适合文献分析和知识整合</div>
+                  <div class="agent-tags">
+                    <span class="tag tag--brand">LLM</span>
+                    <span class="tag tag--neutral">长文本</span>
+                    <span class="tag tag--info">分析</span>
+                  </div>
+                </div>
+                <div class="agent-right">
+                  <div class="agent-status agent-status--running">
+                    <img src="../assets/icons/dl_builtin_trae/check-circle.svg" alt="" width="14" height="14">
+                    运行中
+                  </div>
+                  <div class="agent-meta">
+                    <span class="agent-meta-text">API调用量 856次</span>
+                    <span class="agent-meta-text">最后活跃 5分钟前</span>
+                    <span class="agent-meta-text">关联群组 算法刷题群</span>
+                  </div>
+                  <div class="agent-actions">
+                    <button class="btn-icon open-config-btn" title="配置">
+                      <img src="../assets/icons/dl_builtin_trae/gear.svg" alt="">
+                    </button>
+                  </div>
+                </div>
+              </article>
+
+              <!-- Agent Card 3: Claude -->
+              <article class="agent-card" data-status="running">
+                <div class="agent-avatar" style="background: #D4A853;">C</div>
+                <div class="agent-info">
+                  <div class="agent-name">Claude</div>
+                  <div class="agent-description">Anthropic 开发的AI助手，以安全性和准确性著称，擅长深度分析和结构化回答</div>
+                  <div class="agent-tags">
+                    <span class="tag tag--brand">LLM</span>
+                    <span class="tag tag--neutral">安全</span>
+                    <span class="tag tag--warning">深度分析</span>
+                  </div>
+                </div>
+                <div class="agent-right">
+                  <div class="agent-status agent-status--running">
+                    <img src="../assets/icons/dl_builtin_trae/check-circle.svg" alt="" width="14" height="14">
+                    运行中
+                  </div>
+                  <div class="agent-meta">
+                    <span class="agent-meta-text">API调用量 623次</span>
+                    <span class="agent-meta-text">最后活跃 10分钟前</span>
+                    <span class="agent-meta-text">关联群组 面试准备群</span>
+                  </div>
+                  <div class="agent-actions">
+                    <button class="btn-icon open-config-btn" title="配置">
+                      <img src="../assets/icons/dl_builtin_trae/gear.svg" alt="">
+                    </button>
+                  </div>
+                </div>
+              </article>
+
+              <!-- Agent Card 4: 专家 Agent -->
+              <article class="agent-card" data-status="paused">
+                <div class="agent-avatar" style="background: var(--status-warning-default);">E</div>
+                <div class="agent-info">
+                  <div class="agent-name">专家 Agent</div>
+                  <div class="agent-description">领域专家角色，可根据不同学科动态调整专家角色，提供权威性分析和面试级回答</div>
+                  <div class="agent-tags">
+                    <span class="tag tag--brand">专家</span>
+                    <span class="tag tag--neutral">角色扮演</span>
+                    <span class="tag tag--warning">自定义</span>
+                  </div>
+                </div>
+                <div class="agent-right">
+                  <div class="agent-status agent-status--paused">
+                    <img src="../assets/icons/dl_builtin_trae/x-circle.svg" alt="" width="14" height="14">
+                    已暂停
+                  </div>
+                  <div class="agent-meta">
+                    <span class="agent-meta-text">API调用量 0次</span>
+                    <span class="agent-meta-text">最后活跃 2天前</span>
+                    <span class="agent-meta-text">关联群组 无</span>
+                  </div>
+                  <div class="agent-actions">
+                    <button class="btn-icon open-config-btn" title="配置">
+                      <img src="../assets/icons/dl_builtin_trae/gear.svg" alt="">
+                    </button>
+                  </div>
+                </div>
+              </article>
+
+            </div>
+
+            <!-- Empty State -->
+            <div class="empty-state" id="agentEmptyState">
+              <div class="empty-state__icon">
+                <img src="../assets/icons/dl_builtin_trae/search.svg" alt="">
+              </div>
+              <div class="empty-state__title">未找到匹配的 Agent</div>
+              <div class="empty-state__desc">尝试调整搜索关键词或切换筛选条件</div>
+              <button class="empty-state__action" id="agentEmptyReset">清除筛选</button>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </main>
+
+    <!-- Create Agent Modal -->
+    <div class="config-modal-overlay" id="createAgentModalOverlay">
+      <div class="config-modal">
+        <div class="config-modal__header">
+          <span class="config-modal__title">新建 Agent</span>
+          <button class="config-modal__close" id="createAgentModalClose">
+            <img src="../assets/icons/dl_builtin_trae/x.svg" alt="">
+          </button>
+        </div>
+        <div class="config-modal__body">
+          <!-- Basic Info -->
+          <div class="config-section">
+            <span class="config-section__label">基本信息</span>
+            <div class="config-field">
+              <span class="config-field__label">Agent 名称</span>
+              <input type="text" class="config-input" id="newAgentName" placeholder="输入 Agent 名称">
+            </div>
+            <div class="config-field">
+              <span class="config-field__label">Agent 描述</span>
+              <textarea class="config-textarea" id="newAgentDesc" placeholder="输入 Agent 描述"></textarea>
+            </div>
+          </div>
+
+          <!-- Model Config -->
+          <div class="config-section">
+            <span class="config-section__label">模型配置</span>
+            <div class="config-field">
+              <span class="config-field__label">模型选择</span>
+              <select class="config-select" id="newAgentModel">
+                <option value="deepseek">DeepSeek-V3</option>
+                <option value="kimi">Kimi Moonshot</option>
+                <option value="claude">Claude 4 Sonnet</option>
+                <option value="gpt4">GPT-4o</option>
+                <option value="custom">自定义模型</option>
+              </select>
+            </div>
+            <div class="config-field">
+              <span class="config-field__label">API 密钥</span>
+              <input type="password" class="config-input" id="newAgentApiKey" placeholder="sk-...">
+              <span class="config-field__desc">从平台获取的 API 密钥，将加密存储</span>
+            </div>
+            <div class="config-field">
+              <span class="config-field__label">温度 (Temperature)</span>
+              <input type="text" class="config-input" id="newAgentTemp" placeholder="0.7" value="0.7">
+              <span class="config-field__desc">控制输出随机性，范围 0~1，越高越有创造性</span>
+            </div>
+          </div>
+
+          <!-- Knowledge Base -->
+          <div class="config-section">
+            <span class="config-section__label">关联知识库</span>
+            <div class="create-agent-kb-list" id="createAgentKbList">
+              <div class="create-agent-kb-item" onclick="toggleCreateAgentKb(this)">
+                <span class="create-agent-kb-check">
+                  <img src="../assets/icons/dl_builtin_trae/check.svg" alt="">
+                </span>
+                <span class="create-agent-kb-name">408_知识库</span>
+              </div>
+              <div class="create-agent-kb-item" onclick="toggleCreateAgentKb(this)">
+                <span class="create-agent-kb-check">
+                  <img src="../assets/icons/dl_builtin_trae/check.svg" alt="">
+                </span>
+                <span class="create-agent-kb-name">面试题库</span>
+              </div>
+            </div>
+            <span class="config-field__desc">选择后 Agent 可检索对应知识库内容</span>
+          </div>
+
+          <!-- Behavior -->
+          <div class="config-section">
+            <span class="config-section__label">行为设置</span>
+            <div class="config-field">
+              <div class="config-toggle-row">
+                <div>
+                  <span class="config-field__label">自动回复</span>
+                  <span class="config-field__desc">开启后将自动参与群聊讨论</span>
+                </div>
+                <button class="config-toggle config-toggle--active" id="newAgentAutoReply"></button>
+              </div>
+            </div>
+            <div class="config-field">
+              <div class="config-toggle-row">
+                <div>
+                  <span class="config-field__label">知识库关联</span>
+                  <span class="config-field__desc">关联后 Agent 可检索知识库内容</span>
+                </div>
+                <button class="config-toggle config-toggle--active" id="newAgentKbLinked"></button>
+              </div>
+            </div>
+            <div class="config-field">
+              <div class="config-toggle-row">
+                <div>
+                  <span class="config-field__label">提及才回复</span>
+                  <span class="config-field__desc">仅在 @Agent 时才触发回复</span>
+                </div>
+                <button class="config-toggle" id="newAgentMentionOnly"></button>
+              </div>
+            </div>
+          </div>
+
+          <!-- System Prompt -->
+          <div class="config-section">
+            <span class="config-section__label">系统提示词</span>
+            <div class="config-field">
+              <textarea class="config-textarea" id="newAgentSystemPrompt" placeholder="你是一个专业的 AI 助手..." style="min-height: 100px;"></textarea>
+              <span class="config-field__desc">定义 Agent 的角色和回复规则</span>
+            </div>
+          </div>
+        </div>
+        <div class="config-modal__footer">
+          <button class="btn btn--secondary" id="newAgentCancelBtn">取消</button>
+          <button class="btn btn--primary" id="newAgentCreateBtn">创建</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div class="agent-toast" id="toast"></div>
+
+    <!-- Config Modal -->
+    <div class="config-modal-overlay" id="configModalOverlay">
+      <div class="config-modal">
+        <div class="config-modal__header">
+          <span class="config-modal__title" id="configModalTitle">Agent 配置</span>
+          <button class="config-modal__close" id="configModalClose">
+            <img src="../assets/icons/dl_builtin_trae/x.svg" alt="">
+          </button>
+        </div>
+        <div class="config-modal__body">
+          <!-- Basic Info -->
+          <div class="config-section">
+            <span class="config-section__label">基本信息</span>
+            <div class="config-field">
+              <span class="config-field__label">Agent 名称</span>
+              <input type="text" class="config-input" id="configName" placeholder="输入 Agent 名称">
+            </div>
+            <div class="config-field">
+              <span class="config-field__label">Agent 描述</span>
+              <textarea class="config-textarea" id="configDesc" placeholder="输入 Agent 描述"></textarea>
+            </div>
+          </div>
+
+          <!-- Model Config -->
+          <div class="config-section">
+            <span class="config-section__label">模型配置</span>
+            <div class="config-field">
+              <span class="config-field__label">模型选择</span>
+              <select class="config-select" id="configModel">
+                <option value="deepseek">DeepSeek-V3</option>
+                <option value="kimi">Kimi (Moonshot)</option>
+                <option value="claude">Claude 4 Sonnet</option>
+                <option value="gpt4">GPT-4o</option>
+                <option value="custom">自定义模型</option>
+              </select>
+            </div>
+            <div class="config-field">
+              <span class="config-field__label">API 密钥</span>
+              <input type="password" class="config-input" id="configApiKey" placeholder="sk-...">
+              <span class="config-field__desc">从平台获取的 API 密钥，将加密存储</span>
+            </div>
+            <div class="config-field">
+              <span class="config-field__label">温度 (Temperature)</span>
+              <input type="text" class="config-input" id="configTemp" placeholder="0.7" value="0.7">
+              <span class="config-field__desc">控制输出随机性，范围 0~1，越高越有创造性</span>
+            </div>
+          </div>
+
+          <!-- Behavior -->
+          <div class="config-section">
+            <span class="config-section__label">行为设置</span>
+            <div class="config-field">
+              <div class="config-toggle-row">
+                <div>
+                  <span class="config-field__label">自动回复</span>
+                  <span class="config-field__desc">开启后将自动参与群聊讨论</span>
+                </div>
+                <button class="config-toggle config-toggle--active" id="configAutoReply"></button>
+              </div>
+            </div>
+            <div class="config-field">
+              <div class="config-toggle-row">
+                <div>
+                  <span class="config-field__label">知识库关联</span>
+                  <span class="config-field__desc">关联后 Agent 可检索知识库内容</span>
+                </div>
+                <button class="config-toggle config-toggle--active" id="configKbLinked"></button>
+              </div>
+            </div>
+            <div class="config-field">
+              <div class="config-toggle-row">
+                <div>
+                  <span class="config-field__label">提及才回复</span>
+                  <span class="config-field__desc">仅在 @Agent 时才触发回复</span>
+                </div>
+                <button class="config-toggle" id="configMentionOnly"></button>
+              </div>
+            </div>
+          </div>
+
+          <!-- System Prompt -->
+          <div class="config-section">
+            <span class="config-section__label">系统提示词</span>
+            <div class="config-field">
+              <textarea class="config-textarea" id="configSystemPrompt" placeholder="你是一个专业的 AI 助手..." style="min-height: 100px;"></textarea>
+              <span class="config-field__desc">定义 Agent 的角色和回复规则</span>
+            </div>
+          </div>
+        </div>
+        <div class="config-modal__footer">
+          <button class="btn btn--secondary" id="configCancelBtn">取消</button>
+          <button class="btn btn--primary" id="configSaveBtn">保存配置</button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // ===== Toast notification =====
+      function showToast(message) {
+        var toast = document.getElementById('toast');
+        toast.textContent = message;
+        toast.classList.add('agent-toast--visible');
+        clearTimeout(toast._timer);
+        toast._timer = setTimeout(function() {
+          toast.classList.remove('agent-toast--visible');
+        }, 2000);
+      }
+
+      // ===== Tab switching =====
+      var filterBar = document.getElementById('filterBar');
+      var tabs = filterBar.querySelectorAll('.filter-tab');
+      var cards = document.querySelectorAll('.agent-card');
+
+      tabs.forEach(function(tab) {
+        tab.addEventListener('click', function() {
+          tabs.forEach(function(t) { t.classList.remove('active'); });
+          tab.classList.add('active');
+          applyAgentFilters();
+        });
+      });
+
+      // ===== Unified filter + search logic =====
+      function applyAgentFilters() {
+        var activeTab = document.querySelector('.filter-tab.active');
+        var filter = activeTab ? activeTab.getAttribute('data-filter') : 'all';
+        var query = document.getElementById('searchInput').value.trim().toLowerCase();
+        var visibleCount = 0;
+
+        cards.forEach(function(card) {
+          var name = (card.querySelector('.agent-name') || {}).textContent || '';
+          var desc = (card.querySelector('.agent-description') || {}).textContent || '';
+          var status = card.getAttribute('data-status');
+          var haystack = (name + ' ' + desc).toLowerCase();
+          var matchesFilter = (filter === 'all' || status === filter);
+          var matchesSearch = !query || haystack.indexOf(query) !== -1;
+
+          if (matchesFilter && matchesSearch) {
+            card.style.display = '';
+            visibleCount++;
+          } else {
+            card.style.display = 'none';
+          }
+        });
+
+        // Show/hide empty state
+        var emptyState = document.getElementById('agentEmptyState');
+        if (emptyState) {
+          emptyState.style.display = visibleCount === 0 ? 'flex' : 'none';
+        }
+      }
+
+      // ===== "新建 Agent" button =====
+      document.getElementById('createAgentBtn').addEventListener('click', function() {
+        openCreateAgentModal();
+      });
+
+      // ===== Search filter =====
+      document.getElementById('searchInput').addEventListener('input', applyAgentFilters);
+
+      // ===== Reset filters from empty state =====
+      var agentEmptyReset = document.getElementById('agentEmptyReset');
+      if (agentEmptyReset) {
+        agentEmptyReset.addEventListener('click', function() {
+          document.getElementById('searchInput').value = '';
+          tabs.forEach(function(t) { t.classList.remove('active'); });
+          tabs[0].classList.add('active');
+          applyAgentFilters();
+        });
+      }
+
+      // ===== View Toggle (List / Card) =====
+      var agentList = document.getElementById('agentList');
+      var viewListBtn = document.getElementById('viewListBtn');
+      var viewCardBtn = document.getElementById('viewCardBtn');
+
+      viewListBtn.addEventListener('click', function() {
+        agentList.classList.remove('view-card');
+        viewListBtn.classList.add('view-toggle__btn--active');
+        viewCardBtn.classList.remove('view-toggle__btn--active');
+      });
+
+      viewCardBtn.addEventListener('click', function() {
+        agentList.classList.add('view-card');
+        viewCardBtn.classList.add('view-toggle__btn--active');
+        viewListBtn.classList.remove('view-toggle__btn--active');
+      });
+
+      // ===== Config Modal =====
+      var configOverlay = document.getElementById('configModalOverlay');
+      var configModalTitle = document.getElementById('configModalTitle');
+      var configNameInput = document.getElementById('configName');
+      var configDescInput = document.getElementById('configDesc');
+      var configModelSelect = document.getElementById('configModel');
+      var configApiKeyInput = document.getElementById('configApiKey');
+      var configTempInput = document.getElementById('configTemp');
+      var configSystemPromptInput = document.getElementById('configSystemPrompt');
+      var configAutoReplyToggle = document.getElementById('configAutoReply');
+      var configKbLinkedToggle = document.getElementById('configKbLinked');
+      var configMentionOnlyToggle = document.getElementById('configMentionOnly');
+
+      function openConfigModal(card) {
+        var name = card.querySelector('.agent-name').textContent;
+        var desc = card.querySelector('.agent-description').textContent;
+
+        configModalTitle.textContent = name + ' - 配置';
+        configNameInput.value = name;
+        configDescInput.value = desc;
+
+        // Set model based on agent name
+        var nameLower = name.toLowerCase();
+        if (nameLower.indexOf('deepseek') !== -1) {
+          configModelSelect.value = 'deepseek';
+        } else if (nameLower.indexOf('kimi') !== -1) {
+          configModelSelect.value = 'kimi';
+        } else if (nameLower.indexOf('claude') !== -1) {
+          configModelSelect.value = 'claude';
+        } else {
+          configModelSelect.value = 'custom';
+        }
+
+        configApiKeyInput.value = '';
+        configTempInput.value = '0.7';
+        configSystemPromptInput.value = '';
+
+        // Reset toggles
+        configAutoReplyToggle.classList.add('config-toggle--active');
+        configKbLinkedToggle.classList.add('config-toggle--active');
+        configMentionOnlyToggle.classList.remove('config-toggle--active');
+
+        configOverlay.classList.add('config-modal-overlay--visible');
+      }
+
+      function closeConfigModal() {
+        configOverlay.classList.remove('config-modal-overlay--visible');
+      }
+
+      // Open config on gear click
+      document.querySelectorAll('.open-config-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          var card = btn.closest('.agent-card');
+          openConfigModal(card);
+        });
+      });
+
+      // Close modal
+      document.getElementById('configModalClose').addEventListener('click', closeConfigModal);
+      document.getElementById('configCancelBtn').addEventListener('click', closeConfigModal);
+
+      // Close on overlay click
+      configOverlay.addEventListener('click', function(e) {
+        if (e.target === configOverlay) closeConfigModal();
+      });
+
+      // Close on Escape
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') closeConfigModal();
+      });
+
+      // Toggle buttons in modal
+      [configAutoReplyToggle, configKbLinkedToggle, configMentionOnlyToggle].forEach(function(toggle) {
+        toggle.addEventListener('click', function() {
+          toggle.classList.toggle('config-toggle--active');
+        });
+      });
+
+      // Save button
+      document.getElementById('configSaveBtn').addEventListener('click', function() {
+        closeConfigModal();
+        showToast('配置已保存');
+      });
+
+      // ===== Create Agent Modal =====
+      var createAgentOverlay = document.getElementById('createAgentModalOverlay');
+
+      function openCreateAgentModal() {
+        // Reset all fields
+        document.getElementById('newAgentName').value = '';
+        document.getElementById('newAgentDesc').value = '';
+        document.getElementById('newAgentModel').value = 'deepseek';
+        document.getElementById('newAgentApiKey').value = '';
+        document.getElementById('newAgentTemp').value = '0.7';
+        document.getElementById('newAgentSystemPrompt').value = '';
+        // Reset KB checkboxes
+        document.querySelectorAll('#createAgentKbList .create-agent-kb-item').forEach(function(item) {
+          item.classList.remove('create-agent-kb-item--checked');
+        });
+        // Reset toggles
+        document.getElementById('newAgentAutoReply').classList.add('config-toggle--active');
+        document.getElementById('newAgentKbLinked').classList.add('config-toggle--active');
+        document.getElementById('newAgentMentionOnly').classList.remove('config-toggle--active');
+
+        createAgentOverlay.classList.add('config-modal-overlay--visible');
+      }
+
+      function closeCreateAgentModal() {
+        createAgentOverlay.classList.remove('config-modal-overlay--visible');
+      }
+
+      function toggleCreateAgentKb(el) {
+        el.classList.toggle('create-agent-kb-item--checked');
+      }
+
+      // Close create agent modal
+      document.getElementById('createAgentModalClose').addEventListener('click', closeCreateAgentModal);
+      document.getElementById('newAgentCancelBtn').addEventListener('click', closeCreateAgentModal);
+
+      // Close on overlay click
+      createAgentOverlay.addEventListener('click', function(e) {
+        if (e.target === createAgentOverlay) closeCreateAgentModal();
+      });
+
+      // Toggle buttons in create agent modal
+      ['newAgentAutoReply', 'newAgentKbLinked', 'newAgentMentionOnly'].forEach(function(id) {
+        document.getElementById(id).addEventListener('click', function() {
+          this.classList.toggle('config-toggle--active');
+        });
+      });
+
+      // Create button
+      document.getElementById('newAgentCreateBtn').addEventListener('click', function() {
+        var name = document.getElementById('newAgentName').value.trim();
+        if (!name) {
+          showToast('请输入 Agent 名称');
+          return;
+        }
+        var desc = document.getElementById('newAgentDesc').value.trim() || '自定义 Agent';
+        var initial = name.charAt(0).toUpperCase();
+
+        // Build new agent card
+        var newCard = document.createElement('article');
+        newCard.className = 'agent-card';
+        newCard.setAttribute('data-status', 'running');
+        newCard.innerHTML =
+          '<div class="agent-avatar" style="background: var(--bg-brand);">' + initial + '</div>' +
+          '<div class="agent-info">' +
+            '<div class="agent-name">' + name + '</div>' +
+            '<div class="agent-description">' + desc + '</div>' +
+            '<div class="agent-tags"><span class="tag tag--brand">自定义</span></div>' +
+          '</div>' +
+          '<div class="agent-right">' +
+            '<div class="agent-status agent-status--running">' +
+              '<img src="../assets/icons/dl_builtin_trae/check-circle.svg" alt="" width="14" height="14">运行中' +
+            '</div>' +
+            '<div class="agent-meta">' +
+              '<span class="agent-meta-text">API调用量 0次</span>' +
+              '<span class="agent-meta-text">最后活跃 刚刚</span>' +
+              '<span class="agent-meta-text">关联群组 无</span>' +
+            '</div>' +
+            '<div class="agent-actions">' +
+              '<button class="btn-icon open-config-btn" title="配置">' +
+                '<img src="../assets/icons/dl_builtin_trae/gear.svg" alt="">' +
+              '</button>' +
+            '</div>' +
+          '</div>';
+
+        agentList.appendChild(newCard);
+
+        // Bind config button on new card
+        newCard.querySelector('.open-config-btn').addEventListener('click', function() {
+          openConfigModal(newCard);
+        });
+
+        // Update stats
+        updateAgentStats();
+
+        // Reset form
+        document.getElementById('newAgentName').value = '';
+        document.getElementById('newAgentDesc').value = '';
+
+        closeCreateAgentModal();
+        showToast('Agent ' + name + ' 创建成功');
+      });
+
+      // ===== Update statistics counters =====
+      function updateAgentStats() {
+        var allCards = document.querySelectorAll('.agent-card');
+        var runningCount = 0;
+        var pausedCount = 0;
+        allCards.forEach(function(c) {
+          if (c.getAttribute('data-status') === 'running') runningCount++;
+          else if (c.getAttribute('data-status') === 'paused') pausedCount++;
+        });
+        var statNumbers = document.querySelectorAll('.stat-number');
+        if (statNumbers[0]) statNumbers[0].textContent = allCards.length;
+        if (statNumbers[1]) statNumbers[1].textContent = runningCount;
+        if (statNumbers[2]) statNumbers[2].textContent = pausedCount;
+        // Update filter tab labels
+        var filterTabs = document.querySelectorAll('.filter-tab');
+        if (filterTabs[0]) filterTabs[0].textContent = '全部 Agent (' + allCards.length + ')';
+        if (filterTabs[1]) filterTabs[1].textContent = '运行中 (' + runningCount + ')';
+        if (filterTabs[2]) filterTabs[2].textContent = '已暂停 (' + pausedCount + ')';
+      }
+    </script>
+</body>
+</html>

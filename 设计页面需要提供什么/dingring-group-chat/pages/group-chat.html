@@ -1,0 +1,4390 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DingRing Group Chat</title>
+    <style id="theme-vars">
+/**
+ * Trae design library tokens
+ * Dark-only colors and typography tokens.
+ * Source references:
+ * - /workspace/.uploads/c7804cd9-3301-4b42-8895-bb409861b29a_trae.md
+ * - /workspace/.uploads/3164f329-b5a1-42ba-9dcb-5f1b36b48506_trae.css
+ *
+ * Notes:
+ * - Token values are preserved from the source files.
+ * - Grouping is preserved.
+ * - No alias layer is included.
+ * - Invalid source token names that contained spaces were normalized to kebab-case.
+ *   The original source names are kept in comments.
+ */
+
+/* @dark-only */
+/* @group-priority: brand-green, status, brand-blue, brand-purple, brand-yellow */
+
+:root {
+  /* radius */
+  --radius-2: 2px;
+  --radius-4: 4px;
+  --radius-6: 6px;
+  --radius-8: 8px;
+  --radius-10: 10px;
+  --radius-full: 9999px;
+
+  /* spacers */
+  --spacer-0: 0px;
+  --spacer-4: 4px;
+  --spacer-6: 6px;
+  --spacer-8: 8px;
+  --spacer-12: 12px;
+  --spacer-16: 16px;
+  --spacer-24: 24px;
+  --spacer-32: 32px;
+  --spacer-40: 40px;
+
+  /* font */
+  --font-family-default: SF Pro Text;
+  --font-family-heading: SF Pro;
+  --font-family-mono: JetBrains Mono;
+  --font-weight-default: 400;
+  --font-weight-code: 450;
+  --font-weight-medium: 500;
+  --font-weight-strong: 600;
+  --font-family-base: var(--font-family-default);
+  --font-family-heading-alias: var(--font-family-heading);
+  --font-family-mono-alias: var(--font-family-mono);
+
+  /* body */
+  --body-xs-font-family: "SF Pro Text", system-ui, -apple-system, sans-serif;
+  --body-xs-font-size: 10px;
+  --body-xs-font-weight: 400;
+  --body-xs-line-height: 14px;
+  --body-sm-font-family: "SF Pro Text", system-ui, -apple-system, sans-serif;
+  --body-sm-font-size: 11px;
+  --body-sm-font-weight: 400;
+  --body-sm-line-height: 16px;
+  --body-sm-strong-font-family: "SF Pro Text", system-ui, -apple-system, sans-serif;
+  --body-sm-strong-font-size: 11px;
+  --body-sm-strong-font-weight: 500;
+  --body-sm-strong-line-height: 16px;
+  --body-md-font-family: "SF Pro Text", system-ui, -apple-system, sans-serif;
+  --body-md-font-size: 12px;
+  --body-md-font-weight: 400;
+  --body-md-line-height: 18px;
+  --body-md-strong-font-family: "SF Pro Text", system-ui, -apple-system, sans-serif;
+  --body-md-strong-font-size: 12px;
+  --body-md-strong-font-weight: 500;
+  --body-md-strong-line-height: 18px;
+  --body-base-font-family: "SF Pro Text", system-ui, -apple-system, sans-serif;
+  --body-base-font-size: 13px;
+  --body-base-font-weight: 400;
+  --body-base-line-height: 20px;
+  --body-base-strong-font-family: "SF Pro Text", system-ui, -apple-system, sans-serif;
+  --body-base-strong-font-size: 13px;
+  --body-base-strong-font-weight: 500;
+  --body-base-strong-line-height: 20px;
+
+  /* heading */
+  --heading-3xs-font-family: "SF Pro Text", system-ui, -apple-system, sans-serif;
+  --heading-3xs-font-size: 11px;
+  --heading-3xs-font-weight: 600;
+  --heading-3xs-line-height: 16px;
+  --heading-2xs-font-family: "SF Pro Text", system-ui, -apple-system, sans-serif;
+  --heading-2xs-font-size: 12px;
+  --heading-2xs-font-weight: 600;
+  --heading-2xs-line-height: 18px;
+  --heading-xs-font-family: "SF Pro Text", system-ui, -apple-system, sans-serif;
+  --heading-xs-font-size: 13px;
+  --heading-xs-font-weight: 600;
+  --heading-xs-line-height: 20px;
+  --heading-sm-font-family: "SF Pro Text", system-ui, -apple-system, sans-serif;
+  --heading-sm-font-size: 16px;
+  --heading-sm-font-weight: 600;
+  --heading-sm-line-height: 24px;
+  --heading-md-font-family: "SF Pro", system-ui, -apple-system, sans-serif;
+  --heading-md-font-size: 20px;
+  --heading-md-font-weight: 600;
+  --heading-md-line-height: 28px;
+  --heading-lg-font-family: "SF Pro", system-ui, -apple-system, sans-serif;
+  --heading-lg-font-size: 22px;
+  --heading-lg-font-weight: 600;
+  --heading-lg-line-height: 30px;
+  --heading-xl-font-family: "SF Pro", system-ui, -apple-system, sans-serif;
+  --heading-xl-font-size: 24px;
+  --heading-xl-font-weight: 600;
+  --heading-xl-line-height: 32px;
+  --heading-2xl-font-family: "SF Pro", system-ui, -apple-system, sans-serif;
+  --heading-2xl-font-size: 28px;
+  --heading-2xl-font-weight: 600;
+  --heading-2xl-line-height: 36px;
+  --heading-3xl-font-family: "SF Pro", system-ui, -apple-system, sans-serif;
+  --heading-3xl-font-size: 32px;
+  --heading-3xl-font-weight: 600;
+  --heading-3xl-line-height: 40px;
+
+  /* code */
+  --code-editor-font-family: "JetBrains Mono", system-ui, -apple-system, sans-serif;
+  --code-editor-font-size: 13px;
+  --code-editor-font-weight: 450;
+  --code-editor-line-height: 20px;
+  --code-terminal-font-family: "JetBrains Mono", system-ui, -apple-system, sans-serif;
+  --code-terminal-font-size: 12px;
+  --code-terminal-font-weight: 450;
+  --code-terminal-line-height: 18px;
+  --code-text: #E0E3EE;
+  --code-doc: #7F838C;
+  --code-link: #3C7EFF;
+  --code-number: #F48CCA;
+  --code-action: #B38CFF;
+  --code-instruction: #F0D8FF;
+  --code-function: #F29D79;
+  --code-constant: #80BBFF;
+  --code-parameter: #82D99F;
+  --code-attribute: #DED47E;
+  --code-tag: #F2858C;
+
+  /* bg */
+  --bg-base-default: #1A1B1D;
+  --bg-base-secondary: #222427;
+  --bg-base-tertiary: #2A2D31;
+  --bg-overlay-l1: rgba(224, 226, 242, 0.04);
+  --bg-overlay-l2: rgba(224, 226, 242, 0.06);
+  --bg-overlay-l3: rgba(224, 226, 242, 0.08);
+  --bg-overlay-l4: rgba(224, 226, 242, 0.12);
+  --bg-menu: #202123;
+  --bg-tooltip: #1A1B1D;
+  --bg-invert: #DADDE5;
+  --bg-invert-hover: #EDEFF2;
+  --bg-invert-active: #979AA4;
+  --bg-invert-disabled: rgba(224, 226, 242, 0.12);
+  --color-background: var(--bg-base-default);
+  --color-surface: var(--bg-base-secondary);
+  --color-surface-variant: var(--bg-base-tertiary);
+  --color-overlay-1: var(--bg-overlay-l1);
+  --color-overlay-2: var(--bg-overlay-l2);
+  --color-overlay-3: var(--bg-overlay-l3);
+  --color-overlay-4: var(--bg-overlay-l4);
+  --color-card: var(--bg-base-secondary);
+  --color-tooltip: var(--bg-tooltip);
+  --color-menu: var(--bg-menu);
+
+  /* bg-brand */
+  --bg-brand: #32F08C;
+  --bg-brand-hover: #0FDC78;
+  --bg-brand-disabled: rgba(50, 240, 140, 0.2);
+  --bg-brand-popup: rgba(50, 240, 140, 0.12);
+  --color-primary: var(--bg-brand);
+  --color-primary-hover: var(--bg-brand-hover);
+  --color-primary-disabled: var(--bg-brand-disabled);
+  --color-primary-soft: var(--bg-brand-popup);
+  --color-accent: var(--bg-brand);
+
+  /* text */
+  --text-default: #D1D3DB;
+  --text-default-hover: #F5F9FE;
+  --text-default-active: #F5F9FE;
+  --text-secondary: #9599A6;
+  --text-secondary-hover: #D1D3DB;
+  --text-secondary-active: #D1D3DB;
+  --text-tertiary: #666B75;
+  --text-disabled: #666B75;
+  --text-onbrand: #0C0C0D;
+  --text-onaccent: #0C0C0D;
+  --color-foreground: var(--text-default);
+  --color-foreground-hover: var(--text-default-hover);
+  --color-on-surface: var(--text-default);
+  --color-on-surface-variant: var(--text-secondary);
+  --color-muted-foreground: var(--text-secondary);
+  --color-disabled-foreground: var(--text-disabled);
+  --color-on-primary: var(--text-onbrand);
+
+  /* text-brand */
+  --text-brand: #32F08C;
+  --text-brand-hover: #0FDC78;
+
+  /* icon */
+  --icon-default: #D1D3DB;
+  --icon-default-hover: #F5F9FE;
+  --icon-default-active: #F5F9FE;
+  --icon-secondary: #9599A6;
+  --icon-secondary-hover: #D1D3DB;
+  --icon-secondary-active: #D1D3DB;
+  --icon-tertiary: #666B75;
+  --icon-disabled: #666B75;
+  --icon-onbrand: #0C0C0D;
+  --icon-onaccent: #0C0C0D;
+
+  /* icon-brand */
+  --icon-brand: #32F08C;
+  --icon-brand-hover: #0FDC78;
+
+  /* border */
+  --border-neutral-l1: rgba(224, 226, 242, 0.1);
+  --border-neutral-l2: rgba(224, 226, 242, 0.16);
+  --border-neutral-l3: rgba(224, 226, 242, 0.2);
+  --border-contrast: #FFFFFF;
+  --border-brand: #32F08C;
+  --color-border: var(--border-neutral-l1);
+  --color-border-strong: var(--border-neutral-l2);
+  --color-border-stronger: var(--border-neutral-l3);
+  --color-border-contrast: var(--border-contrast);
+  --color-outline: var(--border-neutral-l1);
+
+  /* accent */
+  --accent-teal: #2DD288;
+  --accent-coral: #FF9392;
+  --accent-amber: #DCB364;
+  --accent-lime: #8ACB3A;
+  --accent-cyan: #04CBE5;
+  --accent-blue: #7BB8FF;
+  --accent-magenta: #EC93FF;
+  --accent-violet: #BFA5FF;
+  --accent-slate: #AFB9CF;
+
+  /* status */
+  --status-primary-default: #387BFF;
+  --status-primary-hover: #4C88FF;
+  --status-primary-active: #1759DD;
+  --status-primary-surface-l1: rgba(53, 121, 255, 0.18);
+  --status-primary-surface-l2: rgba(53, 121, 255, 0.28);
+  --status-primary-surface-l3: rgba(53, 121, 255, 0.36);
+  --status-success-default: #33C192;
+  --status-success-hover: #5ED4AD;
+  --status-success-active: #27B082;
+  --status-success-surface-l1: rgba(0, 165, 110, 0.18);
+  --status-success-surface-l2: rgba(0, 165, 110, 0.28);
+  --status-success-surface-l3: rgba(0, 165, 110, 0.36);
+  --status-alert-default: #D29D00;
+  --status-alert-hover: #DFB949;
+  --status-alert-active: #AB8820;
+  --status-alert-surface-l1: rgba(210, 157, 0, 0.16);
+  --status-alert-surface-l2: rgba(210, 157, 0, 0.28);
+  --status-alert-surface-l3: rgba(210, 157, 0, 0.36);
+  --status-warning-default: #D27E24;
+  --status-warning-hover: #D78B28;
+  --status-warning-active: #B46510;
+  --status-warning-surface-l1: rgba(210, 126, 36, 0.16);
+  --status-warning-surface-l2: rgba(210, 126, 36, 0.28);
+  --status-warning-surface-l3: rgba(210, 126, 36, 0.36);
+  --status-error-default: #F65A5A;
+  --status-error-hover: #F86262;
+  --status-error-active: #B33636;
+  --status-error-surface-l1: rgba(246, 70, 70, 0.18);
+  --status-error-surface-l2: rgba(246, 70, 70, 0.28);
+  --status-error-surface-l3: rgba(246, 70, 70, 0.36);
+  --color-info: var(--status-primary-default);
+  --color-success: var(--status-success-default);
+  --color-warning: var(--status-warning-default);
+  --color-error: var(--status-error-default);
+  --color-error-soft: var(--status-error-surface-l1);
+
+  /* brand */
+  --brand-green-100: #E5FFF2;
+  --brand-green-200: #B4FDD9;
+  --brand-green-300: #85FABF;
+  --brand-green-400: #5CF5A8;
+  --brand-green-500: #32F08C;
+  --brand-green-600: #0FDC78;
+  --brand-green-700: #0AB861;
+  --brand-green-800: #05994F;
+  --brand-green-900: #02743B;
+  --brand-green-1000: #004D26;
+  --brand-red-100: #FFE5E5;
+  --brand-red-200: #FFCCCC;
+  --brand-red-300: #FFB2B2;
+  --brand-red-400: #FF9999;
+  --brand-red-500: #FF8080;
+  --brand-red-600: #FF6464;
+  --brand-red-700: #E63737;
+  --brand-red-800: #CB1010;
+  --brand-red-900: #8F0505;
+  --brand-red-1000: #4D0000;
+  --brand-yellow-100: #FFF6E5;
+  --brand-yellow-200: #FFECCC;
+  --brand-yellow-300: #FFE3B2;
+  --brand-yellow-400: #FFDA99;
+  --brand-yellow-500: #FFD080;
+  --brand-yellow-600: #FFC864;
+  --brand-yellow-700: #E6A637;
+  --brand-yellow-800: #CB8710;
+  --brand-yellow-900: #8F5C05;
+  --brand-yellow-1000: #4D3000;
+  --brand-blue-100: #E5F3FF;
+  --brand-blue-200: #CCE6FF;
+  --brand-blue-300: #B2DAFF;
+  --brand-blue-400: #99CEFF;
+  --brand-blue-500: #80C1FF;
+  --brand-blue-600: #64B4FF;
+  --brand-blue-700: #3792E6;
+  --brand-blue-800: #1071CB;
+  --brand-blue-900: #054C8F;
+  --brand-blue-1000: #00284D;
+  --brand-purple-100: #E8E5FF;
+  --brand-purple-200: #D2CCFF;
+  --brand-purple-300: #BBB2FF;
+  --brand-purple-400: #A599FF;
+  --brand-purple-500: #8E80FF;
+  --brand-purple-600: #7864FF;
+  --brand-purple-700: #4C37E6;
+  --brand-purple-800: #2610CB;
+  --brand-purple-900: #15058F;
+  --brand-purple-1000: #09004D;
+  /* original source token: --brand-neutral grey-100 */
+  --brand-neutral-grey-100: #F2F2F2;
+  /* original source token: --brand-neutral grey-200 */
+  --brand-neutral-grey-200: #E3E3E3;
+  /* original source token: --brand-neutral grey-300 */
+  --brand-neutral-grey-300: #D6D6D6;
+  /* original source token: --brand-neutral grey-400 */
+  --brand-neutral-grey-400: #C7C7C7;
+  /* original source token: --brand-neutral grey-500 */
+  --brand-neutral-grey-500: #BABABA;
+  /* original source token: --brand-neutral grey-600 */
+  --brand-neutral-grey-600: #ABABAB;
+  /* original source token: --brand-neutral grey-700 */
+  --brand-neutral-grey-700: #8A8A8A;
+  /* original source token: --brand-neutral grey-800 */
+  --brand-neutral-grey-800: #686868;
+  /* original source token: --brand-neutral grey-900 */
+  --brand-neutral-grey-900: #474747;
+  /* original source token: --brand-neutral grey-1000 */
+  --brand-neutral-grey-1000: #262626;
+  /* original source token: --brand-blue grey-100 */
+  --brand-blue-grey-100: #F1EFF4;
+  /* original source token: --brand-blue grey-200 */
+  --brand-blue-grey-200: #E0E1E6;
+  /* original source token: --brand-blue grey-300 */
+  --brand-blue-grey-300: #CFD3D8;
+  /* original source token: --brand-blue grey-400 */
+  --brand-blue-grey-400: #BFC5CA;
+  /* original source token: --brand-blue grey-500 */
+  --brand-blue-grey-500: #B0B5BA;
+  /* original source token: --brand-blue grey-600 */
+  --brand-blue-grey-600: #A0A6AB;
+  /* original source token: --brand-blue grey-700 */
+  --brand-blue-grey-700: #80898E;
+  /* original source token: --brand-blue grey-800 */
+  --brand-blue-grey-800: #5E696E;
+  /* original source token: --brand-blue grey-900 */
+  --brand-blue-grey-900: #404A4F;
+  /* original source token: --brand-blue grey-1000 */
+  --brand-blue-grey-1000: #21262B;
+  /* original source token: --brand-green grey-100 */
+  --brand-green-grey-100: #F1F4F4;
+  /* original source token: --brand-green grey-200 */
+  --brand-green-grey-200: #E0E6E6;
+  /* original source token: --brand-green grey-300 */
+  --brand-green-grey-300: #CFD8D8;
+  /* original source token: --brand-green grey-400 */
+  --brand-green-grey-400: #BFCACA;
+  /* original source token: --brand-green grey-500 */
+  --brand-green-grey-500: #B0BABA;
+  /* original source token: --brand-green grey-600 */
+  --brand-green-grey-600: #A0ABAB;
+  /* original source token: --brand-green grey-700 */
+  --brand-green-grey-700: #808E8E;
+  /* original source token: --brand-green grey-800 */
+  --brand-green-grey-800: #5E6E6E;
+  /* original source token: --brand-green grey-900 */
+  --brand-green-grey-900: #404F4F;
+  /* original source token: --brand-green grey-1000 */
+  --brand-green-grey-1000: #212B2B;
+
+  /* font (generic fallback — used by a few preview sections) */
+  --font-family: "SF Pro Text", system-ui, -apple-system, sans-serif;
+  --font-size: 10px;
+  --font-weight: 400;
+  --line-height: 14px;
+
+  /* viz */
+  --viz-series-coral: #F87454;
+  --viz-series-amber: #EDAA45;
+  --viz-series-mint: #1DC981;
+  --viz-series-teal: #78F2F2;
+  --viz-series-sky: #22A5F7;
+  --viz-series-violet: #B655FC;
+  --viz-series-magenta: #FB9DD7;
+  --viz-series-indigo: #B6A3FF;
+  --viz-series-lime: #A6EA39;
+  --viz-series-slate: #859EAD;
+  --viz-ui-bg-chart: #202123;
+  --viz-ui-bg-tooltip: #1A1B1D;
+  --viz-ui-chart-title: #D1D3DB;
+  --viz-ui-chart-subtitle: #9599A6;
+  --viz-ui-chart-axis: rgba(224, 226, 242, 0.16);
+  --viz-ui-chart-tick: #9599A6;
+  --viz-ui-legend-label: #9599A6;
+  --viz-ui-legend-value: #D1D3DB;
+
+  /* special */
+  --special-white: #FFFFFF;
+  --special-black: #000000;
+  --special-bgtabsoverlay: rgba(0, 0, 0, 0.2);
+
+  /* layout aliases (originally fallback in _preview.css) */
+  --brand-1: #32f08c;
+  --brand-2: #3ee1a3;
+  --brand-3: #60f2bd;
+  --brand-4: #a0fde7;
+  --site-canvas: #1A1B1D;
+  --bg-layout-1: var(--bg-base-secondary);
+  --bg-layout-2: var(--bg-overlay-l1);
+  --border-1: var(--border-neutral-l1);
+
+  /* semantic aliases for head contract */
+  --color-muted: var(--text-secondary);
+  --color-radius-sm: var(--radius-6);
+  --color-radius-md: var(--radius-8);
+  --color-radius-lg: var(--radius-10);
+}
+
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.1/dist/index.global.js"></script>
+    <script src="https://unpkg.com/lucide@1.8.0/dist/umd/lucide.min.js"></script>
+    <style type="text/tailwindcss">
+  @theme inline {
+    --color-background: var(--color-background);
+    --color-foreground: var(--color-foreground);
+    --color-card: var(--color-card);
+    --color-primary: var(--color-primary);
+    --color-muted: var(--color-muted);
+    --color-muted-foreground: var(--color-muted-foreground);
+    --color-accent: var(--color-accent);
+    --color-border: var(--color-border);
+    --radius-sm: var(--color-radius-sm);
+    --radius-md: var(--color-radius-md);
+    --radius-lg: var(--color-radius-lg);
+  }
+  @layer base {
+    body { background: var(--color-background); color: var(--color-foreground); }
+    td, th { @apply break-words; word-break: break-all; word-break: auto-phrase; }
+    th { @apply whitespace-nowrap; }
+  }
+    </style>
+    <style id="semantic-token-fallback">
+      .bg-background { background-color: var(--color-background); }
+      .text-background { color: var(--color-background); }
+      .border-background { border-color: var(--color-background); }
+      .ring-background { --tw-ring-color: var(--color-background); }
+      .bg-foreground { background-color: var(--color-foreground); }
+      .text-foreground { color: var(--color-foreground); }
+      .border-foreground { border-color: var(--color-foreground); }
+      .ring-foreground { --tw-ring-color: var(--color-foreground); }
+      .bg-card { background-color: var(--color-card); }
+      .text-card { color: var(--color-card); }
+      .border-card { border-color: var(--color-card); }
+      .ring-card { --tw-ring-color: var(--color-card); }
+      .bg-primary { background-color: var(--color-primary); }
+      .text-primary { color: var(--color-primary); }
+      .border-primary { border-color: var(--color-primary); }
+      .ring-primary { --tw-ring-color: var(--color-primary); }
+      .bg-muted { background-color: var(--color-muted); }
+      .text-muted { color: var(--color-muted); }
+      .border-muted { border-color: var(--color-muted); }
+      .ring-muted { --tw-ring-color: var(--color-muted); }
+      .bg-muted-foreground { background-color: var(--color-muted-foreground); }
+      .text-muted-foreground { color: var(--color-muted-foreground); }
+      .border-muted-foreground { border-color: var(--color-muted-foreground); }
+      .ring-muted-foreground { --tw-ring-color: var(--color-muted-foreground); }
+      .bg-accent { background-color: var(--color-accent); }
+      .text-accent { color: var(--color-accent); }
+      .border-accent { border-color: var(--color-accent); }
+      .ring-accent { --tw-ring-color: var(--color-accent); }
+      .bg-border { background-color: var(--color-border); }
+      .text-border { color: var(--color-border); }
+      .border-border { border-color: var(--color-border); }
+      .ring-border { --tw-ring-color: var(--color-border); }
+    </style>
+    <style>
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      [data-icon] {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        -webkit-mask-size: contain;
+        mask-size: contain;
+        -webkit-mask-repeat: no-repeat;
+        mask-repeat: no-repeat;
+        -webkit-mask-position: center;
+        mask-position: center;
+        background-color: currentColor;
+      }
+    </style>
+</head>
+<body class="min-h-screen font-sans antialiased">
+<style>
+/* ===== Reset & Root ===== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; margin: 0; overflow: hidden; background: var(--bg-base-default); color: var(--text-default); font-family: var(--font-family-default); font-size: var(--body-base); line-height: 1.5; }
+button { font-family: inherit; }
+img { display: block; }
+
+/* ===== Layout Shell ===== */
+.app-shell {
+  display: flex;
+  height: 100vh;
+  width: 100%;
+}
+
+/* ===== Left Sidebar ===== */
+.sidebar {
+  width: 240px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-base-secondary);
+  border-right: 1px solid var(--border-neutral-l1);
+}
+
+.sidebar__header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacer-8);
+  padding: var(--spacer-16) var(--spacer-16) var(--spacer-8);
+}
+
+.sidebar__logo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-6);
+  background: var(--bg-brand);
+  flex-shrink: 0;
+}
+
+.sidebar__logo img {
+  width: 16px;
+  height: 16px;
+}
+
+.sidebar__title {
+  font-size: var(--heading-sm);
+  font-weight: var(--font-weight-strong);
+  color: var(--text-default);
+  letter-spacing: -0.01em;
+}
+
+.sidebar__title-accent {
+  color: var(--bg-brand);
+}
+
+.sidebar__search {
+  padding: var(--spacer-8) var(--spacer-16);
+}
+
+.sidebar__search-input {
+  width: 100%;
+  height: 32px;
+  padding: 0 var(--spacer-8) 0 32px;
+  border: 1px solid var(--border-neutral-l2);
+  border-radius: var(--radius-6);
+  background: var(--bg-base-tertiary);
+  color: var(--text-default);
+  font-size: var(--body-sm);
+  font-weight: var(--font-weight-default);
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.sidebar__search-input::placeholder { color: var(--text-tertiary); }
+.sidebar__search-input:focus { border-color: var(--border-brand); }
+
+.sidebar__search-wrap {
+  position: relative;
+}
+
+.sidebar__search-icon {
+  position: absolute;
+  left: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-tertiary);
+}
+
+.sidebar__search-icon img { width: 14px; height: 14px; }
+
+/* Group search empty state */
+.group-empty {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacer-8);
+  padding: var(--spacer-24) var(--spacer-8);
+  color: var(--text-tertiary);
+  font-size: var(--body-sm);
+}
+
+.sidebar__label {
+  padding: var(--spacer-12) var(--spacer-16) var(--spacer-4);
+  font-size: var(--body-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.group-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 var(--spacer-8);
+}
+
+.group-item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacer-8);
+  padding: var(--spacer-8) var(--spacer-8);
+  border-radius: var(--radius-6);
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+
+.group-item:hover { background: var(--bg-overlay-l1); }
+
+.group-item--active {
+  background: rgba(50, 240, 140, 0.1);
+}
+
+.group-item__content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.group-item__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacer-4);
+}
+
+.group-item__name {
+  font-size: var(--body-base);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-default);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.group-item__name-group {
+  display: flex;
+  align-items: center;
+  gap: var(--spacer-4);
+  min-width: 0;
+  flex: 1;
+}
+
+.group-item__time {
+  font-size: var(--body-xs);
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+}
+
+.group-item__bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacer-4);
+}
+
+.group-item__preview {
+  font-size: var(--body-sm);
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+  min-width: 0;
+}
+
+.group-item__badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: var(--radius-full);
+  background: var(--bg-brand);
+  color: var(--text-onbrand);
+  font-size: 10px;
+  font-weight: var(--font-weight-strong);
+  flex-shrink: 0;
+}
+
+.sidebar__footer {
+  padding: var(--spacer-8) var(--spacer-16) var(--spacer-16);
+  border-top: 1px solid var(--border-neutral-l1);
+}
+
+.sidebar__new-group {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacer-4);
+  width: 100%;
+  height: 36px;
+  border: 1px solid var(--border-neutral-l2);
+  border-radius: var(--radius-6);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: var(--body-base);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.sidebar__new-group:hover {
+  background: var(--bg-overlay-l1);
+  color: var(--text-default);
+  border-color: var(--border-neutral-l3);
+}
+
+.sidebar__new-group img { width: 14px; height: 14px; }
+
+/* ===== Sidebar Nav Items ===== */
+.sidebar__nav {
+  padding: 0 var(--spacer-8);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: var(--spacer-4);
+}
+
+.sidebar__nav-item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacer-8);
+  padding: var(--spacer-8);
+  border-radius: var(--radius-6);
+  cursor: pointer;
+  transition: background 0.12s ease;
+  text-decoration: none;
+}
+
+.sidebar__nav-item:hover {
+  background: var(--bg-overlay-l1);
+}
+
+.sidebar__nav-item--active {
+  background: rgba(50, 240, 140, 0.1);
+}
+
+.sidebar__nav-item--active .sidebar__nav-icon {
+  color: var(--bg-brand);
+}
+
+.sidebar__nav-item--active .sidebar__nav-text {
+  color: var(--text-default);
+}
+
+.sidebar__nav-icon {
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+}
+
+.sidebar__nav-icon img { width: 16px; height: 16px; }
+
+.sidebar__nav-text {
+  font-size: var(--body-base);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-secondary);
+}
+
+.sidebar__nav-badge {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: var(--radius-full);
+  background: var(--bg-brand);
+  color: var(--text-onbrand);
+  font-size: 10px;
+  font-weight: var(--font-weight-strong);
+  flex-shrink: 0;
+}
+
+/* ===== Center Chat Window ===== */
+.chat-window {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-base-default);
+  min-width: 0;
+}
+
+.chat-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacer-12) var(--spacer-16);
+  border-bottom: 1px solid var(--border-neutral-l1);
+  flex-shrink: 0;
+}
+
+.chat-header__left {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.chat-header__name-row {
+  display: flex;
+  align-items: center;
+  gap: var(--spacer-8);
+}
+
+.chat-header__title {
+  font-size: var(--heading-xs);
+  font-weight: var(--font-weight-strong);
+  color: var(--text-default);
+}
+
+.chat-header__topic {
+  font-size: var(--body-sm);
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chat-header__right {
+  display: flex;
+  align-items: center;
+  gap: var(--spacer-4);
+  flex-shrink: 0;
+  position: relative;
+}
+
+.chat-header__icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: var(--radius-6);
+  background: transparent;
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: all 0.12s ease;
+}
+
+.chat-header__icon-btn:hover {
+  background: var(--bg-overlay-l1);
+  color: var(--text-default);
+}
+
+.chat-header__icon-btn img { width: 16px; height: 16px; }
+
+.chat-header__members {
+  display: flex;
+  align-items: center;
+  gap: var(--spacer-4);
+  font-size: var(--body-sm);
+  color: var(--text-tertiary);
+}
+
+.chat-header__members img { width: 14px; height: 14px; }
+
+/* ===== In-chat Search Bar ===== */
+.chat-search {
+  display: none;
+  align-items: center;
+  gap: var(--spacer-8);
+  padding: var(--spacer-8) var(--spacer-16);
+  border-bottom: 1px solid var(--border-neutral-l1);
+  background: var(--bg-base-secondary);
+  flex-shrink: 0;
+}
+
+.chat-search--open { display: flex; }
+
+.chat-search__input-wrap {
+  position: relative;
+  flex: 1;
+  max-width: 360px;
+}
+
+.chat-search__input {
+  width: 100%;
+  height: 30px;
+  padding: 0 var(--spacer-8) 0 30px;
+  border: 1px solid var(--border-neutral-l2);
+  border-radius: var(--radius-6);
+  background: var(--bg-base-tertiary);
+  color: var(--text-default);
+  font-size: var(--body-sm);
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.chat-search__input::placeholder { color: var(--text-tertiary); }
+.chat-search__input:focus { border-color: var(--border-brand); }
+
+.chat-search__icon {
+  position: absolute;
+  left: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-tertiary);
+}
+
+.chat-search__icon img { width: 14px; height: 14px; }
+
+.chat-search__count {
+  font-size: var(--body-sm);
+  color: var(--text-secondary);
+  min-width: 48px;
+  text-align: center;
+}
+
+.chat-search__nav {
+  display: flex;
+  gap: 2px;
+}
+
+.chat-search__nav-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: var(--radius-4);
+  background: transparent;
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.chat-search__nav-btn:hover:not(:disabled) {
+  background: var(--bg-overlay-l1);
+  color: var(--text-default);
+}
+
+.chat-search__nav-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.chat-search__nav-btn img { width: 14px; height: 14px; }
+
+.chat-search__close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: var(--radius-4);
+  background: transparent;
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.chat-search__close:hover {
+  background: var(--bg-overlay-l1);
+  color: var(--text-default);
+}
+
+.chat-search__close img { width: 14px; height: 14px; }
+
+/* Message highlight on search match */
+.message--search-match {
+  background: var(--bg-overlay-l1);
+  border-radius: var(--radius-8);
+  box-shadow: 0 0 0 2px var(--border-brand);
+  transition: box-shadow 0.2s ease;
+}
+
+.message--search-current {
+  box-shadow: 0 0 0 2px var(--bg-brand);
+}
+
+/* ===== Tag Component ===== */
+.tag {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 var(--spacer-8);
+  border-radius: var(--radius-full);
+  font-size: var(--body-xs);
+  font-weight: var(--font-weight-medium);
+  white-space: nowrap;
+}
+
+.tag--brand {
+  background: rgba(50, 240, 140, 0.12);
+  color: var(--bg-brand);
+}
+
+.tag--success {
+  background: var(--status-success-surface-l1);
+  color: var(--status-success-default);
+}
+
+.tag--warning {
+  background: rgba(210, 126, 36, 0.15);
+  color: var(--status-warning-default);
+}
+
+.tag--neutral {
+  background: var(--bg-overlay-l2);
+  color: var(--text-secondary);
+}
+
+/* ===== Message List ===== */
+.message-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--spacer-16);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacer-16);
+}
+
+/* System Notice */
+.system-notice {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacer-4) 0;
+}
+
+.system-notice__inner {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacer-4);
+  padding: var(--spacer-4) var(--spacer-12);
+  border-radius: var(--radius-full);
+  background: var(--bg-overlay-l1);
+  font-size: var(--body-xs);
+  color: var(--text-tertiary);
+}
+
+.system-notice__inner img { width: 12px; height: 12px; }
+
+/* Message Row */
+.message {
+  display: flex;
+  gap: var(--spacer-8);
+  max-width: 72%;
+}
+
+.message--user {
+  align-self: flex-end;
+  flex-direction: row-reverse;
+}
+
+.message--agent {
+  align-self: flex-start;
+}
+
+.message__avatar {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.message__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacer-4);
+  min-width: 0;
+}
+
+.message--user .message__body {
+  align-items: flex-end;
+}
+
+.message__sender {
+  display: flex;
+  align-items: center;
+  gap: var(--spacer-4);
+}
+
+.message__sender-name {
+  font-size: var(--body-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-secondary);
+}
+
+.message--user .message__sender-name {
+  color: var(--text-tertiary);
+}
+
+.message__sender-time {
+  font-size: var(--body-xs);
+  color: var(--text-tertiary);
+}
+
+.message__bubble {
+  padding: var(--spacer-8) var(--spacer-12);
+  border-radius: var(--radius-10);
+  font-size: var(--body-base);
+  font-weight: var(--font-weight-default);
+  line-height: 1.6;
+  word-break: break-word;
+}
+
+.message--agent .message__bubble {
+  background: var(--bg-base-tertiary);
+  color: var(--text-default);
+  border-top-left-radius: var(--radius-4);
+}
+
+.message--user .message__bubble {
+  background: var(--status-success-surface-l1);
+  color: var(--text-default);
+  border-top-right-radius: var(--radius-4);
+}
+
+/* ===== Avatar Component ===== */
+.ds-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--bg-overlay-l3);
+  color: var(--text-default);
+  font-size: var(--body-sm);
+  font-weight: var(--font-weight-strong);
+  flex-shrink: 0;
+}
+
+.ds-avatar--accent {
+  background: var(--bg-brand);
+  color: var(--text-onbrand);
+}
+
+.ds-avatar--sm {
+  width: 24px;
+  height: 24px;
+  font-size: var(--body-xs);
+}
+
+/* Agent avatar colors */
+.ds-avatar--deepseek { background: #4A6CF7; color: #fff; }
+.ds-avatar--kimi { background: #6C5CE7; color: #fff; }
+.ds-avatar--claude { background: #D4A853; color: #fff; }
+.ds-avatar--expert { background: var(--status-warning-default); color: #fff; }
+
+/* ===== Typing Indicator ===== */
+.typing-indicator {
+  display: flex;
+  align-items: center;
+  gap: var(--spacer-8);
+  padding: var(--spacer-4) 0;
+}
+
+.typing-indicator__avatar {
+  flex-shrink: 0;
+}
+
+.typing-indicator__body {
+  display: flex;
+  align-items: center;
+  gap: var(--spacer-8);
+  padding: var(--spacer-8) var(--spacer-12);
+  background: var(--bg-base-tertiary);
+  border-radius: var(--radius-10);
+  border-top-left-radius: var(--radius-4);
+}
+
+.typing-indicator__text {
+  font-size: var(--body-xs);
+  color: var(--text-tertiary);
+}
+
+.typing-indicator__dots {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.typing-indicator__dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--text-tertiary);
+  animation: typing-dot 1.4s infinite ease-in-out;
+}
+
+.typing-indicator__dot:nth-child(2) { animation-delay: 0.2s; }
+.typing-indicator__dot:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes typing-dot {
+  0%, 60%, 100% { opacity: 0.3; }
+  30% { opacity: 1; }
+}
+
+/* ===== Composer ===== */
+.message-input {
+  flex-shrink: 0;
+  padding: var(--spacer-8) var(--spacer-16) var(--spacer-16);
+}
+
+.ds-composer {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacer-8);
+  width: 100%;
+  padding: var(--spacer-12);
+  background: var(--bg-overlay-l1);
+  border: 1px solid var(--border-neutral-l2);
+  border-radius: var(--radius-10);
+  transition: border-color 0.15s ease;
+}
+
+.ds-composer:focus-within {
+  border-color: var(--border-brand);
+}
+
+.ds-composer__input {
+  width: 100%;
+  min-height: 40px;
+  max-height: 120px;
+  resize: none;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--text-default);
+  font-size: var(--body-md);
+  line-height: 1.5;
+  font-weight: var(--font-weight-default);
+  font-family: var(--font-family-default);
+}
+
+.ds-composer__input::placeholder {
+  color: var(--text-tertiary);
+}
+
+.ds-composer__toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacer-8);
+}
+
+.ds-composer__tools {
+  display: flex;
+  align-items: center;
+  gap: var(--spacer-4);
+}
+
+.ds-composer__icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-6);
+  background: transparent;
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: all 0.12s ease;
+}
+
+.ds-composer__icon-btn:hover {
+  background: var(--bg-overlay-l2);
+  color: var(--text-default);
+}
+
+.ds-composer__icon-btn img {
+  width: 16px;
+  height: 16px;
+}
+
+.ds-composer__send {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-8);
+  background: var(--bg-brand);
+  cursor: pointer;
+  color: var(--text-onbrand);
+  transition: background 0.15s ease;
+}
+
+.ds-composer__send:hover {
+  background: var(--bg-brand-hover);
+}
+
+.ds-composer__send img {
+  width: 16px;
+  height: 16px;
+}
+
+/* ===== Right Info Panel ===== */
+.info-panel {
+  width: 280px;
+  flex-shrink: 0;
+  overflow-y: auto;
+  border-left: 1px solid var(--border-neutral-l1);
+  background: var(--bg-base-secondary);
+  display: flex;
+  flex-direction: column;
+}
+
+.info-panel__section {
+  padding: var(--spacer-16);
+  border-bottom: 1px solid var(--border-neutral-l1);
+}
+
+.info-panel__section:last-child {
+  border-bottom: none;
+}
+
+.info-panel__heading {
+  font-size: var(--heading-2xs);
+  font-weight: var(--font-weight-strong);
+  color: var(--text-default);
+  margin-bottom: var(--spacer-12);
+}
+
+/* Member List */
+.member-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacer-2);
+}
+
+.member-item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacer-8);
+  padding: var(--spacer-8);
+  border-radius: var(--radius-6);
+  transition: background 0.12s ease;
+}
+
+.member-item:hover {
+  background: var(--bg-overlay-l1);
+}
+
+.member-item__info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.member-item__name {
+  font-size: var(--body-base);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-default);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.member-item__row {
+  display: flex;
+  align-items: center;
+  gap: var(--spacer-4);
+}
+
+/* Topic Panel */
+.topic-panel__title {
+  font-size: var(--heading-xs);
+  font-weight: var(--font-weight-strong);
+  color: var(--text-default);
+  margin-bottom: var(--spacer-12);
+}
+
+.topic-panel__status-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--spacer-8);
+}
+
+.topic-panel__round {
+  font-size: var(--body-sm);
+  color: var(--text-secondary);
+}
+
+.topic-panel__actions {
+  margin-top: var(--spacer-12);
+}
+
+.topic-panel__end-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacer-4);
+  width: 100%;
+  height: 32px;
+  border: 1px solid var(--border-brand);
+  border-radius: var(--radius-6);
+  background: transparent;
+  color: var(--bg-brand);
+  font-size: var(--body-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.topic-panel__end-btn:hover {
+  background: rgba(50, 240, 140, 0.08);
+}
+
+.topic-panel__end-btn img {
+  width: 14px;
+  height: 14px;
+}
+
+/* History Topics */
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacer-4);
+}
+
+.history-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacer-8);
+  border-radius: var(--radius-6);
+  transition: background 0.12s ease;
+}
+
+.history-item:hover {
+  background: var(--bg-overlay-l1);
+}
+
+.history-item--clickable {
+  cursor: pointer;
+}
+
+.history-item--clickable:active {
+  background: var(--bg-overlay-l2);
+}
+
+.history-item__name {
+  font-size: var(--body-base);
+  color: var(--text-secondary);
+}
+
+/* ===== Knowledge Card Modal ===== */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.modal-overlay--visible {
+  display: flex;
+  opacity: 1;
+}
+
+.kc-modal {
+  width: 480px;
+  max-height: 80vh;
+  background: var(--bg-base-secondary);
+  border: 1px solid var(--border-neutral-l2);
+  border-radius: var(--radius-10);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.4);
+}
+
+.kc-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacer-16) var(--spacer-16) var(--spacer-12);
+  border-bottom: 1px solid var(--border-neutral-l1);
+}
+
+.kc-modal__title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.kc-modal__title {
+  font-size: var(--heading-sm);
+  font-weight: var(--font-weight-strong);
+  color: var(--text-default);
+}
+
+.kc-modal__source {
+  font-size: var(--body-sm);
+  color: var(--text-secondary);
+}
+
+.kc-modal__close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: var(--radius-6);
+  background: transparent;
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: all 0.12s ease;
+}
+
+.kc-modal__close:hover {
+  background: var(--bg-overlay-l2);
+  color: var(--text-default);
+}
+
+.kc-modal__close img { width: 16px; height: 16px; }
+
+.kc-modal__body {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--spacer-16);
+}
+
+.kc-modal__content {
+  font-size: var(--body-base);
+  color: var(--text-default);
+  line-height: var(--body-base-line-height);
+}
+
+.kc-modal__content b {
+  color: var(--text-default-hover);
+  font-weight: var(--font-weight-medium);
+}
+
+.kc-modal__content p {
+  margin-bottom: var(--spacer-12);
+}
+
+.kc-modal__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacer-4);
+  margin-top: var(--spacer-12);
+}
+
+.kc-modal__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacer-12) var(--spacer-16) var(--spacer-16);
+  border-top: 1px solid var(--border-neutral-l1);
+}
+
+.kc-modal__meta {
+  font-size: var(--body-sm);
+  color: var(--text-tertiary);
+}
+
+.kc-modal__actions {
+  display: flex;
+  gap: var(--spacer-8);
+}
+
+.kc-modal__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacer-4);
+  height: 32px;
+  padding: 0 var(--spacer-12);
+  border-radius: var(--radius-6);
+  font-size: var(--body-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.kc-modal__btn img { width: 14px; height: 14px; }
+
+.kc-modal__btn--primary {
+  border: none;
+  background: var(--bg-brand);
+  color: var(--text-onbrand);
+}
+
+.kc-modal__btn--primary:hover {
+  background: var(--bg-brand-hover);
+}
+
+.kc-modal__btn--secondary {
+  border: 1px solid var(--border-neutral-l2);
+  background: transparent;
+  color: var(--text-secondary);
+}
+
+.kc-modal__btn--secondary:hover {
+  background: var(--bg-overlay-l1);
+  color: var(--text-default);
+}
+
+.kc-modal__btn--danger {
+  border: none;
+  background: var(--status-error-default);
+  color: var(--text-onbrand);
+}
+
+.kc-modal__btn--danger:hover {
+  background: var(--status-error-hover, #d9363e);
+}
+
+/* ===== Scrollbar ===== */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-neutral-l2);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--border-neutral-l3);
+}
+
+/* ===== Member avatar with star ===== */
+.member-item__avatar-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.member-item__star {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--bg-base-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.member-item__star img {
+  width: 10px;
+  height: 10px;
+}
+
+/* ===== Create Group Modal ===== */
+.create-group-modal {
+  width: 440px;
+  background: var(--bg-base-secondary);
+  border: 1px solid var(--border-neutral-l2);
+  border-radius: var(--radius-10);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.4);
+}
+
+.create-group-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacer-16) var(--spacer-16) var(--spacer-12);
+  border-bottom: 1px solid var(--border-neutral-l1);
+}
+
+.create-group-modal__title {
+  font-size: var(--heading-sm);
+  font-weight: var(--font-weight-strong);
+  color: var(--text-default);
+}
+
+.create-group-modal__close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: var(--radius-6);
+  background: transparent;
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: all 0.12s ease;
+}
+
+.create-group-modal__close:hover {
+  background: var(--bg-overlay-l2);
+  color: var(--text-default);
+}
+
+.create-group-modal__close img { width: 16px; height: 16px; }
+
+.create-group-modal__body {
+  padding: var(--spacer-16);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacer-16);
+}
+
+.create-group-modal__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacer-6);
+}
+
+.create-group-modal__label {
+  font-size: var(--body-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-secondary);
+}
+
+.create-group-modal__input {
+  width: 100%;
+  height: 36px;
+  padding: 0 var(--spacer-12);
+  border: 1px solid var(--border-neutral-l2);
+  border-radius: var(--radius-6);
+  background: var(--bg-base-tertiary);
+  color: var(--text-default);
+  font-size: var(--body-base);
+  font-weight: var(--font-weight-default);
+  font-family: var(--font-family-default);
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.create-group-modal__input::placeholder {
+  color: var(--text-tertiary);
+}
+
+.create-group-modal__input:focus {
+  border-color: var(--border-brand);
+}
+
+.create-group-modal__textarea {
+  width: 100%;
+  min-height: 72px;
+  max-height: 120px;
+  resize: vertical;
+  padding: var(--spacer-8) var(--spacer-12);
+  border: 1px solid var(--border-neutral-l2);
+  border-radius: var(--radius-6);
+  background: var(--bg-base-tertiary);
+  color: var(--text-default);
+  font-size: var(--body-base);
+  font-weight: var(--font-weight-default);
+  line-height: 1.5;
+  font-family: var(--font-family-default);
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.create-group-modal__textarea::placeholder {
+  color: var(--text-tertiary);
+}
+
+.create-group-modal__textarea:focus {
+  border-color: var(--border-brand);
+}
+
+.create-group-modal__agents {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacer-8);
+}
+
+.create-group-modal__agent-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacer-8);
+}
+
+.create-group-modal__agent-item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacer-6);
+  padding: var(--spacer-6) var(--spacer-10);
+  border: 1px solid var(--border-neutral-l2);
+  border-radius: var(--radius-6);
+  background: var(--bg-overlay-l1);
+  cursor: pointer;
+  transition: all 0.12s ease;
+  user-select: none;
+}
+
+.create-group-modal__agent-item:hover {
+  border-color: var(--border-neutral-l3);
+  background: var(--bg-overlay-l2);
+}
+
+.create-group-modal__agent-item--checked {
+  border-color: var(--border-brand);
+  background: rgba(50, 240, 140, 0.08);
+}
+
+.create-group-modal__agent-checkbox {
+  width: 16px;
+  height: 16px;
+  border-radius: var(--radius-4);
+  border: 1.5px solid var(--border-neutral-l3);
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.12s ease;
+}
+
+.create-group-modal__agent-item--checked .create-group-modal__agent-checkbox {
+  background: var(--bg-brand);
+  border-color: var(--bg-brand);
+}
+
+.create-group-modal__agent-checkbox img {
+  width: 10px;
+  height: 10px;
+  opacity: 0;
+}
+
+.create-group-modal__agent-item--checked .create-group-modal__agent-checkbox img {
+  opacity: 1;
+}
+
+.create-group-modal__agent-name {
+  font-size: var(--body-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-default);
+}
+
+.create-group-modal__footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--spacer-8);
+  padding: var(--spacer-12) var(--spacer-16) var(--spacer-16);
+  border-top: 1px solid var(--border-neutral-l1);
+}
+
+/* ===== More Menu Dropdown ===== */
+.more-menu-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 99;
+  display: none;
+}
+
+.more-menu-overlay--visible {
+  display: block;
+}
+
+.more-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  width: 180px;
+  background: var(--bg-menu);
+  border: 1px solid var(--border-neutral-l2);
+  border-radius: var(--radius-8);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+  padding: var(--spacer-4);
+  z-index: 100;
+  display: none;
+  /* Positioned relative to .chat-header__right which has position: relative */
+}
+
+.more-menu--visible {
+  display: block;
+}
+
+.more-menu__item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacer-8);
+  width: 100%;
+  height: 34px;
+  padding: 0 var(--spacer-10);
+  border: none;
+  border-radius: var(--radius-6);
+  background: transparent;
+  color: var(--text-default);
+  font-size: var(--body-sm);
+  font-weight: var(--font-weight-default);
+  font-family: var(--font-family-default);
+  cursor: pointer;
+  transition: background 0.12s ease;
+  text-align: left;
+}
+
+.more-menu__item:hover {
+  background: var(--bg-overlay-l2);
+}
+
+.more-menu__item:active {
+  background: var(--bg-overlay-l3);
+}
+
+.more-menu__item img {
+  width: 16px;
+  height: 16px;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.more-menu__item--danger {
+  color: var(--status-error-default);
+}
+
+.more-menu__item--danger:hover {
+  background: var(--status-error-surface-l1);
+}
+
+/* ===== Sidebar Group Search ===== */
+(function() {
+  var searchInput = document.getElementById('groupSearchInput');
+  var groupList = document.getElementById('group-list');
+  var emptyState = document.getElementById('groupEmptyState');
+  if (!searchInput || !groupList) return;
+
+  var groupItems = groupList.querySelectorAll('.group-item');
+
+  function applyGroupSearch() {
+    var query = searchInput.value.trim().toLowerCase();
+    var visibleCount = 0;
+
+    groupItems.forEach(function(item) {
+      var name = (item.querySelector('.group-item__name') || {}).textContent || '';
+      var preview = (item.querySelector('.group-item__preview') || {}).textContent || '';
+      var haystack = (name + ' ' + preview).toLowerCase();
+      var match = !query || haystack.indexOf(query) !== -1;
+
+      if (match) {
+        item.style.display = '';
+        visibleCount++;
+      } else {
+        item.style.display = 'none';
+      }
+    });
+
+    if (emptyState) {
+      emptyState.style.display = visibleCount === 0 ? 'flex' : 'none';
+    }
+  }
+
+  searchInput.addEventListener('input', applyGroupSearch);
+})();
+
+/* ===== In-chat Message Search ===== */
+(function() {
+  var searchBtn = document.getElementById('chatSearchBtn');
+  var searchBar = document.getElementById('chatSearchBar');
+  var searchInput = document.getElementById('chatSearchInput');
+  var countEl = document.getElementById('chatSearchCount');
+  var prevBtn = document.getElementById('chatSearchPrev');
+  var nextBtn = document.getElementById('chatSearchNext');
+  var closeBtn = document.getElementById('chatSearchClose');
+  var messageList = document.getElementById('message-list');
+  if (!searchBtn || !searchBar || !messageList) return;
+
+  var matches = [];
+  var currentIndex = -1;
+
+  function getMessages() {
+    return messageList.querySelectorAll('.message');
+  }
+
+  function getMessageText(msg) {
+    // Collect text from bubble, excluding nested reply-to blocks
+    var bubble = msg.querySelector('.message__bubble');
+    if (!bubble) return '';
+    var clone = bubble.cloneNode(true);
+    var replyTo = clone.querySelector('.message__reply-to');
+    if (replyTo) replyTo.remove();
+    return clone.textContent || '';
+  }
+
+  function clearHighlights() {
+    getMessages().forEach(function(msg) {
+      msg.classList.remove('message--search-match', 'message--search-current');
+    });
+  }
+
+  function runSearch() {
+    clearHighlights();
+    matches = [];
+    currentIndex = -1;
+
+    var query = searchInput.value.trim().toLowerCase();
+    if (!query) {
+      updateCount();
+      return;
+    }
+
+    getMessages().forEach(function(msg) {
+      var text = getMessageText(msg).toLowerCase();
+      if (text.indexOf(query) !== -1) {
+        msg.classList.add('message--search-match');
+        matches.push(msg);
+      }
+    });
+
+    if (matches.length > 0) {
+      currentIndex = 0;
+      highlightCurrent();
+    }
+    updateCount();
+  }
+
+  function highlightCurrent() {
+    matches.forEach(function(m) { m.classList.remove('message--search-current'); });
+    if (currentIndex >= 0 && currentIndex < matches.length) {
+      var msg = matches[currentIndex];
+      msg.classList.add('message--search-current');
+      // Scroll the matched message into view within the message-list
+      var listRect = messageList.getBoundingClientRect();
+      var msgRect = msg.getBoundingClientRect();
+      var offset = msgRect.top - listRect.top + messageList.scrollTop - (listRect.height / 2) + (msgRect.height / 2);
+      messageList.scrollTo({ top: offset, behavior: 'smooth' });
+    }
+  }
+
+  function updateCount() {
+    if (matches.length === 0) {
+      countEl.textContent = searchInput.value.trim() ? '0/0' : '0/0';
+      prevBtn.disabled = true;
+      nextBtn.disabled = true;
+    } else {
+      countEl.textContent = (currentIndex + 1) + '/' + matches.length;
+      prevBtn.disabled = matches.length <= 1;
+      nextBtn.disabled = matches.length <= 1;
+    }
+  }
+
+  function openSearch() {
+    searchBar.classList.add('chat-search--open');
+    setTimeout(function() { searchInput.focus(); }, 50);
+  }
+
+  function closeSearch() {
+    searchBar.classList.remove('chat-search--open');
+    searchInput.value = '';
+    clearHighlights();
+    matches = [];
+    currentIndex = -1;
+    updateCount();
+  }
+
+  searchBtn.addEventListener('click', function() {
+    if (searchBar.classList.contains('chat-search--open')) {
+      closeSearch();
+    } else {
+      openSearch();
+    }
+  });
+
+  searchInput.addEventListener('input', runSearch);
+
+  searchInput.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (e.shiftKey) {
+        if (currentIndex > 0) { currentIndex--; highlightCurrent(); updateCount(); }
+      } else {
+        if (currentIndex < matches.length - 1) { currentIndex++; highlightCurrent(); updateCount(); }
+      }
+    } else if (e.key === 'Escape') {
+      closeSearch();
+    }
+  });
+
+  prevBtn.addEventListener('click', function() {
+    if (matches.length === 0) return;
+    currentIndex = (currentIndex - 1 + matches.length) % matches.length;
+    highlightCurrent();
+    updateCount();
+  });
+
+  nextBtn.addEventListener('click', function() {
+    if (matches.length === 0) return;
+    currentIndex = (currentIndex + 1) % matches.length;
+    highlightCurrent();
+    updateCount();
+  });
+
+  closeBtn.addEventListener('click', closeSearch);
+})();
+
+/* ===== Toast ===== */
+.toast-container {
+  position: fixed;
+  top: var(--spacer-24);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacer-8);
+  pointer-events: none;
+}
+
+.toast {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacer-8);
+  padding: var(--spacer-8) var(--spacer-16);
+  background: var(--bg-base-tertiary);
+  border: 1px solid var(--border-neutral-l2);
+  border-radius: var(--radius-8);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  font-size: var(--body-base);
+  color: var(--text-default);
+  white-space: nowrap;
+  opacity: 0;
+  transform: translateY(-8px);
+  transition: all 0.25s ease;
+  pointer-events: auto;
+}
+
+.toast--visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.toast img {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+/* ===== Config Toggle ===== */
+.config-toggle {
+  position: relative;
+  width: 40px;
+  height: 22px;
+  background: var(--bg-overlay-l3);
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  border: none;
+  flex-shrink: 0;
+}
+.config-toggle--active {
+  background: var(--bg-brand);
+}
+.config-toggle::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 16px;
+  height: 16px;
+  background: #fff;
+  border-radius: 50%;
+  transition: transform 0.2s ease;
+}
+.config-toggle--active::after {
+  transform: translateX(18px);
+}
+
+/* ===== Member Management Item ===== */
+.member-mgmt-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacer-8);
+  padding: var(--spacer-8) var(--spacer-12);
+  margin-bottom: var(--spacer-8);
+  border-radius: var(--radius-6);
+  background: var(--bg-overlay-l1);
+}
+.member-mgmt-summary__text {
+  font-size: var(--body-sm);
+  color: var(--text-secondary);
+}
+.member-mgmt-summary__text strong {
+  color: var(--bg-brand);
+  font-weight: var(--font-weight-strong);
+}
+.member-mgmt-summary__hint {
+  font-size: var(--body-xs);
+  color: var(--text-tertiary);
+}
+.member-mgmt-list {
+  max-height: 280px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+.member-mgmt-item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacer-12);
+  padding: var(--spacer-10) 0;
+  border-bottom: 1px solid var(--border-neutral-l1);
+  transition: opacity 0.18s ease;
+}
+.member-mgmt-item:last-child {
+  border-bottom: none;
+}
+.member-mgmt-item--removing {
+  opacity: 0.4;
+}
+.member-mgmt-item__info {
+  display: flex;
+  align-items: center;
+  gap: var(--spacer-8);
+  flex: 1;
+  min-width: 0;
+}
+.member-mgmt-item__name {
+  font-size: var(--body-base);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-default);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.member-mgmt-item__remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: var(--radius-6);
+  background: transparent;
+  cursor: pointer;
+  color: var(--text-tertiary);
+  transition: all 0.12s ease;
+}
+.member-mgmt-item__remove:hover {
+  background: var(--status-error-surface-l1);
+  color: var(--status-error-default);
+}
+.member-mgmt-item__remove img {
+  width: 14px;
+  height: 14px;
+}
+
+/* Add Member Area */
+.member-mgmt-add {
+  margin-top: var(--spacer-12);
+  padding-top: var(--spacer-12);
+  border-top: 1px solid var(--border-neutral-l1);
+}
+.member-mgmt-add__label {
+  display: block;
+  font-size: var(--body-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-secondary);
+  margin-bottom: var(--spacer-8);
+}
+.member-mgmt-add__agents {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacer-6);
+  margin-bottom: var(--spacer-10);
+}
+.member-mgmt-agent-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: var(--radius-6);
+  border: 1px solid var(--border-neutral-l2);
+  background: var(--bg-overlay-l1);
+  cursor: pointer;
+  transition: all 0.12s ease;
+  font-size: var(--body-sm);
+  color: var(--text-secondary);
+}
+.member-mgmt-agent-option:hover {
+  border-color: var(--bg-brand);
+  color: var(--text-default);
+}
+.member-mgmt-agent-option--added {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+.member-mgmt-agent-option--added:hover {
+  border-color: var(--border-neutral-l2);
+}
+.member-mgmt-agent-option__avatar {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: var(--font-weight-strong);
+  color: var(--text-on-brand);
+  flex-shrink: 0;
+}
+.member-mgmt-agent-option__check {
+  display: none;
+  color: var(--bg-brand);
+}
+.member-mgmt-agent-option--added .member-mgmt-agent-option__check {
+  display: inline-flex;
+}
+.member-mgmt-add__empty {
+  margin: 0;
+  padding: var(--spacer-8) 0;
+  font-size: var(--body-sm);
+  color: var(--text-tertiary);
+  text-align: center;
+}
+
+/* Role tag: clickable for switching (except owner) */
+.member-mgmt-item__role {
+  cursor: pointer;
+  transition: opacity 0.12s ease;
+  user-select: none;
+}
+.member-mgmt-item__role:hover {
+  opacity: 0.7;
+}
+.member-mgmt-item__role--locked {
+  cursor: default;
+}
+.member-mgmt-item__role--locked:hover {
+  opacity: 1;
+}
+
+/* Confirm remove modal text */
+.member-mgmt-confirm__text {
+  font-size: var(--body-base);
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin: 0;
+}
+.member-mgmt-confirm__text strong {
+  color: var(--text-default);
+  font-weight: var(--font-weight-strong);
+}
+
+/* ===== @ Mention Styles ===== */
+.mention {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 1px 6px;
+  border-radius: var(--radius-4);
+  background: var(--bg-brand-popup);
+  color: var(--bg-brand);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: background-color 0.12s ease;
+  white-space: nowrap;
+  vertical-align: baseline;
+  line-height: inherit;
+}
+
+.mention:hover {
+  background: rgba(50, 240, 140, 0.18);
+}
+
+.mention--self {
+  background: var(--status-primary-surface-l1);
+  color: var(--status-primary-default);
+}
+
+.mention--self:hover {
+  background: rgba(53, 121, 255, 0.24);
+}
+
+.mention__avatar {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 8px;
+  font-weight: var(--font-weight-strong);
+  color: #fff;
+  flex-shrink: 0;
+}
+
+/* Mention dropdown picker */
+.mention-picker {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  margin-bottom: 4px;
+  width: 220px;
+  background: var(--bg-menu);
+  border: 1px solid var(--border-neutral-l2);
+  border-radius: var(--radius-8);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  padding: var(--spacer-4);
+  display: none;
+  z-index: 60;
+}
+
+.mention-picker--visible {
+  display: block;
+}
+
+.mention-picker__header {
+  padding: var(--spacer-4) var(--spacer-8);
+  font-size: var(--body-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.mention-picker__item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacer-8);
+  padding: var(--spacer-6) var(--spacer-8);
+  border-radius: var(--radius-6);
+  cursor: pointer;
+  transition: background 0.1s ease;
+}
+
+.mention-picker__item:hover {
+  background: var(--bg-overlay-l2);
+}
+
+.mention-picker__item--active {
+  background: rgba(50, 240, 140, 0.1);
+}
+
+.mention-picker__name {
+  font-size: var(--body-base);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-default);
+}
+
+.mention-picker__role {
+  margin-left: auto;
+  font-size: var(--body-xs);
+  color: var(--text-tertiary);
+}
+
+/* Mention badge on message sender */
+.message__mentions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacer-4);
+  margin-bottom: var(--spacer-4);
+}
+
+/* Message reply-to quote block — WeChat-style, lives inside bubble */
+.message__reply-to {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacer-8);
+  padding: var(--spacer-8) var(--spacer-12);
+  margin-bottom: var(--spacer-8);
+  border-radius: var(--radius-sm);
+  background: rgba(255,255,255,0.06);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.message__reply-to:hover {
+  background: rgba(255,255,255,0.1);
+}
+.message__reply-to-avatar {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  font-size: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  flex-shrink: 0;
+  font-weight: 600;
+}
+.message__reply-to-content {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+.message__reply-to-name {
+  font-size: 11px;
+  color: var(--text-secondary);
+  font-weight: 600;
+  margin-bottom: 1px;
+}
+.message__reply-to-text {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  word-break: break-all;
+}
+
+/* ===== Rich Text / Markdown Message Rendering ===== */
+.message__bubble h1, .message__bubble h2, .message__bubble h3,
+.message__bubble h4, .message__bubble h5, .message__bubble h6 {
+  margin: 8px 0 4px;
+  font-weight: 600;
+  color: var(--text-default);
+}
+.message__bubble h3 { font-size: 15px; }
+.message__bubble h4 { font-size: 14px; }
+.message__bubble p { margin: 4px 0; }
+.message__bubble ul, .message__bubble ol {
+  margin: 6px 0;
+  padding-left: 20px;
+}
+.message__bubble li { margin: 2px 0; }
+.message__bubble pre {
+  background: var(--bg-base-tertiary);
+  border: 1px solid var(--border-neutral-l2);
+  border-radius: var(--radius-md);
+  padding: var(--spacer-12);
+  margin: 8px 0;
+  overflow-x: auto;
+  font-size: var(--body-sm);
+  line-height: 1.6;
+}
+.message__bubble code {
+  font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+  font-size: 0.9em;
+}
+.message__bubble :not(pre) > code {
+  background: var(--bg-overlay-l2);
+  border: 1px solid var(--border-neutral-l2);
+  border-radius: var(--radius-sm);
+  padding: 1px 5px;
+}
+.message__bubble blockquote {
+  border-left: 3px solid var(--border-brand-subtle);
+  margin: 8px 0;
+  padding: 4px 12px;
+  color: var(--text-secondary);
+  background: var(--bg-overlay-l1);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+.message__bubble hr {
+  border: none;
+  border-top: 1px solid var(--border-neutral-l2);
+  margin: 12px 0;
+}
+.message__bubble table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 8px 0;
+  font-size: var(--body-sm);
+}
+.message__bubble th, .message__bubble td {
+  border: 1px solid var(--border-neutral-l2);
+  padding: 6px 10px;
+  text-align: left;
+}
+.message__bubble th {
+  background: var(--bg-overlay-l1);
+  font-weight: 600;
+}
+
+/* ===== Composer Rich Text Editable ===== */
+.ds-composer__editor {
+  width: 100%;
+  min-height: 40px;
+  max-height: 160px;
+  overflow-y: auto;
+  outline: none;
+  background: transparent;
+  color: var(--text-default);
+  font-size: var(--body-md);
+  line-height: 1.5;
+  font-weight: var(--font-weight-default);
+  font-family: var(--font-family-default);
+  word-break: break-word;
+}
+.ds-composer__editor:empty::before {
+  content: attr(data-placeholder);
+  color: var(--text-tertiary);
+  pointer-events: none;
+}
+.ds-composer__editor:focus {
+  outline: none;
+}
+/* Active formatting mode indicator */
+.ds-composer__format-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-overlay-l2);
+  font-size: 10px;
+  color: var(--text-secondary);
+  margin-left: auto;
+}
+.ds-composer__send--active {
+  opacity: 1;
+}
+.ds-composer__send--disabled {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+/* ===== Message Context Menu ===== */
+.msg-ctx-menu {
+  position: fixed;
+  z-index: 200;
+  min-width: 140px;
+  padding: 4px;
+  border-radius: var(--radius-md);
+  background: var(--bg-base-tertiary, #1a1a2e);
+  border: 1px solid var(--border-neutral-l2);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  display: none;
+}
+.msg-ctx-menu--visible {
+  display: block;
+}
+.msg-ctx-menu__item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacer-8);
+  width: 100%;
+  padding: 6px 10px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-default);
+  font-size: var(--body-sm);
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.12s ease;
+}
+.msg-ctx-menu__item:hover {
+  background: var(--bg-overlay-l2);
+}
+.msg-ctx-menu__item img {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+.msg-ctx-menu__item--danger {
+  color: var(--status-error-default);
+}
+.msg-ctx-menu__item--danger:hover {
+  background: var(--status-error-surface-l1);
+}
+/* Highlight effect on quoted message */
+.message--quoted {
+  animation: quote-highlight 1.5s ease;
+}
+@keyframes quote-highlight {
+  0% { box-shadow: 0 0 0 2px var(--bg-brand); }
+  100% { box-shadow: none; }
+}
+</style>
+
+<!-- ===== APP SHELL ===== -->
+<main>
+<div class="app-shell">
+
+  <!-- ===== LEFT SIDEBAR ===== -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar__header">
+      <div class="sidebar__logo">
+        <img src="../assets/icons/dl_builtin_trae/zap.0c0c0d.svg" width="16" height="16" alt="">
+      </div>
+      <span class="sidebar__title">Ding<span class="sidebar__title-accent">Ring</span></span>
+    </div>
+
+    <div class="sidebar__search">
+      <div class="sidebar__search-wrap">
+        <span class="sidebar__search-icon">
+          <img src="../assets/icons/dl_builtin_trae/search.svg" width="14" height="14" alt="">
+        </span>
+        <input type="text" class="sidebar__search-input" placeholder="搜索群组..." id="groupSearchInput">
+      </div>
+    </div>
+
+    <div class="sidebar__nav">
+      <div class="sidebar__nav-item sidebar__nav-item--active">
+        <span class="sidebar__nav-icon">
+          <img src="../assets/icons/dl_builtin_trae/message-circle.svg" width="16" height="16" alt="">
+        </span>
+        <span class="sidebar__nav-text">群聊</span>
+      </div>
+      <a class="sidebar__nav-item" href="knowledge-cards.html" data-dom-id="interaction-id-e6kez0h">
+        <span class="sidebar__nav-icon">
+          <img src="../assets/icons/dl_builtin_trae/file-text.svg" width="16" height="16" alt="">
+        </span>
+        <span class="sidebar__nav-text">知识卡片管理</span>
+        <span class="sidebar__nav-badge">5</span>
+      </a>
+      <a class="sidebar__nav-item" href="knowledge-base.html" data-dom-id="interaction-id-iw8zpu7">
+        <span class="sidebar__nav-icon">
+          <img src="../assets/icons/dl_builtin_trae/layers.svg" width="16" height="16" alt="">
+        </span>
+        <span class="sidebar__nav-text">知识库管理</span>
+      </a>
+      <a class="sidebar__nav-item" href="agent-management.html" data-dom-id="interaction-id-0cvxw4w">
+        <span class="sidebar__nav-icon">
+          <img src="../assets/icons/dl_builtin_trae/sparkles.svg" width="16" height="16" alt="">
+        </span>
+        <span class="sidebar__nav-text">Agent 管理</span>
+      </a>
+    </div>
+
+    <div class="sidebar__label">我的群组</div>
+
+    <div class="group-list" id="group-list">
+      <!-- Group 1: Active -->
+      <div class="group-item group-item--active">
+        <div class="ds-avatar ds-avatar--sm" style="background: var(--bg-brand); color: var(--text-onbrand); font-size: 10px;">
+          <img src="../assets/icons/dl_builtin_trae/users.svg" width="14" height="14" alt="">
+        </div>
+        <div class="group-item__content">
+          <div class="group-item__top">
+            <div class="group-item__name-group">
+              <span class="group-item__name">408 讨论群</span>
+              <span class="tag tag--brand">讨论中</span>
+            </div>
+            <span class="group-item__time">14:32</span>
+          </div>
+          <div class="group-item__bottom">
+            <span class="group-item__preview">DeepSeek: 进程调度是操作系统中最核心的...</span>
+            <span class="group-item__badge">3</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Group 2 -->
+      <div class="group-item">
+        <div class="ds-avatar ds-avatar--sm">
+          <img src="../assets/icons/dl_builtin_trae/hash.svg" width="14" height="14" alt="">
+        </div>
+        <div class="group-item__content">
+          <div class="group-item__top">
+            <div class="group-item__name-group">
+              <span class="group-item__name">算法刷题群</span>
+            </div>
+            <span class="group-item__time">昨天</span>
+          </div>
+          <div class="group-item__bottom">
+            <span class="group-item__preview">Kimi: 动态规划的边界条件需要注意...</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Group 3 -->
+      <div class="group-item">
+        <div class="ds-avatar ds-avatar--sm">
+          <img src="../assets/icons/dl_builtin_trae/star.svg" width="14" height="14" alt="">
+        </div>
+        <div class="group-item__content">
+          <div class="group-item__top">
+            <div class="group-item__name-group">
+              <span class="group-item__name">面试准备群</span>
+            </div>
+            <span class="group-item__time">周二</span>
+          </div>
+          <div class="group-item__bottom">
+            <span class="group-item__preview">我: 请大家帮我准备一下网络编程的面试题</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Empty State -->
+      <div class="group-empty" id="groupEmptyState">
+        <img src="../assets/icons/dl_builtin_trae/search.svg" width="20" height="20" alt="">
+        <span>未找到匹配的群组</span>
+      </div>
+    </div>
+
+    <div class="sidebar__footer">
+      <button class="sidebar__new-group" onclick="openCreateGroupModal()">
+        <img src="../assets/icons/dl_builtin_trae/plus.svg" width="14" height="14" alt="">
+        新建群组
+      </button>
+    </div>
+  </aside>
+
+  <!-- ===== CENTER CHAT WINDOW ===== -->
+  <main class="chat-window" id="chat-window">
+    <!-- Chat Header -->
+    <div class="chat-header">
+      <div class="chat-header__left">
+        <div class="chat-header__name-row">
+          <span class="chat-header__title">408 讨论群</span>
+          <span class="chat-header__members">
+            <img src="../assets/icons/dl_builtin_trae/users.svg" width="14" height="14" alt="">
+            5 位成员
+          </span>
+        </div>
+        <span class="chat-header__topic">当前主题：什么是进程调度？</span>
+      </div>
+      <div class="chat-header__right">
+        <button class="chat-header__icon-btn" title="搜索消息" id="chatSearchBtn">
+          <img src="../assets/icons/dl_builtin_trae/search.svg" width="16" height="16" alt="">
+        </button>
+        <button class="chat-header__icon-btn" title="更多" id="more-menu-btn" onclick="openMoreMenu(event)">
+          <img src="../assets/icons/dl_builtin_trae/more-h.svg" width="16" height="16" alt="">
+        </button>
+        <div class="more-menu" id="more-menu">
+          <button class="more-menu__item" onclick="handleMoreMenuAction('成员管理')">
+            <img src="../assets/icons/dl_builtin_trae/users.svg" width="16" height="16" alt="">
+            成员管理
+          </button>
+          <button class="more-menu__item more-menu__item--danger" onclick="handleMoreMenuAction('清空聊天记录')">
+            <img src="../assets/icons/dl_builtin_trae/trash.svg" width="16" height="16" alt="">
+            清空聊天记录
+          </button>
+          <button class="more-menu__item" onclick="handleMoreMenuAction('导出聊天记录')">
+            <img src="../assets/icons/dl_builtin_trae/download.svg" width="16" height="16" alt="">
+            导出聊天记录
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- In-chat Search Bar -->
+    <div class="chat-search" id="chatSearchBar">
+      <div class="chat-search__input-wrap">
+        <span class="chat-search__icon">
+          <img src="../assets/icons/dl_builtin_trae/search.svg" width="14" height="14" alt="">
+        </span>
+        <input type="text" class="chat-search__input" placeholder="搜索聊天记录..." id="chatSearchInput">
+      </div>
+      <span class="chat-search__count" id="chatSearchCount">0/0</span>
+      <div class="chat-search__nav">
+        <button class="chat-search__nav-btn" id="chatSearchPrev" title="上一个">
+          <img src="../assets/icons/dl_builtin_trae/arrow-up.svg" width="14" height="14" alt="">
+        </button>
+        <button class="chat-search__nav-btn" id="chatSearchNext" title="下一个">
+          <img src="../assets/icons/dl_builtin_trae/arrow-down.svg" width="14" height="14" alt="">
+        </button>
+      </div>
+      <button class="chat-search__close" id="chatSearchClose" title="关闭搜索">
+        <img src="../assets/icons/dl_builtin_trae/x.svg" width="14" height="14" alt="">
+      </button>
+    </div>
+
+    <!-- Message List -->
+    <div class="message-list" id="message-list">
+      <!-- System Notice -->
+      <div class="system-notice">
+        <div class="system-notice__inner">
+          <img src="../assets/icons/dl_builtin_trae/sparkles.32f08c.svg" width="12" height="12" alt="">
+          <span>DeepSeek 创建了新主题：什么是进程调度？</span>
+        </div>
+      </div>
+
+      <!-- User Message 1 -->
+      <div class="message message--user" id="msg-user-1">
+        <div class="message__avatar">
+          <div class="ds-avatar ds-avatar--accent">我</div>
+        </div>
+        <div class="message__body">
+          <div class="message__sender">
+            <span class="message__sender-name">我</span>
+            <span class="message__sender-time">14:20</span>
+          </div>
+          <div class="message__bubble">大家好，我想讨论一下进程调度的相关概念，谁先来？</div>
+        </div>
+      </div>
+
+      <!-- Agent: DeepSeek -->
+      <div class="message message--agent" id="msg-agent-1">
+        <div class="message__avatar">
+          <div class="ds-avatar ds-avatar--deepseek">D</div>
+        </div>
+        <div class="message__body">
+          <div class="message__sender">
+            <span class="message__sender-name">DeepSeek</span>
+            <span class="message__sender-time">14:21</span>
+          </div>
+          <div class="message__bubble">进程调度是操作系统的核心功能之一，它负责决定哪个进程在什么时候获得 CPU 的使用权限。主要有以下几种算法：<br><br>1. <b>先来先服务 (FCFS)</b>：按进程到达顺序调度<br>2. <b>短作业优先 (SJF)</b>：选择预计运行时间最短的进程<br>3. <b>优先级调度</b>：根据进程优先级分配 CPU<br>4. <b>时间片轮转 (RR)</b>：每个进程分配固定时间片<br><br>其中时间片轮转适合分时系统，而短作业优先在理论上能获得最短的平均等待时间。</div>
+        </div>
+      </div>
+
+      <!-- Agent: Kimi -->
+      <div class="message message--agent" id="msg-agent-2">
+        <div class="message__avatar">
+          <div class="ds-avatar ds-avatar--kimi">K</div>
+        </div>
+        <div class="message__body">
+          <div class="message__sender">
+            <span class="message__sender-name">Kimi</span>
+            <span class="message__sender-time">14:23</span>
+          </div>
+          <div class="message__bubble">我补充一下 DeepSeek 提到的内容。多级反馈队列算法是一个比较经典的实现，它综合了 FCFS、SJF 和 RR 的优点：<br><br>- 设置多个优先级队列，优先级逐级降低<br>- 高优先级队列使用较短的时间片<br>- 新进程先进入最高优先级队列<br>- 若进程在时间片内未完成，则降入下一级队列<br><br>这个算法不需要预知进程的执行时间，是实际操作系统中广泛采用的方案。</div>
+        </div>
+      </div>
+
+      <!-- User Message 2 -->
+      <div class="message message--user" id="msg-user-2">
+        <div class="message__avatar">
+          <div class="ds-avatar ds-avatar--accent">我</div>
+        </div>
+        <div class="message__body">
+          <div class="message__sender">
+            <span class="message__sender-name">我</span>
+            <span class="message__sender-time">14:26</span>
+          </div>
+          <div class="message__bubble"><span class="mention"><span class="mention__avatar" style="background:#4A6CF7;">D</span>DeepSeek</span> <span class="mention"><span class="mention__avatar" style="background:#6C5CE7;">K</span>Kimi</span> 你们觉得多级反馈队列在实际系统中性能如何？</div>
+        </div>
+      </div>
+
+      <!-- Agent: Claude -->
+      <div class="message message--agent" id="msg-agent-3">
+        <div class="message__avatar">
+          <div class="ds-avatar ds-avatar--claude">C</div>
+        </div>
+        <div class="message__body">
+          <div class="message__sender">
+            <span class="message__sender-name">Claude</span>
+            <span class="message__sender-time">14:28</span>
+          </div>
+          <div class="message__bubble">
+            <div class="message__reply-to" onclick="scrollToMessage('msg-user-2')">
+              <div class="message__reply-to-avatar ds-avatar--accent">我</div>
+              <div class="message__reply-to-content">
+                <div class="message__reply-to-name">我</div>
+                <div class="message__reply-to-text">你们觉得多级反馈队列在实际系统中性能如何？</div>
+              </div>
+            </div>
+            这是一个很好的问题。优先级调度和多级反馈队列的核心区别在于：<br><br><b>优先级调度</b>是静态的——进程的优先级在创建时确定，调度器始终选择优先级最高的就绪进程运行。这可能导致低优先级进程"饥饿"。<br><br><b>多级反馈队列</b>是动态的——优先级会根据进程的行为动态调整。I/O 密集型进程（频繁让出 CPU）会留在高优先级队列，而 CPU 密集型进程会逐渐降级。这种自适应特性有效防止了饥饿问题，同时兼顾了响应时间和吞吐量。<br><br>408 考试中，这两者的区别是高频考点，建议重点理解"动态优先级"这个概念。
+          </div>
+        </div>
+      </div>
+
+      <!-- Typing Indicator -->
+      <div class="typing-indicator">
+        <div class="typing-indicator__avatar">
+          <div class="ds-avatar ds-avatar--deepseek" style="width:28px;height:28px;font-size:var(--body-xs);">D</div>
+        </div>
+        <div class="typing-indicator__body">
+          <span class="typing-indicator__text">DeepSeek 正在输入...</span>
+          <div class="typing-indicator__dots">
+            <span class="typing-indicator__dot"></span>
+            <span class="typing-indicator__dot"></span>
+            <span class="typing-indicator__dot"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Message Input -->
+    <div class="message-input" id="message-input">
+      <div class="ds-composer">
+        <div class="ds-composer__editor" id="composer-editor" contenteditable="true" data-placeholder="输入消息，@ 提及 Agent... 支持 Markdown 语法"></div>
+        <div class="ds-composer__toolbar">
+          <div class="ds-composer__tools">
+            <button class="ds-composer__icon-btn" id="mention-trigger" title="提及">
+              <img src="../assets/icons/dl_builtin_trae/at.svg" width="16" height="16" alt="">
+            </button>
+            <button class="ds-composer__icon-btn" title="加粗 (Ctrl+B)" onclick="execFormat('bold')">
+              <img src="../assets/icons/dl_builtin_trae/bold.svg" width="16" height="16" alt="">
+            </button>
+            <button class="ds-composer__icon-btn" title="斜体 (Ctrl+I)" onclick="execFormat('italic')">
+              <img src="../assets/icons/dl_builtin_trae/italic.svg" width="16" height="16" alt="">
+            </button>
+            <button class="ds-composer__icon-btn" title="代码" onclick="execFormat('code')">
+              <img src="../assets/icons/dl_builtin_trae/code.svg" width="16" height="16" alt="">
+            </button>
+            <button class="ds-composer__icon-btn" title="链接" onclick="execFormat('link')">
+              <img src="../assets/icons/dl_builtin_trae/link.svg" width="16" height="16" alt="">
+            </button>
+            <button class="ds-composer__icon-btn" title="有序列表" onclick="execFormat('ol')">
+              <img src="../assets/icons/dl_builtin_trae/list-ordered.svg" width="16" height="16" alt="">
+            </button>
+            <button class="ds-composer__icon-btn" title="无序列表" onclick="execFormat('ul')">
+              <img src="../assets/icons/dl_builtin_trae/list.svg" width="16" height="16" alt="">
+            </button>
+            <button class="ds-composer__icon-btn" id="composer-attach-btn" title="附件" onclick="showToast('附件上传功能开发中')">
+              <img src="../assets/icons/dl_builtin_trae/paperclip.svg" width="16" height="16" alt="">
+            </button>
+            <button class="ds-composer__icon-btn" id="composer-image-btn" title="图片" onclick="showToast('图片上传功能开发中')">
+              <img src="../assets/icons/dl_builtin_trae/image.svg" width="16" height="16" alt="">
+            </button>
+          </div>
+          <button class="ds-composer__send ds-composer__send--disabled" id="send-btn" title="发送" onclick="sendMessage()">
+            <img src="../assets/icons/dl_builtin_trae/send.svg" width="16" height="16" alt="">
+          </button>
+        </div>
+        <!-- Mention Picker -->
+        <div class="mention-picker" id="mention-picker">
+          <div class="mention-picker__header">选择提及对象</div>
+          <div class="mention-picker__item" onclick="insertMention('DeepSeek', '#4A6CF7', 'D')">
+            <div class="ds-avatar ds-avatar--deepseek" style="width:24px;height:24px;font-size:10px;">D</div>
+            <span class="mention-picker__name">DeepSeek</span>
+            <span class="mention-picker__role">Agent</span>
+          </div>
+          <div class="mention-picker__item" onclick="insertMention('Kimi', '#6C5CE7', 'K')">
+            <div class="ds-avatar ds-avatar--kimi" style="width:24px;height:24px;font-size:10px;">K</div>
+            <span class="mention-picker__name">Kimi</span>
+            <span class="mention-picker__role">Agent</span>
+          </div>
+          <div class="mention-picker__item" onclick="insertMention('Claude', '#D4A853', 'C')">
+            <div class="ds-avatar ds-avatar--claude" style="width:24px;height:24px;font-size:10px;">C</div>
+            <span class="mention-picker__name">Claude</span>
+            <span class="mention-picker__role">Agent</span>
+          </div>
+          <div class="mention-picker__item" onclick="insertMention('专家 Agent', 'var(--status-warning-default)', 'E')">
+            <div class="ds-avatar ds-avatar--expert" style="width:24px;height:24px;font-size:10px;">E</div>
+            <span class="mention-picker__name">专家 Agent</span>
+            <span class="mention-picker__role">专家</span>
+          </div>
+          <div class="mention-picker__header">成员</div>
+          <div class="mention-picker__item" onclick="insertMention('我', 'var(--bg-brand)', '我')">
+            <div class="ds-avatar ds-avatar--accent" style="width:24px;height:24px;font-size:10px;">我</div>
+            <span class="mention-picker__name">我</span>
+            <span class="mention-picker__role">群主</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ===== RIGHT INFO PANEL ===== -->
+  <aside class="info-panel" id="info-panel">
+    <!-- Members Section -->
+    <div class="info-panel__section">
+      <div class="info-panel__heading">群成员</div>
+      <div class="member-list" id="member-list">
+        <!-- Member: 我 (群主) -->
+        <div class="member-item">
+          <div class="ds-avatar ds-avatar--accent">我</div>
+          <div class="member-item__info">
+            <span class="member-item__name">我</span>
+            <div class="member-item__row">
+              <span class="tag tag--brand">群主</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Member: DeepSeek -->
+        <div class="member-item">
+          <div class="ds-avatar ds-avatar--deepseek">D</div>
+          <div class="member-item__info">
+            <span class="member-item__name">DeepSeek</span>
+            <div class="member-item__row">
+              <span class="tag tag--neutral">成员</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Member: Kimi -->
+        <div class="member-item">
+          <div class="ds-avatar ds-avatar--kimi">K</div>
+          <div class="member-item__info">
+            <span class="member-item__name">Kimi</span>
+            <div class="member-item__row">
+              <span class="tag tag--neutral">成员</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Member: Claude -->
+        <div class="member-item">
+          <div class="ds-avatar ds-avatar--claude">C</div>
+          <div class="member-item__info">
+            <span class="member-item__name">Claude</span>
+            <div class="member-item__row">
+              <span class="tag tag--neutral">成员</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Member: 专家 Agent -->
+        <div class="member-item">
+          <div class="member-item__avatar-wrap">
+            <div class="ds-avatar ds-avatar--expert">E</div>
+            <span class="member-item__star">
+              <img src="../assets/icons/dl_builtin_trae/star.svg" width="10" height="10" alt="">
+            </span>
+          </div>
+          <div class="member-item__info">
+            <span class="member-item__name">专家 Agent</span>
+            <div class="member-item__row">
+              <span class="tag tag--warning">专家</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Topic Panel Section -->
+    <div class="info-panel__section" id="topic-panel">
+      <div class="info-panel__heading">当前主题</div>
+      <div class="topic-panel__title">什么是进程调度？</div>
+      <div class="topic-panel__status-row">
+        <span class="tag tag--success">讨论中</span>
+        <span class="topic-panel__round">轮次 5/20</span>
+      </div>
+      <div class="topic-panel__actions">
+        <button class="topic-panel__end-btn" id="end-discussion-btn" onclick="toggleDiscussion()">
+          <img src="../assets/icons/dl_builtin_trae/square.svg" width="14" height="14" alt="">
+          结束讨论
+        </button>
+      </div>
+    </div>
+
+    <!-- History Topics Section -->
+    <div class="info-panel__section">
+      <div class="info-panel__heading">历史主题</div>
+      <div class="history-list">
+        <div class="history-item">
+          <span class="history-item__name">进程间通信</span>
+          <span class="tag tag--neutral">已关闭</span>
+        </div>
+        <div class="history-item">
+          <span class="history-item__name">内存管理</span>
+          <span class="tag tag--neutral">已关闭</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Knowledge Cards Section -->
+    <div class="info-panel__section">
+      <div class="info-panel__heading">知识卡片管理</div>
+      <div class="history-list">
+        <div class="history-item history-item--clickable" onclick="openCardModal('process-scheduling')">
+          <span class="history-item__name">进程调度算法</span>
+          <span class="tag tag--success">已收录</span>
+        </div>
+        <div class="history-item history-item--clickable" onclick="openCardModal('deadlock')">
+          <span class="history-item__name">死锁检测与预防</span>
+          <span class="tag tag--success">已收录</span>
+        </div>
+        <div class="history-item history-item--clickable" onclick="openCardModal('virtual-memory')">
+          <span class="history-item__name">虚拟内存机制</span>
+          <span class="tag tag--warning">待整理</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Database Management Section -->
+    <div class="info-panel__section">
+      <div class="info-panel__heading">知识库管理</div>
+      <div class="member-list">
+        <div class="member-item">
+          <div class="ds-avatar ds-avatar--sm" style="background: var(--status-primary-surface-l1); color: var(--status-primary-default);">
+            <img src="../assets/icons/dl_builtin_trae/layers.svg" width="14" height="14" alt="">
+          </div>
+          <div class="member-item__info">
+            <span class="member-item__name">408_知识库</span>
+            <div class="member-item__row">
+              <span class="tag tag--neutral">12 条记录</span>
+              <span class="tag tag--success">已连接</span>
+            </div>
+          </div>
+        </div>
+        <div class="member-item">
+          <div class="ds-avatar ds-avatar--sm" style="background: var(--status-warning-surface-l1); color: var(--status-warning-default);">
+            <img src="../assets/icons/dl_builtin_trae/layers.svg" width="14" height="14" alt="">
+          </div>
+          <div class="member-item__info">
+            <span class="member-item__name">面试题库</span>
+            <div class="member-item__row">
+              <span class="tag tag--neutral">5 条记录</span>
+              <span class="tag tag--warning">未同步</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+</div>
+
+</main>
+
+<!-- Member Management Modal -->
+<div class="modal-overlay" id="member-mgmt-overlay" onclick="closeMemberMgmtModal(event)">
+  <div class="create-group-modal" id="member-mgmt-modal" style="width:480px" onclick="event.stopPropagation()">
+    <div class="create-group-modal__header">
+      <span class="create-group-modal__title">成员管理</span>
+      <button class="create-group-modal__close" onclick="closeMemberMgmtModal()">
+        <img src="../assets/icons/dl_builtin_trae/x.svg" width="16" height="16" alt="">
+      </button>
+    </div>
+    <div class="create-group-modal__body">
+      <!-- Member count summary -->
+      <div class="member-mgmt-summary">
+        <span class="member-mgmt-summary__text">共 <strong id="member-mgmt-count">5</strong> 位成员</span>
+        <span class="member-mgmt-summary__hint" id="member-mgmt-hint"></span>
+      </div>
+      <div id="member-mgmt-list" class="member-mgmt-list">
+        <!-- Members rendered dynamically via renderMemberList() -->
+      </div>
+      <!-- Add Member: Agent selector only (no free-text input) -->
+      <div class="member-mgmt-add" id="member-mgmt-add">
+        <label class="member-mgmt-add__label">从 Agent 列表添加</label>
+        <div class="member-mgmt-add__agents" id="member-mgmt-agent-list" role="group" aria-label="可选 Agent">
+          <!-- Agent options rendered dynamically via renderAgentOptions() -->
+        </div>
+        <p class="member-mgmt-add__empty" id="member-mgmt-add-empty" style="display:none;">所有 Agent 均已加入群组</p>
+      </div>
+    </div>
+    <div class="create-group-modal__footer">
+      <button class="kc-modal__btn kc-modal__btn--primary" onclick="finishMemberMgmt()">完成</button>
+    </div>
+  </div>
+</div>
+
+<!-- Member Management: Confirm Remove Modal -->
+<div class="modal-overlay" id="member-mgmt-confirm-overlay" onclick="closeMemberConfirm(event)">
+  <div class="create-group-modal" style="width:360px" onclick="event.stopPropagation()">
+    <div class="create-group-modal__header">
+      <span class="create-group-modal__title">移除成员</span>
+      <button class="create-group-modal__close" onclick="closeMemberConfirm()">
+        <img src="../assets/icons/dl_builtin_trae/x.svg" width="16" height="16" alt="">
+      </button>
+    </div>
+    <div class="create-group-modal__body">
+      <p class="member-mgmt-confirm__text">确定将 <strong id="member-mgmt-confirm-name"></strong> 移出群组吗？移除后该成员将无法接收群消息。</p>
+    </div>
+    <div class="create-group-modal__footer">
+      <button class="kc-modal__btn kc-modal__btn--secondary" onclick="closeMemberConfirm()">取消</button>
+      <button class="kc-modal__btn kc-modal__btn--danger" id="member-mgmt-confirm-btn">移除</button>
+    </div>
+  </div>
+</div>
+
+<!-- Create Group Modal -->
+<div class="modal-overlay" id="create-group-overlay" onclick="closeCreateGroupModal(event)">
+  <div class="create-group-modal" id="create-group-modal" onclick="event.stopPropagation()">
+    <div class="create-group-modal__header">
+      <span class="create-group-modal__title">新建群组</span>
+      <button class="create-group-modal__close" onclick="closeCreateGroupModal()">
+        <img src="../assets/icons/dl_builtin_trae/x.svg" width="16" height="16" alt="">
+      </button>
+    </div>
+    <div class="create-group-modal__body">
+      <div class="create-group-modal__field">
+        <label class="create-group-modal__label">群组名称</label>
+        <input type="text" class="create-group-modal__input" id="create-group-name" placeholder="输入群组名称">
+      </div>
+      <div class="create-group-modal__field">
+        <label class="create-group-modal__label">群组描述</label>
+        <textarea class="create-group-modal__textarea" id="create-group-desc" placeholder="输入群组描述（可选）"></textarea>
+      </div>
+      <div class="create-group-modal__field">
+        <label class="create-group-modal__label">选择关联 Agent</label>
+        <div class="create-group-modal__agent-list" id="agent-checkbox-list">
+          <div class="create-group-modal__agent-item" data-agent="deepseek" onclick="toggleAgentCheckbox(this)">
+            <span class="create-group-modal__agent-checkbox">
+              <img src="../assets/icons/dl_builtin_trae/check.svg" alt="">
+            </span>
+            <span class="create-group-modal__agent-name">DeepSeek</span>
+          </div>
+          <div class="create-group-modal__agent-item" data-agent="kimi" onclick="toggleAgentCheckbox(this)">
+            <span class="create-group-modal__agent-checkbox">
+              <img src="../assets/icons/dl_builtin_trae/check.svg" alt="">
+            </span>
+            <span class="create-group-modal__agent-name">Kimi</span>
+          </div>
+          <div class="create-group-modal__agent-item" data-agent="claude" onclick="toggleAgentCheckbox(this)">
+            <span class="create-group-modal__agent-checkbox">
+              <img src="../assets/icons/dl_builtin_trae/check.svg" alt="">
+            </span>
+            <span class="create-group-modal__agent-name">Claude</span>
+          </div>
+          <div class="create-group-modal__agent-item" data-agent="expert" onclick="toggleAgentCheckbox(this)">
+            <span class="create-group-modal__agent-checkbox">
+              <img src="../assets/icons/dl_builtin_trae/check.svg" alt="">
+            </span>
+            <span class="create-group-modal__agent-name">专家 Agent</span>
+          </div>
+        </div>
+      </div>
+      <div class="create-group-modal__field">
+        <label class="create-group-modal__label">关联知识库</label>
+        <div class="create-group-modal__agent-list" id="kb-checkbox-list">
+          <div class="create-group-modal__agent-item" data-kb="kb1" onclick="toggleKbCheckbox(this)">
+            <span class="create-group-modal__agent-checkbox">
+              <img src="../assets/icons/dl_builtin_trae/check.svg" alt="">
+            </span>
+            <span class="create-group-modal__agent-name">408_知识库</span>
+          </div>
+          <div class="create-group-modal__agent-item" data-kb="kb2" onclick="toggleKbCheckbox(this)">
+            <span class="create-group-modal__agent-checkbox">
+              <img src="../assets/icons/dl_builtin_trae/check.svg" alt="">
+            </span>
+            <span class="create-group-modal__agent-name">面试题库</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="create-group-modal__footer">
+      <button class="kc-modal__btn kc-modal__btn--secondary" onclick="closeCreateGroupModal()">取消</button>
+      <button class="kc-modal__btn kc-modal__btn--primary" onclick="handleCreateGroup()">
+        <img src="../assets/icons/dl_builtin_trae/plus.0c0c0d.svg" width="14" height="14" alt="">
+        创建
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- More Menu Dropdown -->
+<div class="more-menu-overlay" id="more-menu-overlay" onclick="closeMoreMenu()"></div>
+<!-- More menu HTML is placed inside chat-header__right for positioning -->
+
+<!-- Toast Container -->
+<div class="toast-container" id="toast-container"></div>
+
+<!-- Message Context Menu -->
+<div class="msg-ctx-menu" id="msg-ctx-menu">
+  <button class="msg-ctx-menu__item" id="ctx-goto-original" onclick="gotoOriginalMessage()" style="display:none;">
+    <img src="../assets/icons/dl_builtin_trae/arrow-up-right.svg" width="14" height="14" alt="">
+    跳到原文
+  </button>
+  <button class="msg-ctx-menu__item" id="ctx-quote" onclick="quoteMessage()">
+    <img src="../assets/icons/dl_builtin_trae/external.svg" width="14" height="14" alt="">
+    引用
+  </button>
+  <button class="msg-ctx-menu__item" id="ctx-copy" onclick="copyMessage()">
+    <img src="../assets/icons/dl_builtin_trae/copy.svg" width="14" height="14" alt="">
+    复制
+  </button>
+  <button class="msg-ctx-menu__item" id="ctx-forward" onclick="forwardMessage()">
+    <img src="../assets/icons/dl_builtin_trae/share.svg" width="14" height="14" alt="">
+    转发
+  </button>
+  <button class="msg-ctx-menu__item msg-ctx-menu__item--danger" id="ctx-delete" onclick="deleteMessage()">
+    <img src="../assets/icons/dl_builtin_trae/trash.svg" width="14" height="14" alt="">
+    删除
+  </button>
+</div>
+
+<!-- Knowledge Card Detail Modal -->
+<div class="modal-overlay" id="kc-modal-overlay" onclick="closeCardModal(event)">
+  <div class="kc-modal" id="kc-modal" onclick="event.stopPropagation()">
+    <div class="kc-modal__header">
+      <div class="kc-modal__title-group">
+        <span class="kc-modal__title" id="kc-modal-title">知识卡片标题</span>
+        <span class="kc-modal__source" id="kc-modal-source">来源：408 讨论群</span>
+      </div>
+      <button class="kc-modal__close" onclick="closeCardModal()">
+        <img src="../assets/icons/dl_builtin_trae/x.svg" width="16" height="16" alt="">
+      </button>
+    </div>
+    <div class="kc-modal__body">
+      <div class="kc-modal__content" id="kc-modal-content"></div>
+      <div class="kc-modal__tags" id="kc-modal-tags"></div>
+    </div>
+    <div class="kc-modal__footer">
+      <span class="kc-modal__meta" id="kc-modal-meta">创建于 2024-01-15 · 复习 3 次</span>
+      <div class="kc-modal__actions">
+        <button class="kc-modal__btn kc-modal__btn--secondary">
+          <img src="../assets/icons/dl_builtin_trae/edit.svg" width="14" height="14" alt="">
+          编辑
+        </button>
+        <button class="kc-modal__btn kc-modal__btn--primary">
+          <img src="../assets/icons/dl_builtin_trae/sparkles.32f08c.svg" width="14" height="14" alt="">
+          加入复习
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const cardData = {
+  'process-scheduling': {
+    title: '进程调度算法',
+    source: '来源：408 讨论群 · DeepSeek, Kimi, Claude',
+    content: '<p>进程调度是操作系统的核心功能之一，负责决定哪个进程在什么时候获得 CPU 的使用权限。</p><p><b>主要算法：</b></p><p>1. <b>先来先服务 (FCFS)</b> — 按进程到达顺序调度，简单但可能导致"护航效应"。</p><p>2. <b>短作业优先 (SJF)</b> — 选择预计运行时间最短的进程，理论上能获得最短平均等待时间，但可能导致长进程"饥饿"。</p><p>3. <b>优先级调度</b> — 根据进程优先级分配 CPU，可分为抢占式和非抢占式。静态优先级可能导致低优先级进程饥饿。</p><p>4. <b>时间片轮转 (RR)</b> — 每个进程分配固定时间片，适合分时系统，时间片大小的选择影响系统性能。</p><p>5. <b>多级反馈队列 (MLFQ)</b> — 综合上述算法优点，动态调整优先级，是实际操作系统广泛采用的方案。</p>',
+    tags: ['操作系统', '进程管理', '408核心'],
+    meta: '创建于 2024-01-15 · 复习 3 次'
+  },
+  'deadlock': {
+    title: '死锁检测与预防',
+    source: '来源：408 讨论群 · Claude',
+    content: '<p><b>死锁产生的四个必要条件：</b></p><p>1. <b>互斥条件</b> — 资源在任一时刻只能被一个进程使用。</p><p>2. <b>占有并等待</b> — 进程持有至少一个资源，同时在等待获取其他资源。</p><p>3. <b>不可抢占</b> — 资源不能被强行从持有它的进程中夺走。</p><p>4. <b>循环等待</b> — 存在进程的循环等待链。</p><p><b>死锁预防策略：</b>破坏上述四个条件之一即可。常用银行家算法进行死锁避免。</p><p><b>死锁检测：</b>通过资源分配图检测是否存在环路。检测到死锁后可通过进程终止或资源抢占进行恢复。</p>',
+    tags: ['操作系统', '死锁', '408核心'],
+    meta: '创建于 2024-01-16 · 复习 1 次'
+  },
+  'virtual-memory': {
+    title: '虚拟内存机制',
+    source: '来源：408 讨论群 · 待整理',
+    content: '<p>虚拟内存是计算机系统内存管理的一种技术。它使得应用程序认为它拥有连续的可用内存空间，而实际上物理内存被分散在 RAM 和磁盘上。</p><p><b>核心概念：</b></p><p>1. <b>页面置换算法</b> — FIFO、LRU、OPT、Clock 算法。</p><p>2. <b>页表</b> — 实现虚拟地址到物理地址的映射。</p><p>3. <b>TLB</b> — 快表，加速地址翻译。</p><p><i>内容待补充完善...</i></p>',
+    tags: ['操作系统', '内存管理', '待整理'],
+    meta: '创建于 2024-01-17 · 尚未复习'
+  }
+};
+
+function openCardModal(cardId) {
+  const card = cardData[cardId];
+  if (!card) return;
+  document.getElementById('kc-modal-title').textContent = card.title;
+  document.getElementById('kc-modal-source').textContent = card.source;
+  document.getElementById('kc-modal-content').innerHTML = card.content;
+  document.getElementById('kc-modal-meta').textContent = card.meta;
+  const tagsEl = document.getElementById('kc-modal-tags');
+  tagsEl.innerHTML = card.tags.map(function(t) {
+    return '<span class="tag tag--neutral">' + t + '</span>';
+  }).join('');
+  const overlay = document.getElementById('kc-modal-overlay');
+  overlay.classList.add('modal-overlay--visible');
+}
+
+function closeCardModal(event) {
+  if (event && event.target !== event.currentTarget) return;
+  document.getElementById('kc-modal-overlay').classList.remove('modal-overlay--visible');
+}
+
+/* ===== Composer & Rich Text ===== */
+var mentionPicker = document.getElementById('mention-picker');
+var mentionTrigger = document.getElementById('mention-trigger');
+var composerEditor = document.getElementById('composer-editor');
+var sendBtn = document.getElementById('send-btn');
+
+// Toggle send button state based on editor content
+function updateSendBtn() {
+  if (!sendBtn || !composerEditor) return;
+  var clone = composerEditor.cloneNode(true);
+  var rts = clone.querySelectorAll('.message__reply-to');
+  for (var i = 0; i < rts.length; i++) rts[i].parentNode.removeChild(rts[i]);
+  var text = clone.innerText.trim();
+  if (text.length > 0) {
+    sendBtn.classList.remove('ds-composer__send--disabled');
+    sendBtn.classList.add('ds-composer__send--active');
+  } else {
+    sendBtn.classList.remove('ds-composer__send--active');
+    sendBtn.classList.add('ds-composer__send--disabled');
+  }
+}
+
+if (composerEditor) {
+  composerEditor.addEventListener('input', updateSendBtn);
+  composerEditor.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  });
+}
+
+// Toggle mention picker on @ button click
+if (mentionTrigger && mentionPicker) {
+  mentionTrigger.addEventListener('click', function(event) {
+    event.stopPropagation();
+    mentionPicker.classList.toggle('mention-picker--visible');
+    if (composerEditor) composerEditor.focus();
+  });
+}
+
+// Close picker when clicking elsewhere
+document.addEventListener('click', function(e) {
+  if (mentionPicker && !mentionPicker.contains(e.target) && e.target !== mentionTrigger) {
+    mentionPicker.classList.remove('mention-picker--visible');
+  }
+});
+
+// Insert mention into composer
+function insertMention(name, bgColor, initial) {
+  if (composerEditor) {
+    composerEditor.focus();
+    var mentionHtml = '<span class="mention" contenteditable="false"><span class="mention__avatar" style="background:' + bgColor + ';">' + initial + '</span>' + name + '</span>&nbsp;';
+    document.execCommand('insertHTML', false, mentionHtml);
+    updateSendBtn();
+  }
+  if (mentionPicker) {
+    mentionPicker.classList.remove('mention-picker--visible');
+  }
+}
+
+// Also detect @ typing in input to show picker
+if (composerEditor) {
+  composerEditor.addEventListener('input', function() {
+    var sel = window.getSelection();
+    if (sel.rangeCount > 0) {
+      var range = sel.getRangeAt(0);
+      var node = range.startContainer;
+      var text = node.textContent || '';
+      var offset = range.startOffset;
+      if (offset > 0 && text.charAt(offset - 1) === '@') {
+        if (mentionPicker) mentionPicker.classList.add('mention-picker--visible');
+      }
+    }
+  });
+}
+
+// Rich text formatting commands
+function execFormat(type) {
+  if (!composerEditor) return;
+  composerEditor.focus();
+  switch(type) {
+    case 'bold':
+      document.execCommand('bold', false, null);
+      break;
+    case 'italic':
+      document.execCommand('italic', false, null);
+      break;
+    case 'code':
+      var sel = window.getSelection();
+      if (sel.rangeCount > 0) {
+        var range = sel.getRangeAt(0);
+        var selectedText = range.toString();
+        var codeEl = document.createElement('code');
+        codeEl.textContent = selectedText || 'code';
+        range.deleteContents();
+        range.insertNode(codeEl);
+        range.setStartAfter(codeEl);
+        range.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(range);
+      }
+      break;
+    case 'link':
+      var sel2 = window.getSelection();
+      if (sel2.rangeCount > 0) {
+        var range2 = sel2.getRangeAt(0);
+        var text2 = range2.toString() || '链接';
+        document.execCommand('insertHTML', false, '<a href="https://" target="_blank" style="color:var(--bg-brand);text-decoration:underline;">' + text2 + '</a>');
+      }
+      break;
+    case 'ol':
+      document.execCommand('insertOrderedList', false, null);
+      break;
+    case 'ul':
+      document.execCommand('insertUnorderedList', false, null);
+      break;
+  }
+}
+
+// ===== Lightweight Markdown Parser =====
+function parseMarkdown(text) {
+  if (!text) return '';
+  var html = text;
+  html = html.replace(/```(\w*)\n([\s\S]*?)```/g, function(m, lang, code) {
+    return '<pre><code>' + escapeHtml(code.trim()) + '</code></pre>';
+  });
+  html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+  html = html.replace(/^### (.+)$/gm, '<h4>$1</h4>');
+  html = html.replace(/^## (.+)$/gm, '<h3>$1</h3>');
+  html = html.replace(/^# (.+)$/gm, '<h3 style="font-size:16px;">$1</h3>');
+  html = html.replace(/\*\*\*(.+?)\*\*\*/g, '<b><i>$1</i></b>');
+  html = html.replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
+  html = html.replace(/\*(.+?)\*/g, '<i>$1</i>');
+  html = html.replace(/~~(.+?)~~/g, '<del>$1</del>');
+  html = html.replace(/^> (.+)$/gm, '<blockquote>$1</blockquote>');
+  html = html.replace(/^---$/gm, '<hr>');
+  html = html.replace(/^[*-] (.+)$/gm, '<li>$1</li>');
+  html = html.replace(/((?:<li>.*<\/li>\n?)+)/g, '<ul>$1</ul>');
+  html = html.replace(/^\d+\. (.+)$/gm, '<li>$1</li>');
+  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" style="color:var(--bg-brand);text-decoration:underline;">$1</a>');
+  html = html.replace(/\n/g, '<br>');
+  return html;
+}
+
+function escapeHtml(text) {
+  var div = document.createElement('div');
+  div.appendChild(document.createTextNode(text));
+  return div.innerHTML;
+}
+
+// ===== Send Message =====
+var msgCounter = 0;
+function sendMessage() {
+  if (!composerEditor) return;
+  var html = composerEditor.innerHTML.trim();
+
+  // Extract pure user text, excluding any quoted reply-to content
+  var clone = composerEditor.cloneNode(true);
+  var replyTos = clone.querySelectorAll('.message__reply-to');
+  for (var i = 0; i < replyTos.length; i++) {
+    replyTos[i].parentNode.removeChild(replyTos[i]);
+  }
+  // Also remove <br> left behind
+  var text = clone.innerText.trim();
+
+  if (!text) return;
+
+  var messageList = document.getElementById('message-list');
+  if (!messageList) return;
+
+  msgCounter++;
+  var now = new Date();
+  var timeStr = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
+
+  var msgDiv = document.createElement('div');
+  msgDiv.className = 'message message--user';
+  msgDiv.id = 'msg-user-' + msgCounter;
+  msgDiv.innerHTML =
+    '<div class="message__avatar"><div class="ds-avatar ds-avatar--accent">我</div></div>' +
+    '<div class="message__body">' +
+      '<div class="message__sender">' +
+        '<span class="message__sender-name">我</span>' +
+        '<span class="message__sender-time">' + timeStr + '</span>' +
+      '</div>' +
+      '<div class="message__bubble">' + html + '</div>' +
+    '</div>';
+
+  var typingIndicator = messageList.querySelector('.typing-indicator');
+  messageList.insertBefore(msgDiv, typingIndicator);
+  scrollToBottom();
+
+  composerEditor.innerHTML = '';
+  updateSendBtn();
+
+  // Store user message text for reply quote
+  var lastUserText = text;
+
+  setTimeout(function() {
+    mockAgentReply(msgCounter, lastUserText);
+  }, 1200 + Math.random() * 1500);
+}
+
+function mockAgentReply(userMsgNum, userText) {
+  var messageList = document.getElementById('message-list');
+  if (!messageList) return;
+
+  var agents = [
+    { name: 'DeepSeek', cls: 'ds-avatar--deepseek', initial: 'D' },
+    { name: 'Kimi', cls: 'ds-avatar--kimi', initial: 'K' },
+    { name: 'Claude', cls: 'ds-avatar--claude', initial: 'C' }
+  ];
+  var agent = agents[Math.floor(Math.random() * agents.length)];
+
+  var mockReplies = [
+    '<b>总结一下要点：</b><br><br>1. 这个问题涉及<b>核心概念</b>的理解<br>2. 需要结合实际场景分析<br>3. 建议从以下几个角度考虑：<br><br><blockquote>理论基础 → 实际应用 → 考试重点</blockquote><br>408 考试中这类题目是必考内容。',
+    '<h4>补充说明</h4><p>这个话题可以从以下维度展开：</p><ul><li>基本原理与定义</li><li>算法实现方式</li><li>性能对比分析</li><li>实际应用场景</li></ul><p>其中<b>性能对比</b>是高频考点，建议重点掌握。</p>',
+    '<pre><code>public class ProcessScheduler {\n    private Queue&lt;Process&gt; readyQueue;\n\n    public void schedule() {\n        Process p = readyQueue.poll();\n        if (p != null) {\n            p.execute();\n        }\n    }\n}</code></pre><br>以上是一个简化的调度器实现。实际系统中还需要考虑<b>优先级反转</b>、<b>死锁预防</b>等问题。',
+    '<b>关于这个问题，我来详细解释：</b><br><br>首先，我们需要理解几个关键概念：<br><br>1. <b>时间复杂度</b>：O(n log n) 是比较高效的<br>2. <b>空间复杂度</b>：需要注意额外空间的使用<br>3. <b>稳定性</b>：在某些场景下非常重要<br><br>408考试中这类题目频率很高。',
+    '很好的提问！让我从 <b>操作系统</b> 的角度来分析：<br><br><h4>核心要点</h4><p>进程调度涉及 <code>CPU</code> 时间片的分配策略，不同算法有各自适用场景：</p><ol><li><b>FCFS</b> — 简单但可能导致"护航效应"</li><li><b>SJF</b> — 平均等待时间最优，但可能饥饿</li><li><b>Round Robin</b> — 公平性好，适合分时系统</li></ol><p>建议结合真题进行练习。</p>'
+  ];
+  var replyHtml = mockReplies[Math.floor(Math.random() * mockReplies.length)];
+
+  var now = new Date();
+  var timeStr = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
+
+  var replyDiv = document.createElement('div');
+  replyDiv.className = 'message message--agent';
+  replyDiv.id = 'msg-agent-' + userMsgNum;
+  replyDiv.innerHTML =
+    '<div class="message__avatar"><div class="ds-avatar ' + agent.cls + '">' + agent.initial + '</div></div>' +
+    '<div class="message__body">' +
+      '<div class="message__sender">' +
+        '<span class="message__sender-name">' + agent.name + '</span>' +
+        '<span class="message__sender-time">' + timeStr + '</span>' +
+      '</div>' +
+      '<div class="message__bubble">' +
+        '<div class="message__reply-to" onclick="scrollToMessage(\'msg-user-' + userMsgNum + '\')">' +
+          '<div class="message__reply-to-avatar ds-avatar--accent">我</div>' +
+          '<div class="message__reply-to-content">' +
+            '<div class="message__reply-to-name">我</div>' +
+            '<div class="message__reply-to-text">' + (userText.length > 80 ? userText.substring(0,80) + '...' : userText) + '</div>' +
+          '</div>' +
+        '</div>' +
+        replyHtml +
+      '</div>' +
+    '</div>';
+
+  var typingIndicator = messageList.querySelector('.typing-indicator');
+  messageList.insertBefore(replyDiv, typingIndicator);
+  scrollToBottom();
+}
+
+function scrollToBottom() {
+  var messageList = document.getElementById('message-list');
+  if (messageList) {
+    messageList.scrollTop = messageList.scrollHeight;
+  }
+}
+
+/* ===== Message Context Menu ===== */
+var ctxMenu = document.getElementById('msg-ctx-menu');
+var ctxTargetMsg = null; // the .message element being right-clicked
+var ctxTargetReplyTo = null; // the .message__reply-to element being right-clicked (if any)
+
+// Menu item elements
+var ctxGotoOriginal = document.getElementById('ctx-goto-original');
+var ctxQuoteItem = document.getElementById('ctx-quote');
+var ctxCopyItem = document.getElementById('ctx-copy');
+var ctxForwardItem = document.getElementById('ctx-forward');
+var ctxDeleteItem = document.getElementById('ctx-delete');
+
+// Right-click on messages or reply-to blocks
+document.addEventListener('contextmenu', function(e) {
+  // Check if right-clicking on a reply-to block first
+  var replyToEl = e.target.closest('.message__reply-to');
+  var msgEl = e.target.closest('.message');
+
+  if (replyToEl && msgEl) {
+    // Right-click on a reply-to quote block: show only "跳到原文"
+    e.preventDefault();
+    ctxTargetMsg = msgEl;
+    ctxTargetReplyTo = replyToEl;
+
+    // Show only "goto original", hide others
+    ctxGotoOriginal.style.display = 'flex';
+    ctxQuoteItem.style.display = 'none';
+    ctxCopyItem.style.display = 'none';
+    ctxForwardItem.style.display = 'none';
+    ctxDeleteItem.style.display = 'none';
+  } else if (msgEl) {
+    // Right-click on a normal message: show full menu
+    e.preventDefault();
+    ctxTargetMsg = msgEl;
+    ctxTargetReplyTo = null;
+
+    // Hide "goto original", show others
+    ctxGotoOriginal.style.display = 'none';
+    ctxQuoteItem.style.display = 'flex';
+    ctxCopyItem.style.display = 'flex';
+    ctxForwardItem.style.display = 'flex';
+    ctxDeleteItem.style.display = 'flex';
+  } else {
+    return;
+  }
+
+  // Position menu
+  var x = e.clientX;
+  var y = e.clientY;
+  ctxMenu.style.left = x + 'px';
+  ctxMenu.style.top = y + 'px';
+  ctxMenu.classList.add('msg-ctx-menu--visible');
+
+  // Ensure menu stays within viewport
+  requestAnimationFrame(function() {
+    var rect = ctxMenu.getBoundingClientRect();
+    if (rect.right > window.innerWidth) {
+      ctxMenu.style.left = (x - rect.width) + 'px';
+    }
+    if (rect.bottom > window.innerHeight) {
+      ctxMenu.style.top = (y - rect.height) + 'px';
+    }
+  });
+});
+
+// Close context menu on any other click
+document.addEventListener('click', function(e) {
+  if (ctxMenu && !ctxMenu.contains(e.target)) {
+    ctxMenu.classList.remove('msg-ctx-menu--visible');
+  }
+});
+
+// Prevent native context menu on the custom menu itself
+if (ctxMenu) {
+  ctxMenu.addEventListener('contextmenu', function(e) { e.preventDefault(); });
+}
+
+// Quote: insert a reply-to reference into the composer (WeChat-style)
+function quoteMessage() {
+  if (!ctxTargetMsg || !composerEditor) {
+    closeCtxMenu();
+    return;
+  }
+
+  // Extract sender name
+  var senderEl = ctxTargetMsg.querySelector('.message__sender-name');
+  var senderName = senderEl ? senderEl.textContent.trim() : '未知';
+
+  // Extract bubble text, excluding any nested reply-to content
+  var bubbleEl = ctxTargetMsg.querySelector('.message__bubble');
+  var bubbleText = '';
+  if (bubbleEl) {
+    // Clone bubble, remove reply-to blocks, then get text
+    var clone = bubbleEl.cloneNode(true);
+    var replyTos = clone.querySelectorAll('.message__reply-to');
+    for (var i = 0; i < replyTos.length; i++) {
+      replyTos[i].parentNode.removeChild(replyTos[i]);
+    }
+    bubbleText = clone.innerText.trim();
+  }
+  // Truncate to reasonable length for display
+  var truncatedText = bubbleText.length > 80 ? bubbleText.substring(0, 80) + '...' : bubbleText;
+  if (!truncatedText) truncatedText = '(空消息)';
+
+  // Get sender avatar info for styling
+  var avatarEl = ctxTargetMsg.querySelector('.ds-avatar');
+  var avatarCls = avatarEl ? Array.from(avatarEl.classList).find(function(c) { return c.startsWith('ds-avatar--'); }) : '';
+  var avatarText = avatarEl ? avatarEl.textContent.trim() : '?';
+
+  // If no specific agent class, default to accent
+  var avatarStyle = avatarCls ? '' : ' style="background:var(--bg-brand);"';
+
+  // Build the reply-to block (contenteditable=false so it's treated as an atomic block in editor)
+  var quoteId = ctxTargetMsg.id || '';
+  var quoteClick = quoteId ? ' onclick="scrollToMessage(\'' + quoteId + '\')"' : '';
+  var quoteHtml = '<div class="message__reply-to" contenteditable="false"' + quoteClick + '>' +
+    '<div class="message__reply-to-avatar ' + avatarCls + '"' + avatarStyle + '>' + avatarText + '</div>' +
+    '<div class="message__reply-to-content">' +
+      '<div class="message__reply-to-name">' + escapeHtml(senderName) + '</div>' +
+      '<div class="message__reply-to-text">' + escapeHtml(truncatedText) + '</div>' +
+    '</div>' +
+  '</div><br>';
+
+  // Insert into composer
+  composerEditor.focus();
+  document.execCommand('insertHTML', false, quoteHtml);
+  updateSendBtn();
+
+  // Highlight the quoted message briefly
+  ctxTargetMsg.classList.add('message--quoted');
+  setTimeout(function() {
+    ctxTargetMsg.classList.remove('message--quoted');
+  }, 1500);
+
+  // Scroll to bottom to show composer
+  scrollToBottom();
+  closeCtxMenu();
+}
+
+// Copy message text
+function copyMessage() {
+  if (!ctxTargetMsg) { closeCtxMenu(); return; }
+  var bubbleEl = ctxTargetMsg.querySelector('.message__bubble');
+  var text = bubbleEl ? bubbleEl.innerText : '';
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(function() {
+      showToast('已复制到剪贴板');
+    });
+  } else {
+    // Fallback
+    var textarea = document.createElement('textarea');
+    textarea.value = text;
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand('copy');
+    document.body.removeChild(textarea);
+    showToast('已复制到剪贴板');
+  }
+  closeCtxMenu();
+}
+
+// Jump to the original message referenced by the reply-to block
+function gotoOriginalMessage() {
+  if (!ctxTargetReplyTo) {
+    closeCtxMenu();
+    return;
+  }
+
+  // Extract target message id from the onclick attribute
+  var onclickAttr = ctxTargetReplyTo.getAttribute('onclick') || '';
+  var match = onclickAttr.match(/scrollToMessage\(['"]([^'"]+)['"]\)/);
+  if (match && match[1]) {
+    var targetId = match[1];
+    closeCtxMenu();
+    scrollToMessage(targetId);
+  } else {
+    // Fallback: try clicking the reply-to block to trigger its onclick
+    closeCtxMenu();
+    ctxTargetReplyTo.click();
+  }
+}
+
+function closeCtxMenu() {
+  if (ctxMenu) ctxMenu.classList.remove('msg-ctx-menu--visible');
+  ctxTargetMsg = null;
+  ctxTargetReplyTo = null;
+}
+
+// Forward message (placeholder)
+function forwardMessage() {
+  showToast('转发功能即将上线');
+  closeCtxMenu();
+}
+
+// Delete message: only allow deleting own messages
+function deleteMessage() {
+  if (!ctxTargetMsg) {
+    closeCtxMenu();
+    return;
+  }
+  if (!ctxTargetMsg.classList.contains('message--user')) {
+    showToast('无法删除 Agent 消息');
+    closeCtxMenu();
+    return;
+  }
+  var msg = ctxTargetMsg;
+  if (msg.parentNode) {
+    msg.parentNode.removeChild(msg);
+  }
+  showToast('消息已删除');
+  closeCtxMenu();
+}
+
+/* ===== Create Group Modal ===== */
+function openCreateGroupModal() {
+  var overlay = document.getElementById('create-group-overlay');
+  overlay.classList.add('modal-overlay--visible');
+  document.getElementById('create-group-name').value = '';
+  document.getElementById('create-group-desc').value = '';
+  var items = document.querySelectorAll('#agent-checkbox-list .create-group-modal__agent-item');
+  items.forEach(function(item) {
+    item.classList.remove('create-group-modal__agent-item--checked');
+  });
+  var kbItems = document.querySelectorAll('#kb-checkbox-list .create-group-modal__agent-item');
+  kbItems.forEach(function(item) {
+    item.classList.remove('create-group-modal__agent-item--checked');
+  });
+}
+
+function closeCreateGroupModal(event) {
+  if (event && event.target !== event.currentTarget) return;
+  document.getElementById('create-group-overlay').classList.remove('modal-overlay--visible');
+}
+
+function toggleAgentCheckbox(el) {
+  el.classList.toggle('create-group-modal__agent-item--checked');
+}
+
+function toggleKbCheckbox(el) {
+  el.classList.toggle('create-group-modal__agent-item--checked');
+}
+
+function handleCreateGroup() {
+  var name = document.getElementById('create-group-name').value.trim();
+  if (!name) {
+    showToast('请输入群组名称');
+    return;
+  }
+  closeCreateGroupModal();
+  showToast('群组创建成功');
+}
+
+/* ===== Scroll to referenced message ===== */
+function scrollToMessage(msgId) {
+  var el = document.getElementById(msgId);
+  if (!el) return;
+
+  var messageList = document.getElementById('message-list');
+  if (messageList) {
+    // Calculate target position relative to scroll container
+    var listRect = messageList.getBoundingClientRect();
+    var elRect = el.getBoundingClientRect();
+    var offsetTop = elRect.top - listRect.top + messageList.scrollTop;
+    // Scroll to center the element in the visible area
+    var targetScroll = offsetTop - (listRect.height / 2) + (elRect.height / 2);
+    messageList.scrollTo({ top: targetScroll, behavior: 'smooth' });
+  }
+
+  // Highlight animation
+  el.style.transition = 'box-shadow 0.3s ease';
+  el.style.boxShadow = '0 0 0 2px var(--bg-brand)';
+  setTimeout(function() { el.style.boxShadow = 'none'; }, 1500);
+}
+
+/* ===== Topic Panel: End / Restart Discussion ===== */
+var discussionEnded = false;
+var discussionOriginalRound = '轮次 5/20';
+
+function toggleDiscussion() {
+  var btn = document.getElementById('end-discussion-btn');
+  if (!btn) return;
+  var topicPanel = document.getElementById('topic-panel');
+  var statusTag = topicPanel ? topicPanel.querySelector('.topic-panel__status-row .tag') : null;
+  var roundEl = topicPanel ? topicPanel.querySelector('.topic-panel__round') : null;
+  var btnImg = btn.querySelector('img');
+  var btnText = btn.childNodes[btn.childNodes.length - 1];
+
+  if (!discussionEnded) {
+    // End discussion
+    if (statusTag) {
+      statusTag.classList.remove('tag--success');
+      statusTag.classList.add('tag--neutral');
+      statusTag.textContent = '已结束';
+    }
+    if (roundEl) {
+      discussionOriginalRound = roundEl.textContent;
+      roundEl.textContent = '已结束';
+    }
+    if (btnImg) btnImg.src = '../assets/icons/dl_builtin_trae/play.svg';
+    if (btnText) btnText.textContent = '重新开始';
+    discussionEnded = true;
+    showToast('讨论已结束');
+  } else {
+    // Restart discussion
+    if (statusTag) {
+      statusTag.classList.remove('tag--neutral');
+      statusTag.classList.add('tag--success');
+      statusTag.textContent = '讨论中';
+    }
+    if (roundEl) {
+      roundEl.textContent = discussionOriginalRound;
+    }
+    if (btnImg) btnImg.src = '../assets/icons/dl_builtin_trae/square.svg';
+    if (btnText) btnText.textContent = '结束讨论';
+    discussionEnded = false;
+    showToast('讨论已重新开始');
+  }
+}
+
+/* ===== More Menu ===== */
+function openMoreMenu(event) {
+  event.stopPropagation();
+  var menu = document.getElementById('more-menu');
+  var overlay = document.getElementById('more-menu-overlay');
+  menu.classList.add('more-menu--visible');
+  overlay.classList.add('more-menu-overlay--visible');
+}
+
+function closeMoreMenu() {
+  var menu = document.getElementById('more-menu');
+  var overlay = document.getElementById('more-menu-overlay');
+  menu.classList.remove('more-menu--visible');
+  overlay.classList.remove('more-menu-overlay--visible');
+}
+
+function handleMoreMenuAction(action) {
+  closeMoreMenu();
+  if (action === '成员管理') {
+    openMemberMgmtModal();
+  } else if (action === '清空聊天记录') {
+    clearChatHistory();
+  } else if (action === '导出聊天记录') {
+    exportChatHistory();
+  } else {
+    showToast(action + ' 功能开发中');
+  }
+}
+
+function clearChatHistory() {
+  var messageList = document.getElementById('message-list');
+  if (!messageList) return;
+  var messages = messageList.querySelectorAll('.message');
+  messages.forEach(function(msg) {
+    messageList.removeChild(msg);
+  });
+  showToast('聊天记录已清空');
+}
+
+function exportChatHistory() {
+  var messageList = document.getElementById('message-list');
+  if (!messageList) {
+    showToast('聊天记录已导出');
+    return;
+  }
+  var messages = messageList.querySelectorAll('.message');
+  var lines = [];
+  lines.push('聊天记录 - 408讨论群');
+  lines.push('导出时间：' + new Date().toLocaleString());
+  lines.push('========================================');
+  messages.forEach(function(msg) {
+    var senderEl = msg.querySelector('.message__sender-name');
+    var timeEl = msg.querySelector('.message__sender-time');
+    var bubbleEl = msg.querySelector('.message__bubble');
+    var sender = senderEl ? senderEl.textContent.trim() : '未知';
+    var time = timeEl ? timeEl.textContent.trim() : '';
+    var content = bubbleEl ? bubbleEl.innerText.trim() : '';
+    lines.push('[' + time + '] ' + sender + '：');
+    lines.push(content);
+    lines.push('');
+  });
+  var text = lines.join('\n');
+  var blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = '聊天记录_408讨论群.txt';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
+  showToast('聊天记录已导出');
+}
+
+/* ===== Member Management Modal ===== */
+/* ===== Member Management Modal ===== */
+// Agent registry: mirrors create-group modal agent list
+var MEMBER_AGENTS = [
+  { name: 'DeepSeek',   cls: 'ds-avatar--deepseek', initial: 'D', role: '成员', tagCls: 'tag--neutral' },
+  { name: 'Kimi',       cls: 'ds-avatar--kimi',     initial: 'K', role: '成员', tagCls: 'tag--neutral' },
+  { name: 'Claude',     cls: 'ds-avatar--claude',   initial: 'C', role: '成员', tagCls: 'tag--neutral' },
+  { name: '专家 Agent',  cls: 'ds-avatar--expert',   initial: 'E', role: '专家', tagCls: 'tag--warning' }
+];
+
+// Current member state (data-driven)
+var memberMgmtState = [
+  { name: '我',         cls: 'ds-avatar--accent',    initial: '我', role: '群主', tagCls: 'tag--brand',   removable: false },
+  { name: 'DeepSeek',   cls: 'ds-avatar--deepseek',  initial: 'D',  role: '成员', tagCls: 'tag--neutral', removable: true },
+  { name: 'Kimi',       cls: 'ds-avatar--kimi',      initial: 'K',  role: '成员', tagCls: 'tag--neutral', removable: true },
+  { name: 'Claude',     cls: 'ds-avatar--claude',    initial: 'C',  role: '成员', tagCls: 'tag--neutral', removable: true },
+  { name: '专家 Agent',  cls: 'ds-avatar--expert',    initial: 'E',  role: '专家', tagCls: 'tag--warning', removable: true }
+];
+
+function openMemberMgmtModal() {
+  document.getElementById('member-mgmt-overlay').classList.add('modal-overlay--visible');
+  renderMemberList();
+  renderAgentOptions();
+}
+function closeMemberMgmtModal(event) {
+  if (event && event.target !== event.currentTarget) return;
+  document.getElementById('member-mgmt-overlay').classList.remove('modal-overlay--visible');
+}
+
+function renderMemberList() {
+  var list = document.getElementById('member-mgmt-list');
+  if (!list) return;
+  list.innerHTML = '';
+  memberMgmtState.forEach(function(m, idx) {
+    var item = document.createElement('div');
+    item.className = 'member-mgmt-item';
+    item.setAttribute('data-name', m.name);
+    item.setAttribute('data-idx', idx);
+    var rightContent;
+    if (m.removable) {
+      rightContent = '<button class="member-mgmt-item__remove" onclick="requestRemoveMember(this)" data-name="' + escapeAttr(m.name) + '" title="移除" aria-label="移除 ' + escapeAttr(m.name) + '">' +
+        '<img src="../assets/icons/dl_builtin_trae/x.svg" width="14" height="14" alt="">' +
+      '</button>';
+    } else {
+      rightContent = '<span style="font-size:11px;color:var(--text-tertiary);">不可移除</span>';
+    }
+    // Role tag: owner locked, others clickable to cycle 成员 <-> 专家
+    var roleLocked = (m.role === '群主');
+    var roleClass = 'tag ' + m.tagCls + ' member-mgmt-item__role' + (roleLocked ? ' member-mgmt-item__role--locked' : '');
+    var roleAttrs = roleLocked ? '' : (' onclick="cycleMemberRole(this)" data-name="' + escapeAttr(m.name) + '" title="点击切换角色" tabindex="0" role="button"');
+    item.innerHTML =
+      '<div class="ds-avatar ' + m.cls + '" style="width:32px;height:32px;font-size:12px;">' + escapeHtml(m.initial) + '</div>' +
+      '<div class="member-mgmt-item__info">' +
+        '<span class="member-mgmt-item__name">' + escapeHtml(m.name) + '</span>' +
+        '<span class="' + roleClass + '"' + roleAttrs + '>' + escapeHtml(m.role) + '</span>' +
+      '</div>' +
+      rightContent;
+    list.appendChild(item);
+  });
+  // Update count
+  var countEl = document.getElementById('member-mgmt-count');
+  if (countEl) countEl.textContent = memberMgmtState.length;
+  // Update hint
+  var hintEl = document.getElementById('member-mgmt-hint');
+  if (hintEl) {
+    var agentCount = memberMgmtState.filter(function(m){ return m.name !== '我'; }).length;
+    var expertCount = memberMgmtState.filter(function(m){ return m.role === '专家'; }).length;
+    hintEl.textContent = '其中 ' + agentCount + ' 位 Agent' + (expertCount ? '、' + expertCount + ' 位专家' : '');
+  }
+}
+
+function renderAgentOptions() {
+  var container = document.getElementById('member-mgmt-agent-list');
+  if (!container) return;
+  container.innerHTML = '';
+  var emptyEl = document.getElementById('member-mgmt-add-empty');
+  var hasAvailable = false;
+  MEMBER_AGENTS.forEach(function(agent) {
+    var alreadyAdded = memberMgmtState.some(function(m) { return isSameMember(m.name, agent.name); });
+    if (!alreadyAdded) hasAvailable = true;
+    var option = document.createElement('button');
+    option.type = 'button';
+    option.className = 'member-mgmt-agent-option' + (alreadyAdded ? ' member-mgmt-agent-option--added' : '');
+    option.setAttribute('data-agent-name', agent.name);
+    option.setAttribute('aria-label', alreadyAdded ? (agent.name + ' 已加入') : ('添加 ' + agent.name));
+    if (alreadyAdded) option.setAttribute('aria-disabled', 'true');
+    option.innerHTML =
+      '<span class="member-mgmt-agent-option__avatar ' + agent.cls + '">' + escapeHtml(agent.initial) + '</span>' +
+      '<span>' + escapeHtml(agent.name) + '</span>' +
+      '<span class="member-mgmt-agent-option__check">' +
+        '<img src="../assets/icons/dl_builtin_trae/check.svg" width="12" height="12" alt="">' +
+      '</span>';
+    if (!alreadyAdded) {
+      option.onclick = function() { addAgentMember(agent); };
+    }
+    container.appendChild(option);
+  });
+  // Toggle empty-state hint
+  if (emptyEl) emptyEl.style.display = hasAvailable ? 'none' : 'block';
+}
+
+// Case-insensitive member name comparison
+function isSameMember(a, b) {
+  return String(a).toLowerCase() === String(b).toLowerCase();
+}
+
+function addAgentMember(agent) {
+  // Duplicate guard (case-insensitive)
+  if (memberMgmtState.some(function(m) { return isSameMember(m.name, agent.name); })) {
+    showToast(agent.name + ' 已在群组中');
+    return;
+  }
+  memberMgmtState.push({
+    name: agent.name,
+    cls: agent.cls,
+    initial: agent.initial,
+    role: agent.role,
+    tagCls: agent.tagCls,
+    removable: true
+  });
+  renderMemberList();
+  renderAgentOptions();
+  showToast(agent.name + ' 已加入群组');
+}
+
+// Cycle member role between 成员 and 专家 (owner locked)
+function cycleMemberRole(el) {
+  if (!el) return;
+  var name = el.getAttribute('data-name');
+  var m = memberMgmtState.find(function(x) { return x.name === name; });
+  if (!m || m.role === '群主') return;
+  if (m.role === '成员') {
+    m.role = '专家';
+    m.tagCls = 'tag--warning';
+  } else {
+    m.role = '成员';
+    m.tagCls = 'tag--neutral';
+  }
+  renderMemberList();
+  renderAgentOptions();
+  showToast(m.name + ' 角色已切换为 ' + m.role);
+}
+
+// Open confirm modal before removing
+function requestRemoveMember(btn) {
+  if (!btn) return;
+  var name = btn.getAttribute('data-name');
+  var m = memberMgmtState.find(function(x) { return x.name === name; });
+  if (!m) return;
+  if (!m.removable) {
+    showToast(m.name + ' 不可移除');
+    return;
+  }
+  // Stash target name on confirm button
+  var confirmBtn = document.getElementById('member-mgmt-confirm-btn');
+  confirmBtn.setAttribute('data-target-name', name);
+  var nameEl = document.getElementById('member-mgmt-confirm-name');
+  if (nameEl) nameEl.textContent = name;
+  // Wire confirm handler once
+  confirmBtn.onclick = function() {
+    var target = this.getAttribute('data-target-name');
+    closeMemberConfirm();
+    removeMember(target);
+  };
+  document.getElementById('member-mgmt-confirm-overlay').classList.add('modal-overlay--visible');
+}
+
+function closeMemberConfirm(event) {
+  if (event && event.target !== event.currentTarget) return;
+  document.getElementById('member-mgmt-confirm-overlay').classList.remove('modal-overlay--visible');
+}
+
+function removeMember(name) {
+  if (!name) return;
+  var idx = memberMgmtState.findIndex(function(m) { return m.name === name; });
+  if (idx < 0) return;
+  var m = memberMgmtState[idx];
+  if (!m.removable) {
+    showToast(m.name + ' 不可移除');
+    return;
+  }
+  var list = document.getElementById('member-mgmt-list');
+  var item = list ? list.querySelector('.member-mgmt-item[data-name="' + cssEscape(name) + '"]') : null;
+  if (item) {
+    item.classList.add('member-mgmt-item--removing');
+  }
+  var removed = memberMgmtState.splice(idx, 1)[0];
+  // Re-render after fade-out
+  setTimeout(function() {
+    renderMemberList();
+    renderAgentOptions();
+  }, 180);
+  showToast(removed.name + ' 已移出群组');
+}
+
+function submitAddMember() {
+  // Deprecated: free-text member input removed; members are added only via Agent list selection.
+  showToast('请从 Agent 列表中选择成员');
+}
+
+// Finish: sync to group header and close
+function finishMemberMgmt() {
+  // Sync member count into group header if present
+  var headerCount = document.querySelector('.group-header__members, .chat-header__member-count');
+  if (headerCount) {
+    var agentCount = memberMgmtState.filter(function(m){ return m.name !== '我'; }).length;
+    headerCount.textContent = memberMgmtState.length + ' 位成员';
+  }
+  closeMemberMgmtModal();
+  showToast('成员已更新，共 ' + memberMgmtState.length + ' 位');
+}
+
+// Escape helper for attribute values
+function escapeAttr(text) {
+  return escapeHtml(text).replace(/"/g, '&quot;');
+}
+
+// Minimal CSS escape for attribute selector
+function cssEscape(s) {
+  return String(s).replace(/(["\\])/g, '\\$1');
+}
+
+// Keyboard support for role tags + ESC to close confirm modal
+document.addEventListener('DOMContentLoaded', function() {
+  // Keyboard support for role tags (Enter / Space)
+  var list = document.getElementById('member-mgmt-list');
+  if (list) {
+    list.addEventListener('keydown', function(e) {
+      if ((e.key === 'Enter' || e.key === ' ') && e.target.classList.contains('member-mgmt-item__role')) {
+        e.preventDefault();
+        cycleMemberRole(e.target);
+      }
+    });
+  }
+  // ESC closes confirm modal
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      var confirmOverlay = document.getElementById('member-mgmt-confirm-overlay');
+      if (confirmOverlay && confirmOverlay.classList.contains('modal-overlay--visible')) {
+        closeMemberConfirm();
+      }
+    }
+  });
+});
+
+/* ===== Toast ===== */
+function showToast(message) {
+  var container = document.getElementById('toast-container');
+  var toast = document.createElement('div');
+  toast.className = 'toast';
+  toast.innerHTML = '<img src="../assets/icons/dl_builtin_trae/info-circle.svg" width="16" height="16" alt=""><span>' + message + '</span>';
+  container.appendChild(toast);
+  requestAnimationFrame(function() {
+    requestAnimationFrame(function() {
+      toast.classList.add('toast--visible');
+    });
+  });
+  setTimeout(function() {
+    toast.classList.remove('toast--visible');
+    setTimeout(function() {
+      if (toast.parentNode) {
+        toast.parentNode.removeChild(toast);
+      }
+    }, 300);
+  }, 2000);
+}
+</script>
+
+<script src="https://unpkg.com/lucide@latest"></script>
+<script>lucide.createIcons();</script>
+</body>
+</html>

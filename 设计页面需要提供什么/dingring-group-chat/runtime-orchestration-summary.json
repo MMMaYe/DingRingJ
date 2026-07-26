@@ -1,0 +1,495 @@
+{
+  "skillProvenance": {
+    "name": "solo-design",
+    "version": "2026.07.06.8",
+    "version_source": "default"
+  },
+  "operatingMode": "library-bound",
+  "project": {
+    "resolvedLane": "library_bound",
+    "selectedIntentWorkflowRead": true,
+    "contextRequirementsLoaded": [
+      {
+        "path": "shared-runtime/runtime-boundaries/lane-runtime-contracts.md",
+        "readStatus": "loaded",
+        "bodyRead": true
+      },
+      {
+        "path": "shared-runtime/agent-dispatch-runtime/lane-dispatch-index.md",
+        "readStatus": "loaded",
+        "bodyRead": true
+      },
+      {
+        "path": "delivery-quality/page-rendering-quality-gate.md",
+        "readStatus": "loaded",
+        "bodyRead": true
+      },
+      {
+        "path": "delivery-quality/design-artifact-validation.md",
+        "readStatus": "loaded",
+        "bodyRead": true
+      },
+      {
+        "path": "delivery-quality/delivery-evidence-contract.md",
+        "readStatus": "loaded",
+        "bodyRead": true
+      },
+      {
+        "path": "intent-workflows/intent-page-library-bound/INTENT_WORKFLOW.md",
+        "readStatus": "loaded",
+        "bodyRead": true
+      },
+      {
+        "path": "intent-workflows/intent-page-library-bound/start-library-bound-project.md",
+        "readStatus": "loaded",
+        "bodyRead": true
+      },
+      {
+        "path": "intent-workflows/intent-page-library-bound/library-bound-page-runtime.md",
+        "readStatus": "loaded",
+        "bodyRead": true
+      },
+      {
+        "path": "intent-workflows/intent-page-library-bound/dispatch-contract.md",
+        "readStatus": "loaded",
+        "bodyRead": true
+      },
+      {
+        "path": "intent-workflows/intent-page-library-bound/orchestration-summary-fields.md",
+        "readStatus": "loaded",
+        "bodyRead": true
+      },
+      {
+        "path": "intent-workflows/intent-page-library-bound/design-library-ingestion.md",
+        "readStatus": "loaded",
+        "bodyRead": true
+      }
+    ],
+    "contextReadScope": "library-bound: design library extraction + page rendering quality gate + validation flow",
+    "validationRunDiscipline": {
+      "maxFullValidationRuns": 2,
+      "softWarningsTriggerRepair": false,
+      "blockingRepairMode": "targeted-once",
+      "forbiddenRepairTriggers": [
+        "soft-warning-only",
+        "provenance-warning-only",
+        "style-warning-only"
+      ]
+    },
+    "lowValueCallWatchdog": {
+      "noProgressNextAction": "move to readiness or blocked summary"
+    },
+    "expectedDispatches": [
+      {
+        "nodeId": "page-group-chat",
+        "packetType": "LibraryBoundPagePacket",
+        "status": "not_required",
+        "changedFiles": [],
+        "toolCallLedger": {
+          "source": "main-agent-runtime-trace",
+          "traceDigest": "session-restore-completion",
+          "todoWriteCalls": 0,
+          "previewCalls": 0,
+          "validationScriptCalls": 0,
+          "helperScriptWrites": 0
+        }
+      }
+    ],
+    "visualQualityCheckpoints": [
+      {
+        "id": "vc-1",
+        "region": "three-column-layout",
+        "anchor": "Left sidebar (240px) + Center chat (flex-1) + Right panel (280px) must fill full viewport height without scrolling independently",
+        "status": "completed"
+      },
+      {
+        "id": "vc-2",
+        "region": "message-flow",
+        "anchor": "Chat messages must be readable with clear sender avatar + name + bubble alignment, USER right-aligned and AGENT left-aligned",
+        "status": "completed"
+      },
+      {
+        "id": "vc-3",
+        "region": "typing-indicator",
+        "anchor": "Typing indicator shows below last message with animated dots and agent name",
+        "status": "completed"
+      },
+      {
+        "id": "vc-4",
+        "region": "info-panel",
+        "anchor": "Right panel shows members list, topic status with round indicator, and conclude button",
+        "status": "completed"
+      }
+    ],
+    "validationHistory": [
+      {
+        "reportPath": "validation-report.json",
+        "reportHash": "df8d0a43631cbb454d390f06d33a5566677d9f6e27013bb3139ae4eefe9586b7",
+        "checkedAt": "2026-07-26T02:40:12.276Z",
+        "success": false,
+        "exitCode": 1,
+        "renderBlockingErrorCount": 8,
+        "repairPlanHints": [
+          "hardcoded-color-in-body",
+          "hardcoded-color-in-body",
+          "hardcoded-color-in-body"
+        ],
+        "errorSignatures": [
+          {
+            "errorClass": "html-quality",
+            "normalized": "[html-quality] agent-management.html: image references missing asset file: ../assets/icons/dl_builtin_trae/check.0c0c0d.svg",
+            "signature": "098dd37c1bc938b5b55bd5394a8dec1a7a7dd16f8521daf68ddee95459c69ad3"
+          },
+          {
+            "errorClass": "html-quality",
+            "normalized": "[html-quality] agent-management.html: image references missing asset file: ../assets/icons/dl_builtin_trae/check.0c0c0d.svg",
+            "signature": "098dd37c1bc938b5b55bd5394a8dec1a7a7dd16f8521daf68ddee95459c69ad3"
+          },
+          {
+            "errorClass": "html-quality",
+            "normalized": "[html-quality] group-chat.html: image references missing asset file: ../assets/icons/dl_builtin_trae/check.0c0c0d.svg",
+            "signature": "be2a7ce103f4b06938c5a3960fadba5977c7dc6d652acf4aca0c6cdbf42e2a15"
+          },
+          {
+            "errorClass": "html-quality",
+            "normalized": "[html-quality] group-chat.html: image references missing asset file: ../assets/icons/dl_builtin_trae/check.0c0c0d.svg",
+            "signature": "be2a7ce103f4b06938c5a3960fadba5977c7dc6d652acf4aca0c6cdbf42e2a15"
+          },
+          {
+            "errorClass": "html-quality",
+            "normalized": "[html-quality] group-chat.html: image references missing asset file: ../assets/icons/dl_builtin_trae/check.0c0c0d.svg",
+            "signature": "be2a7ce103f4b06938c5a3960fadba5977c7dc6d652acf4aca0c6cdbf42e2a15"
+          },
+          {
+            "errorClass": "html-quality",
+            "normalized": "[html-quality] group-chat.html: image references missing asset file: ../assets/icons/dl_builtin_trae/check.0c0c0d.svg",
+            "signature": "be2a7ce103f4b06938c5a3960fadba5977c7dc6d652acf4aca0c6cdbf42e2a15"
+          },
+          {
+            "errorClass": "html-quality",
+            "normalized": "[html-quality] group-chat.html: image references missing asset file: ../assets/icons/dl_builtin_trae/check.0c0c0d.svg",
+            "signature": "be2a7ce103f4b06938c5a3960fadba5977c7dc6d652acf4aca0c6cdbf42e2a15"
+          },
+          {
+            "errorClass": "html-quality",
+            "normalized": "[html-quality] group-chat.html: image references missing asset file: ../assets/icons/dl_builtin_trae/check.0c0c0d.svg",
+            "signature": "be2a7ce103f4b06938c5a3960fadba5977c7dc6d652acf4aca0c6cdbf42e2a15"
+          }
+        ],
+        "terminalState": null
+      },
+      {
+        "reportPath": "validation-report.json",
+        "reportHash": "a4148d8768820727871d839b26986daec6a2e456e5c28ffa47b5c326f8fc0fbc",
+        "checkedAt": "2026-07-26T02:41:17.435Z",
+        "success": true,
+        "exitCode": 0,
+        "renderBlockingErrorCount": 0,
+        "repairPlanHints": [
+          "hardcoded-color-in-body",
+          "hardcoded-color-in-body",
+          "hardcoded-color-in-body"
+        ],
+        "errorSignatures": [],
+        "terminalState": null
+      }
+    ],
+    "validationRepairLedger": [
+      {
+        "failedReportPath": "validation-report.json",
+        "failedReportHash": "df8d0a43631cbb454d390f06d33a5566677d9f6e27013bb3139ae4eefe9586b7",
+        "repairWorkflowReadPath": "intent-workflows/intent-project-mutation/main-agent-repair-workflow.md",
+        "repairStartedAt": "2026-07-26T02:40:51.264Z",
+        "repairEntryStatus": "revalidated-success",
+        "ownerTriage": [
+          {
+            "owner": "sub-agent",
+            "errorClass": "hardcoded-color-in-body",
+            "affectedFiles": [
+              "agent-management.html"
+            ],
+            "repairScope": "targeted-token-replace",
+            "strategy": "targeted_token_replace_once"
+          },
+          {
+            "owner": "sub-agent",
+            "errorClass": "hardcoded-color-in-body",
+            "affectedFiles": [
+              "group-chat.html"
+            ],
+            "repairScope": "targeted-token-replace",
+            "strategy": "targeted_token_replace_once"
+          },
+          {
+            "owner": "sub-agent",
+            "errorClass": "hardcoded-color-in-body",
+            "affectedFiles": [
+              "knowledge-base.html"
+            ],
+            "repairScope": "targeted-token-replace",
+            "strategy": "targeted_token_replace_once"
+          }
+        ],
+        "repairPlanHints": [
+          {
+            "errorClass": "hardcoded-color-in-body",
+            "owner": "sub-agent",
+            "repairScope": "targeted-token-replace",
+            "strategy": "targeted_token_replace_once",
+            "affectedFiles": [
+              "agent-management.html"
+            ],
+            "repairReportPath": null,
+            "repairAlreadyAttempted": false,
+            "allowSourceRead": "no-full-html-read",
+            "maxValidationRuns": 2
+          },
+          {
+            "errorClass": "hardcoded-color-in-body",
+            "owner": "sub-agent",
+            "repairScope": "targeted-token-replace",
+            "strategy": "targeted_token_replace_once",
+            "affectedFiles": [
+              "group-chat.html"
+            ],
+            "repairReportPath": null,
+            "repairAlreadyAttempted": false,
+            "allowSourceRead": "no-full-html-read",
+            "maxValidationRuns": 2
+          },
+          {
+            "errorClass": "hardcoded-color-in-body",
+            "owner": "sub-agent",
+            "repairScope": "targeted-token-replace",
+            "strategy": "targeted_token_replace_once",
+            "affectedFiles": [
+              "knowledge-base.html"
+            ],
+            "repairReportPath": null,
+            "repairAlreadyAttempted": false,
+            "allowSourceRead": "no-full-html-read",
+            "maxValidationRuns": 2
+          }
+        ],
+        "repairActions": [
+          {
+            "owner": "main-agent",
+            "errorClass": "unknown-blocking",
+            "affectedFiles": [
+              "pages/agent-management.html",
+              "pages/group-chat.html"
+            ],
+            "action": "targeted_asset_reference_replace",
+            "observedFileHashes": [
+              {
+                "path": "pages/agent-management.html",
+                "hash": "9280cd1510ab3c2dbb11f26c0c285fcd765f988dae9960e50d00ab2d32578cd6"
+              },
+              {
+                "path": "pages/group-chat.html",
+                "hash": "61d66cf1a61553790b3a08f82698fb9eb50ec7662aa276407654755e97d68b4d"
+              }
+            ],
+            "preEditFileHashes": [],
+            "postEditFileHashes": [],
+            "repairOwnedFields": [
+              "unknown-blocking"
+            ],
+            "recordedAt": "2026-07-26T02:41:00.602Z",
+            "repairActionTableRequired": true
+          }
+        ],
+        "revalidationReportPath": "validation-report.json",
+        "revalidationReportHash": "a4148d8768820727871d839b26986daec6a2e456e5c28ffa47b5c326f8fc0fbc",
+        "revalidationSuccess": true,
+        "blockedReason": null,
+        "revalidationRecordedAt": "2026-07-26T02:41:21.215Z"
+      }
+    ],
+    "repairEntryEvidence": [
+      {
+        "failedReportPath": "validation-report.json",
+        "failedReportHash": "df8d0a43631cbb454d390f06d33a5566677d9f6e27013bb3139ae4eefe9586b7",
+        "repairWorkflowReadPath": "intent-workflows/intent-project-mutation/main-agent-repair-workflow.md",
+        "repairStartedAt": "2026-07-26T02:40:51.264Z",
+        "ledgerIndex": 0,
+        "ownerTriageCount": 3,
+        "repairActionCount": 1,
+        "revalidationReportPath": "validation-report.json",
+        "revalidationReportHash": "a4148d8768820727871d839b26986daec6a2e456e5c28ffa47b5c326f8fc0fbc",
+        "revalidationSuccess": true
+      }
+    ]
+  },
+  "designSource": {
+    "libraryIdentity": {
+      "name": "TRAE",
+      "id": "dl_builtin_trae",
+      "version": 0,
+      "scope": "builtin-global",
+      "path": "/data/user/design_libraries/TRAE",
+      "versionSource": "metadata.json"
+    },
+    "actualTokenNameReference": [
+      "--bg-base-default",
+      "--bg-base-secondary",
+      "--bg-base-tertiary",
+      "--bg-overlay-l1",
+      "--bg-overlay-l2",
+      "--bg-overlay-l3",
+      "--bg-overlay-l4",
+      "--bg-brand",
+      "--bg-brand-hover",
+      "--bg-brand-disabled",
+      "--bg-brand-popup",
+      "--bg-menu",
+      "--bg-tooltip",
+      "--bg-invert",
+      "--text-default",
+      "--text-default-hover",
+      "--text-default-active",
+      "--text-secondary",
+      "--text-secondary-hover",
+      "--text-tertiary",
+      "--text-disabled",
+      "--text-onbrand",
+      "--text-onaccent",
+      "--text-brand",
+      "--text-brand-hover",
+      "--icon-default",
+      "--icon-secondary",
+      "--icon-tertiary",
+      "--icon-onbrand",
+      "--icon-brand",
+      "--icon-brand-hover",
+      "--border-neutral-l1",
+      "--border-neutral-l2",
+      "--border-neutral-l3",
+      "--border-brand",
+      "--border-contrast",
+      "--status-primary-default",
+      "--status-success-default",
+      "--status-warning-default",
+      "--status-error-default",
+      "--status-primary-surface-l1",
+      "--status-success-surface-l1",
+      "--radius-2",
+      "--radius-4",
+      "--radius-6",
+      "--radius-8",
+      "--radius-10",
+      "--radius-full",
+      "--spacer-0",
+      "--spacer-4",
+      "--spacer-6",
+      "--spacer-8",
+      "--spacer-12",
+      "--spacer-16",
+      "--spacer-24",
+      "--spacer-32",
+      "--spacer-40",
+      "--body-xs-font-size",
+      "--body-sm-font-size",
+      "--body-md-font-size",
+      "--body-base-font-size",
+      "--body-xs-line-height",
+      "--body-sm-line-height",
+      "--body-md-line-height",
+      "--body-base-line-height",
+      "--body-sm-strong-font-weight",
+      "--body-md-strong-font-weight",
+      "--heading-2xs-font-size",
+      "--heading-xs-font-size",
+      "--heading-sm-font-size",
+      "--heading-md-font-size",
+      "--heading-lg-font-size",
+      "--font-family-default",
+      "--font-family-mono",
+      "--font-weight-default",
+      "--font-weight-medium",
+      "--font-weight-strong"
+    ],
+    "componentPlan": [
+      {
+        "slug": "chat-composer",
+        "contractFile": "/data/user/design_libraries/TRAE/components/chat-composer.json",
+        "previewFile": "/data/user/design_libraries/TRAE/preview/component-chat-composer.html"
+      },
+      {
+        "slug": "avatar",
+        "contractFile": "/data/user/design_libraries/TRAE/components/avatar.json",
+        "previewFile": "/data/user/design_libraries/TRAE/preview/component-avatar.html"
+      },
+      {
+        "slug": "nav-list",
+        "contractFile": "/data/user/design_libraries/TRAE/components/nav-list.json",
+        "previewFile": "/data/user/design_libraries/TRAE/preview/component-nav-list.html"
+      },
+      {
+        "slug": "buttons",
+        "contractFile": "/data/user/design_libraries/TRAE/components/buttons.json",
+        "previewFile": "/data/user/design_libraries/TRAE/preview/component-buttons.html"
+      },
+      {
+        "slug": "tag",
+        "contractFile": "/data/user/design_libraries/TRAE/components/tag.json",
+        "previewFile": "/data/user/design_libraries/TRAE/preview/component-tag.html"
+      },
+      {
+        "slug": "atoms",
+        "contractFile": "/data/user/design_libraries/TRAE/components/atoms.json",
+        "previewFile": "/data/user/design_libraries/TRAE/preview/component-atoms.html"
+      }
+    ],
+    "tokenFidelity": "strict",
+    "componentConformance": "strict",
+    "iconAssets": {
+      "source": "assets/icons",
+      "projectIconDir": "assets/icons/dl_builtin_trae",
+      "libraryKey": "dl_builtin_trae",
+      "renderMethod": "css-mask",
+      "pathTemplate": "../assets/icons/dl_builtin_trae/{name}.svg",
+      "totalCount": 120,
+      "coloringRule": "currentColor by default"
+    }
+  },
+  "pages": [
+    {
+      "nodeId": "page-group-chat",
+      "htmlSrc": "pages/group-chat.html",
+      "title": "DingRing Group Chat",
+      "componentPlan": [
+        {
+          "slug": "chat-composer",
+          "previewFile": "/data/user/design_libraries/TRAE/preview/component-chat-composer.html",
+          "contractFile": "/data/user/design_libraries/TRAE/components/chat-composer.json"
+        },
+        {
+          "slug": "avatar",
+          "previewFile": "/data/user/design_libraries/TRAE/preview/component-avatar.html",
+          "contractFile": "/data/user/design_libraries/TRAE/components/avatar.json"
+        },
+        {
+          "slug": "nav-list",
+          "previewFile": "/data/user/design_libraries/TRAE/preview/component-nav-list.html",
+          "contractFile": "/data/user/design_libraries/TRAE/components/nav-list.json"
+        },
+        {
+          "slug": "buttons",
+          "previewFile": "/data/user/design_libraries/TRAE/preview/component-buttons.html",
+          "contractFile": "/data/user/design_libraries/TRAE/components/buttons.json"
+        },
+        {
+          "slug": "tag",
+          "previewFile": "/data/user/design_libraries/TRAE/preview/component-tag.html",
+          "contractFile": "/data/user/design_libraries/TRAE/components/tag.json"
+        },
+        {
+          "slug": "atoms",
+          "previewFile": "/data/user/design_libraries/TRAE/preview/component-atoms.html",
+          "contractFile": "/data/user/design_libraries/TRAE/components/atoms.json"
+        }
+      ]
+    }
+  ]
+}
