@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
-import Sidebar, { IconPlus } from '../../components/Sidebar';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import Sidebar from '../../components/Sidebar';
+import Modal from '../../components/Modal';
 import { toast } from '../../components/Toast';
 import { API } from '../../api';
 import type { KnowledgeCardDTO, ReviewCardDTO } from '../../types';
@@ -10,12 +11,32 @@ export default function CardsPage() {
   const [categories, setCategories] = useState<string[]>([]);
   const [currentCat, setCurrentCat] = useState<string | null>(null);
   const [order, setOrder] = useState<'sequential' | 'random'>('sequential');
+  const [keyword, setKeyword] = useState('');
+  const [detailCard, setDetailCard] = useState<KnowledgeCardDTO | null>(null);
 
   // 复习模式
   const [reviewCards, setReviewCards] = useState<KnowledgeCardDTO[]>([]);
   const [reviewIdx, setReviewIdx] = useState(0);
   const [reviewActive, setReviewActive] = useState(false);
   const [flipped, setFlipped] = useState(false);
+
+  // 搜索过滤
+  const filteredCards = useMemo(() => {
+    const kw = keyword.trim().toLowerCase();
+    if (!kw) return cards;
+    return cards.filter(c =>
+      c.question.toLowerCase().includes(kw) ||
+      c.answer.toLowerCase().includes(kw) ||
+      c.topicTitle.toLowerCase().includes(kw)
+    );
+  }, [cards, keyword]);
+
+  // 统计
+  const stats = useMemo(() => ({
+    total: cards.length,
+    topics: new Set(cards.map(c => c.topicId)).size,
+    categories: categories.length,
+  }), [cards, categories]);
 
   const loadCategories = useCallback(async () => {
     try { setCategories(await API.get<string[]>('/api/cards/categories')); } catch { /* ignore */ }
@@ -92,10 +113,20 @@ export default function CardsPage() {
           <div>
             <div className="page__title">知识卡片</div>
             <div className="page__subtitle">
-              {currentCat ? `分类「${currentCat}」` : '全部'}共 {cards.length} 张卡片 · 点击卡片查看答案
+              {currentCat ? `分类「${currentCat}」` : '全部'}共 {filteredCards.length} 张卡片 · 点击卡片查看详情
             </div>
           </div>
           <div className="page__header-actions">
+            <div className="page__search">
+              <svg className="page__search-icon" width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="6" cy="6" r="4" stroke="currentColor" strokeWidth="1.2"/><path d="M9.5 9.5L12.5 12.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>
+              <input
+                type="text"
+                className="page__search-input"
+                placeholder="搜索卡片（问题 / 答案 / 主题）..."
+                value={keyword}
+                onChange={e => setKeyword(e.target.value)}
+              />
+            </div>
             <select className="input" style={{ width: 130 }} value={order} onChange={e => setOrder(e.target.value as any)}>
               <option value="sequential">顺序复习</option>
               <option value="random">随机复习</option>
@@ -103,14 +134,35 @@ export default function CardsPage() {
             <button className="btn btn--brand" onClick={startReview}>▶ 开始复习</button>
           </div>
         </header>
+
+        {/* 统计栏 */}
+        <div className="page__stats">
+          <div className="page__stat">
+            <span className="page__stat-num">{stats.total}</span>
+            <span className="page__stat-label">张卡片</span>
+          </div>
+          <div className="page__stat">
+            <span className="page__stat-num">{stats.topics}</span>
+            <span className="page__stat-label">个主题</span>
+          </div>
+          <div className="page__stat">
+            <span className="page__stat-num">{stats.categories}</span>
+            <span className="page__stat-label">个分类</span>
+          </div>
+        </div>
+
         <div className="page__body">
           <div className="card-grid">
             {!cards.length ? (
               <div className="empty" style={{ gridColumn: '1/-1' }}>
                 <div className="empty__icon">🗂️</div>暂无知识卡片<br />在群里发起讨论并 @专家 结束后会自动生成
               </div>
-            ) : cards.map(c => (
-              <div key={c.id} className="k-card" onClick={e => (e.currentTarget as HTMLElement).classList.toggle('is-open')}>
+            ) : !filteredCards.length ? (
+              <div className="empty" style={{ gridColumn: '1/-1' }}>
+                <div className="empty__icon">🔍</div>没有匹配「{keyword}」的卡片
+              </div>
+            ) : filteredCards.map(c => (
+              <div key={c.id} className="k-card" onClick={() => setDetailCard(c)}>
                 <div className="k-card__header">
                   <span className="k-card__q">Q: {c.question}</span>
                   {c.category && <span className="tag tag--brand">{c.category}</span>}
@@ -127,6 +179,28 @@ export default function CardsPage() {
           </div>
         </div>
       </section>
+
+      {/* 卡片详情弹窗 */}
+      <Modal open={!!detailCard} onClose={() => setDetailCard(null)}
+        title={detailCard?.category ? `📄 #${detailCard.category}` : '📄 知识卡片'} width={560}
+        footer={<button className="btn btn--ghost" onClick={() => setDetailCard(null)}>关闭</button>}>
+        {detailCard && (
+          <>
+            <div className="card-detail__meta">
+              <span className="tag tag--neutral">来自「{detailCard.topicTitle}」</span>
+              <span className="tag">创建于 {new Date(detailCard.createTime).toLocaleString('zh-CN')}</span>
+            </div>
+            <div className="card-detail__section">
+              <div className="card-detail__label">问题</div>
+              <div className="card-detail__q">{detailCard.question}</div>
+            </div>
+            <div className="card-detail__section">
+              <div className="card-detail__label card-detail__label--answer">答案</div>
+              <div className="card-detail__a">{detailCard.answer}</div>
+            </div>
+          </>
+        )}
+      </Modal>
 
       {/* 复习浮层 */}
       {reviewActive && current && (

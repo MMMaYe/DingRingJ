@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import Sidebar, { IconPlus } from '../../components/Sidebar';
 import Avatar from '../../components/Avatar';
 import Modal from '../../components/Modal';
@@ -11,6 +11,7 @@ export default function AgentsPage() {
   const [agents, setAgents] = useState<AgentDTO[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [keyword, setKeyword] = useState('');
 
   // form
   const [name, setName] = useState('');
@@ -20,6 +21,24 @@ export default function AgentsPage() {
   const [apiKey, setApiKey] = useState('');
   const [systemPrompt, setSystemPrompt] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  // 搜索过滤
+  const filteredAgents = useMemo(() => {
+    const kw = keyword.trim().toLowerCase();
+    if (!kw) return agents;
+    return agents.filter(a =>
+      a.name.toLowerCase().includes(kw) ||
+      a.modelName.toLowerCase().includes(kw) ||
+      (a.description || '').toLowerCase().includes(kw)
+    );
+  }, [agents, keyword]);
+
+  // 统计：按 baseUrl 去重统计供应商数
+  const stats = useMemo(() => ({
+    total: agents.length,
+    providers: new Set(agents.map(a => { try { return new URL(a.baseUrl).host; } catch { return a.baseUrl; } })).size,
+    models: new Set(agents.map(a => a.modelName)).size,
+  }), [agents]);
 
   const loadAgents = useCallback(async () => {
     try { setAgents(await API.get<AgentDTO[]>('/api/agents')); } catch (e: any) { toast(e.message, 'error'); }
@@ -76,15 +95,48 @@ export default function AgentsPage() {
             <div className="page__title">Agent 管理</div>
             <div className="page__subtitle">配置 AI 同学的模型接入与人设，创建后即可拉入群聊参与讨论</div>
           </div>
-          <button className="btn btn--brand" onClick={openCreate}>＋ 新建 Agent</button>
+          <div className="page__header-actions">
+            <div className="page__search">
+              <svg className="page__search-icon" width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="6" cy="6" r="4" stroke="currentColor" strokeWidth="1.2"/><path d="M9.5 9.5L12.5 12.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>
+              <input
+                type="text"
+                className="page__search-input"
+                placeholder="搜索 Agent（名称 / 模型 / 描述）..."
+                value={keyword}
+                onChange={e => setKeyword(e.target.value)}
+              />
+            </div>
+            <button className="btn btn--brand" onClick={openCreate}>＋ 新建 Agent</button>
+          </div>
         </header>
+
+        {/* 统计栏 */}
+        <div className="page__stats">
+          <div className="page__stat">
+            <span className="page__stat-num">{stats.total}</span>
+            <span className="page__stat-label">个 Agent</span>
+          </div>
+          <div className="page__stat">
+            <span className="page__stat-num">{stats.providers}</span>
+            <span className="page__stat-label">个供应商</span>
+          </div>
+          <div className="page__stat">
+            <span className="page__stat-num">{stats.models}</span>
+            <span className="page__stat-label">种模型</span>
+          </div>
+        </div>
+
         <div className="page__body">
           <div className="agent-list">
             {!agents.length ? (
               <div className="empty">
-                <div className="empty__icon">🤖</div>还没有 Agent，点击下方「新建 Agent」创建第一位 AI 同学
+                <div className="empty__icon">🤖</div>还没有 Agent，点击上方「新建 Agent」创建第一位 AI 同学
               </div>
-            ) : agents.map(a => (
+            ) : !filteredAgents.length ? (
+              <div className="empty">
+                <div className="empty__icon">🔍</div>没有匹配「{keyword}」的 Agent
+              </div>
+            ) : filteredAgents.map(a => (
               <div key={a.id} className="agent-card">
                 <div className="agent-card__avatar">
                   <Avatar name={a.name} size="lg" />

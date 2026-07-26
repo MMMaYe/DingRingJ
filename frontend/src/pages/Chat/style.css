@@ -51,6 +51,63 @@
 }
 .chat-header__topic em { color: var(--text-brand); font-style: normal; }
 .chat-header__right { display: flex; align-items: center; gap: 8px; flex: none; }
+.chat-header__icon-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 32px; height: 32px; border: none; border-radius: 6px;
+  background: transparent; cursor: pointer; color: var(--text-secondary);
+  transition: background 0.12s, color 0.12s;
+}
+.chat-header__icon-btn:hover { background: var(--bg-overlay-l1); color: var(--text-default); }
+
+/* 聊天内搜索栏 */
+.chat-search {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 16px;
+  background: var(--bg-base-secondary);
+  border-bottom: 1px solid var(--border-neutral-l1);
+  flex-shrink: 0;
+}
+.chat-search__input-wrap { position: relative; flex: 1; max-width: 360px; }
+.chat-search__icon {
+  position: absolute; left: 8px; top: 50%; transform: translateY(-50%);
+  color: var(--text-tertiary); pointer-events: none;
+}
+.chat-search__input {
+  width: 100%; height: 30px; padding: 0 8px 0 30px;
+  border: 1px solid var(--border-neutral-l2); border-radius: 6px;
+  background: var(--bg-base-tertiary); color: var(--text-default);
+  font-size: 12px; outline: none; transition: border-color 0.15s;
+}
+.chat-search__input::placeholder { color: var(--text-tertiary); }
+.chat-search__input:focus { border-color: var(--border-brand); }
+.chat-search__count { font-size: 12px; color: var(--text-secondary); min-width: 48px; text-align: center; }
+.chat-search__nav { display: flex; gap: 2px; }
+.chat-search__nav-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 26px; height: 26px; border: none; border-radius: 4px;
+  background: transparent; cursor: pointer; color: var(--text-secondary);
+  transition: background 0.12s, color 0.12s;
+}
+.chat-search__nav-btn:hover:not(:disabled) { background: var(--bg-overlay-l1); color: var(--text-default); }
+.chat-search__nav-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.chat-search__close {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 26px; height: 26px; border: none; border-radius: 4px;
+  background: transparent; cursor: pointer; color: var(--text-secondary);
+  transition: background 0.12s, color 0.12s;
+}
+.chat-search__close:hover { background: var(--bg-overlay-l1); color: var(--text-default); }
+
+/* 搜索匹配高亮 */
+.msg--search-match .msg__bubble {
+  background: var(--status-alert-surface-l1);
+  border-color: var(--status-alert-default);
+}
+.msg--search-current .msg__bubble {
+  background: var(--status-primary-surface-l2);
+  border-color: var(--status-primary-default);
+  box-shadow: 0 0 0 2px var(--status-primary-surface-l1);
+}
 
 /* 消息区 */
 .chat-body { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 16px; }
@@ -178,6 +235,17 @@
   transition: all 0.15s;
 }
 .topic-panel__end-btn:hover { background: rgba(50,240,140,0.08); }
+.topic-panel__empty { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 16px 0; }
+.topic-panel__empty-text { font-size: 12px; color: var(--text-tertiary); }
+.topic-panel__start-btn {
+  display: flex; align-items: center; justify-content: center; gap: 4px;
+  width: 100%; height: 32px;
+  border: 1px solid var(--border-brand); border-radius: 6px;
+  background: transparent; color: var(--bg-brand);
+  font-size: 11px; font-weight: 500; cursor: pointer;
+  transition: all 0.15s;
+}
+.topic-panel__start-btn:hover { background: rgba(50,240,140,0.08); }
 .history-list { display: flex; flex-direction: column; gap: 4px; }
 .history-item { display: flex; align-items: center; justify-content: space-between; padding: 8px; border-radius: 6px; }
 .history-item:hover { background: var(--bg-overlay-l1); }

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import Sidebar, { IconPlus } from '../../components/Sidebar';
 import Avatar from '../../components/Avatar';
@@ -26,6 +26,14 @@ export default function ChatPage() {
   const [mentionState, setMentionState] = useState<{ open: boolean; keyword: string; candidates: MemberInfo[] }>({ open: false, keyword: '', candidates: [] });
   const [searchParams, setSearchParams] = useSearchParams();
 
+  // 聊天内搜索
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchKw, setSearchKw] = useState('');
+  const [searchIdx, setSearchIdx] = useState(0);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  // 群列表搜索
+  const [groupKw, setGroupKw] = useState('');
+
   // modals
   const [showCreateGroup, setShowCreateGroup] = useState(false);
   const [showCreateTopic, setShowCreateTopic] = useState(false);
@@ -44,6 +52,59 @@ export default function ChatPage() {
 
   const groupId = group?.id ?? null;
   const { send, onMessage } = useWebSocket(groupId);
+
+  // 群列表过滤
+  const filteredGroups = useMemo(() => {
+    const kw = groupKw.trim().toLowerCase();
+    if (!kw) return groups;
+    return groups.filter(g => g.name.toLowerCase().includes(kw));
+  }, [groups, groupKw]);
+
+  // ---- 搜索匹配 ----
+  const searchMatches = useMemo(() => {
+    const kw = searchKw.trim().toLowerCase();
+    if (!kw) return [] as number[];
+    return messages
+      .filter(m => m.senderType !== 'SYSTEM')
+      .filter(m => m.content.toLowerCase().includes(kw) || m.senderName.toLowerCase().includes(kw))
+      .map(m => m.id);
+  }, [messages, searchKw]);
+
+  // 滚动到当前匹配项
+  useEffect(() => {
+    if (!searchMatches.length) return;
+    const matchId = searchMatches[Math.min(searchIdx, searchMatches.length - 1)];
+    const el = chatBodyRef.current?.querySelector(`[data-msg-id="${matchId}"]`);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, [searchIdx, searchMatches]);
+
+  const toggleSearch = useCallback(() => {
+    setSearchOpen(prev => {
+      const next = !prev;
+      if (next) setTimeout(() => searchInputRef.current?.focus(), 50);
+      else { setSearchKw(''); setSearchIdx(0); }
+      return next;
+    });
+  }, []);
+
+  const navSearch = useCallback((dir: 1 | -1) => {
+    if (!searchMatches.length) return;
+    setSearchIdx(i => (i + dir + searchMatches.length) % searchMatches.length);
+  }, [searchMatches.length]);
+
+  // Ctrl+F 打开搜索
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'f' && group) {
+        e.preventDefault();
+        setSearchOpen(true);
+        setTimeout(() => searchInputRef.current?.focus(), 50);
+      }
+      if (e.key === 'Escape' && searchOpen) setSearchOpen(false);
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [group, searchOpen]);
 
   // ---- 加载群列表 ----
   const loadGroups = useCallback(async () => {
@@ -219,6 +280,14 @@ export default function ChatPage() {
     } catch (e: any) { toast(e.message, 'error'); }
   }, [activeTopic]);
 
+  const restartTopic = useCallback(async () => {
+    if (!activeTopic) return;
+    try {
+      await API.post(`/api/topics/${activeTopic.id}/restart`);
+      toast('讨论已重新开始', 'success');
+    } catch (e: any) { toast(e.message, 'error'); }
+  }, [activeTopic]);
+
   // ---- 新建群 ----
   const openCreateGroup = useCallback(async () => {
     try {
@@ -291,11 +360,13 @@ export default function ChatPage() {
   return (
     <div className="app-shell">
       {/* 左侧：导航 + 群列表 */}
-      <Sidebar showGroupLabel onSearch={q => {}} footer={<button className="sidebar__new-group" onClick={openCreateGroup}><IconPlus /> 新建群组</button>}>
+      <Sidebar showGroupLabel onSearch={setGroupKw} footer={<button className="sidebar__new-group" onClick={openCreateGroup}><IconPlus /> 新建群组</button>}>
         <div className="group-list">
           {!groups.length ? (
             <div className="empty"><div className="empty__icon">👥</div>还没有群，点击下方按钮创建</div>
-          ) : groups.map(g => (
+          ) : !filteredGroups.length ? (
+            <div className="empty"><div className="empty__icon">🔍</div>没有匹配「{groupKw}」的群组</div>
+          ) : filteredGroups.map(g => (
             <div key={g.id} className={`group-item${group?.id === g.id ? ' group-item--active' : ''}`} onClick={() => selectGroup(g.id)}>
               <Avatar name={g.name} size="sm" />
               <div className="group-item__content">
@@ -335,10 +406,45 @@ export default function ChatPage() {
                 </span>
               </div>
               <div className="chat-header__right">
-                {!activeTopic && <button className="btn btn--ghost" onClick={() => setShowCreateTopic(true)}>＋ 发起讨论</button>}
-                {activeTopic && <button className="btn btn--brand" onClick={concludeTopic}>✅ 结束讨论</button>}
+                <button className="chat-header__icon-btn" title="搜索消息 (Ctrl+F)" onClick={toggleSearch}>
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="4.5" stroke="currentColor" strokeWidth="1.2"/><path d="M10.5 10.5L14 14" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>
+                </button>
               </div>
             </header>
+
+            {/* 聊天内搜索栏 */}
+            {searchOpen && (
+              <div className="chat-search">
+                <div className="chat-search__input-wrap">
+                  <svg className="chat-search__icon" width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="6" cy="6" r="4" stroke="currentColor" strokeWidth="1.2"/><path d="M9.5 9.5L12.5 12.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>
+                  <input
+                    ref={searchInputRef}
+                    type="text"
+                    className="chat-search__input"
+                    placeholder="搜索消息内容或发送人..."
+                    value={searchKw}
+                    onChange={e => { setSearchKw(e.target.value); setSearchIdx(0); }}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') { e.preventDefault(); navSearch(e.shiftKey ? -1 : 1); }
+                    }}
+                  />
+                </div>
+                <span className="chat-search__count">
+                  {searchKw.trim() ? (searchMatches.length ? `${Math.min(searchIdx + 1, searchMatches.length)}/${searchMatches.length}` : '0/0') : ''}
+                </span>
+                <div className="chat-search__nav">
+                  <button className="chat-search__nav-btn" title="上一个" disabled={!searchMatches.length} onClick={() => navSearch(-1)}>
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 3v8M3 7l4-4 4 4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  </button>
+                  <button className="chat-search__nav-btn" title="下一个" disabled={!searchMatches.length} onClick={() => navSearch(1)}>
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 11V3M3 7l4 4 4-4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  </button>
+                </div>
+                <button className="chat-search__close" title="关闭 (Esc)" onClick={toggleSearch}>
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 3l8 8M11 3l-8 8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>
+                </button>
+              </div>
+            )}
 
             <div className="chat-body" ref={chatBodyRef}>
               {messages.map(m => {
@@ -351,8 +457,10 @@ export default function ChatPage() {
                 }
                 const self = m.senderType === 'USER';
                 const expert = isExpert(m.senderId, m.senderType);
+                const isMatch = searchMatches.includes(m.id);
+                const isCurrent = searchMatches.length > 0 && searchMatches[Math.min(searchIdx, searchMatches.length - 1)] === m.id;
                 return (
-                  <div key={m.id} className={`msg${self ? ' msg--self' : ''}`}>
+                  <div key={m.id} data-msg-id={m.id} className={`msg${self ? ' msg--self' : ''}${isCurrent ? ' msg--search-current' : isMatch ? ' msg--search-match' : ''}`}>
                     <Avatar name={m.senderName} />
                     <div className="msg__main">
                       <div className="msg__meta">
@@ -451,19 +559,43 @@ export default function ChatPage() {
           </div>
 
           {/* 当前主题 */}
-          {activeTopic && (
-            <div className="info-panel__section">
-              <div className="info-panel__heading">当前主题</div>
-              <div className="topic-panel__title">{activeTopic.title}</div>
-              <div className="topic-panel__status-row">
-                <span className="tag tag--success">讨论中</span>
-                <span className="topic-panel__round">轮次 {activeTopic.messageCount}/20</span>
+          <div className="info-panel__section">
+            <div className="info-panel__heading">当前主题</div>
+            {activeTopic ? (
+              <>
+                <div className="topic-panel__title">{activeTopic.title}</div>
+                <div className="topic-panel__status-row">
+                  {activeTopic.status === 'CONCLUDING'
+                    ? <span className="tag tag--neutral">已结束</span>
+                    : <span className="tag tag--success">讨论中</span>}
+                  <span className="topic-panel__round">
+                    {activeTopic.status === 'CONCLUDING' ? '已结束' : `轮次 ${activeTopic.messageCount}/20`}
+                  </span>
+                </div>
+                <div className="topic-panel__actions">
+                  {activeTopic.status === 'CONCLUDING' ? (
+                    <button className="topic-panel__end-btn" onClick={restartTopic}>
+                      <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><polygon points="4,2 14,8 4,14"/></svg>
+                      重新开始
+                    </button>
+                  ) : (
+                    <button className="topic-panel__end-btn" onClick={concludeTopic}>
+                      <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><rect x="2" y="2" width="12" height="12" rx="2"/></svg>
+                      结束讨论
+                    </button>
+                  )}
+                </div>
+              </>
+            ) : (
+              <div className="topic-panel__empty">
+                <span className="topic-panel__empty-text">暂无进行中的讨论</span>
+                <button className="topic-panel__start-btn" onClick={() => setShowCreateTopic(true)}>
+                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><line x1="8" y1="3" x2="8" y2="13"/><line x1="3" y1="8" x2="13" y2="8"/></svg>
+                  发起讨论
+                </button>
               </div>
-              <div className="topic-panel__actions">
-                <button className="topic-panel__end-btn" onClick={concludeTopic}>结束讨论</button>
-              </div>
-            </div>
-          )}
+            )}
+          </div>
 
           {/* 历史主题 */}
           {topics.filter(t => t.status === 'CLOSED').length > 0 && (
