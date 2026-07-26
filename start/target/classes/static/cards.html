@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DingRing · 知识卡片</title>
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/app.css">
+  <link rel="stylesheet" href="css/cards.css">
+</head>
+<body>
+<div class="app-shell">
+
+  <!-- ============ 左侧导航 + 分类筛选 ============ -->
+  <aside class="sidebar">
+    <div class="sidebar__header">
+      <div class="sidebar__logo">D</div>
+      <div class="sidebar__title">Ding<em>Ring</em></div>
+    </div>
+    <nav class="sidebar__nav">
+      <a class="sidebar__nav-item" href="index.html">💬 <span>群聊</span></a>
+      <a class="sidebar__nav-item sidebar__nav-item--active" href="cards.html">🗂️ <span>知识卡片</span></a>
+      <a class="sidebar__nav-item" href="agents.html">🤖 <span>Agent 管理</span></a>
+    </nav>
+    <div class="sidebar__label">按分类筛选</div>
+    <div class="cat-list" id="catList"></div>
+    <div class="sidebar__footer">
+      <button class="btn btn--brand btn--block" onclick="startReview()">▶ 开始复习</button>
+    </div>
+  </aside>
+
+  <!-- ============ 主区域：卡片列表 ============ -->
+  <section class="page">
+    <header class="page__header">
+      <div>
+        <div class="page__title">知识卡片</div>
+        <div class="page__subtitle" id="pageSubtitle">讨论结束后自动沉淀的问答卡片，点击卡片翻面查看答案</div>
+      </div>
+      <div class="page__header-actions">
+        <select class="input" id="orderSelect" style="width:130px">
+          <option value="sequential">顺序复习</option>
+          <option value="random">随机复习</option>
+        </select>
+        <button class="btn btn--brand" onclick="startReview()">▶ 开始复习</button>
+      </div>
+    </header>
+    <div class="page__body">
+      <div class="card-grid" id="cardGrid"></div>
+    </div>
+  </section>
+</div>
+
+<!-- ============ 复习模式全屏浮层 ============ -->
+<div class="review-mask" id="reviewMask">
+  <div class="review">
+    <div class="review__top">
+      <span class="review__progress" id="rvProgress"></span>
+      <button class="btn btn--ghost" onclick="exitReview()">✕ 退出复习</button>
+    </div>
+    <div class="review__stage">
+      <div class="flip-card" id="flipCard" onclick="flipCard()">
+        <div class="flip-card__inner" id="flipInner">
+          <div class="flip-card__face flip-card__face--front">
+            <div class="flip-card__label">问题 · 点击翻面看答案</div>
+            <div class="flip-card__text" id="rvQuestion"></div>
+            <div class="flip-card__meta" id="rvMetaFront"></div>
+          </div>
+          <div class="flip-card__face flip-card__face--back">
+            <div class="flip-card__label flip-card__label--answer">答案</div>
+            <div class="flip-card__text" id="rvAnswer"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="review__nav">
+      <button class="btn btn--ghost" id="rvPrev" onclick="prevCard()">← 上一张</button>
+      <button class="btn" onclick="flipCard()">🔄 翻面（空格）</button>
+      <button class="btn btn--brand" id="rvNext" onclick="nextCard()">下一张 →</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/common.js"></script>
+<script src="js/cards.js"></script>
+</body>
+</html>

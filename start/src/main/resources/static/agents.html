@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DingRing · Agent 管理</title>
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/app.css">
+  <link rel="stylesheet" href="css/agents.css">
+</head>
+<body>
+<div class="app-shell">
+
+  <!-- ============ 左侧导航 ============ -->
+  <aside class="sidebar">
+    <div class="sidebar__header">
+      <div class="sidebar__logo">D</div>
+      <div class="sidebar__title">Ding<em>Ring</em></div>
+    </div>
+    <nav class="sidebar__nav">
+      <a class="sidebar__nav-item" href="index.html">💬 <span>群聊</span></a>
+      <a class="sidebar__nav-item" href="cards.html">🗂️ <span>知识卡片</span></a>
+      <a class="sidebar__nav-item sidebar__nav-item--active" href="agents.html">🤖 <span>Agent 管理</span></a>
+    </nav>
+    <div class="sidebar__footer">
+      <button class="btn btn--brand btn--block" onclick="openCreate()">＋ 新建 Agent</button>
+    </div>
+  </aside>
+
+  <!-- ============ 主区域：Agent 卡片网格 ============ -->
+  <section class="page">
+    <header class="page__header">
+      <div>
+        <div class="page__title">Agent 管理</div>
+        <div class="page__subtitle">配置 AI 同学的模型接入与人设，创建后即可拉入群聊参与讨论</div>
+      </div>
+      <button class="btn btn--brand" onclick="openCreate()">＋ 新建 Agent</button>
+    </header>
+    <div class="page__body">
+      <div class="agent-grid" id="agentGrid"></div>
+    </div>
+  </section>
+</div>
+
+<!-- ============ 弹窗：新建 / 编辑 Agent ============ -->
+<div class="modal-mask" id="agentModal">
+  <div class="modal" style="width:520px">
+    <div class="modal__title" id="amTitle">新建 Agent</div>
+    <div class="form-grid">
+      <div class="form-row">
+        <label>花名 *</label>
+        <input class="input" id="amName" placeholder="如：老王" maxlength="32">
+      </div>
+      <div class="form-row">
+        <label>模型名 *</label>
+        <input class="input" id="amModel" placeholder="如：gpt-4o-mini / qwen-plus">
+      </div>
+    </div>
+    <div class="form-row">
+      <label>人设描述</label>
+      <input class="input" id="amDesc" placeholder="一句话描述这个 Agent 的性格与擅长领域" maxlength="255">
+    </div>
+    <div class="form-row">
+      <label>Base URL *</label>
+      <input class="input" id="amBaseUrl" placeholder="如：https://api.openai.com">
+    </div>
+    <div class="form-row">
+      <label>API Key <span id="amKeyHint">*</span></label>
+      <input class="input" id="amApiKey" type="password" placeholder="sk-…" autocomplete="new-password">
+    </div>
+    <div class="form-row">
+      <label>系统提示词（人设 Prompt）</label>
+      <textarea class="input" id="amPrompt" rows="5" placeholder="你是一位经验丰富的后端工程师，说话直接，喜欢结合生产实践举例…"></textarea>
+    </div>
+    <div class="modal__footer">
+      <button class="btn btn--ghost" onclick="closeModal('agentModal')">取消</button>
+      <button class="btn btn--brand" id="amSubmit" onclick="submitAgent()">保存</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/common.js"></script>
+<script src="js/agents.js"></script>
+</body>
+</html>

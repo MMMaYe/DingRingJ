@@ -1,0 +1,52 @@
+/* ============================================================
+   Agent 管理页
+   ============================================================ */
+
+.page { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.page__header {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 18px 24px;
+  border-bottom: 1px solid var(--border-neutral-l1);
+  background: var(--bg-base-secondary);
+}
+.page__title { font-size: 17px; font-weight: 600; color: var(--text-default-hover); }
+.page__subtitle { margin-top: 3px; font-size: 12px; color: var(--text-tertiary); }
+.page__body { flex: 1; overflow-y: auto; padding: 20px 24px; }
+
+/* ---------- Agent 卡片网格 ---------- */
+.agent-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 14px;
+}
+.agent-card {
+  display: flex; flex-direction: column; gap: 10px;
+  padding: 16px;
+  background: var(--bg-base-secondary);
+  border: 1px solid var(--border-neutral-l1);
+  border-radius: 12px;
+  transition: border-color .15s;
+}
+.agent-card:hover { border-color: var(--border-neutral-l2); }
+.agent-card__head { display: flex; align-items: center; gap: 10px; }
+.agent-card__name { font-size: 14px; font-weight: 600; color: var(--text-default-hover); }
+.agent-card__model { font-size: 11px; color: var(--text-tertiary); margin-top: 2px; }
+.agent-card__desc {
+  font-size: 12px; color: var(--text-secondary); line-height: 19px;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  min-height: 38px;
+}
+.agent-card__prompt {
+  font-size: 11px; color: var(--text-tertiary);
+  background: var(--bg-overlay-l2); border-radius: 8px; padding: 8px 10px;
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+  line-height: 17px; min-height: 51px;
+}
+.agent-card__footer {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-top: auto; padding-top: 4px;
+}
+.agent-card__time { font-size: 11px; color: var(--text-tertiary); }
+
+/* 表单双列 */
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; }
