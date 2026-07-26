@@ -122,7 +122,7 @@ public class ChatOrchestrator {
     public void conclude(Long topicId, Long operatorId, String triggeredBy) {
         Topic topic = topicRepository.findById(topicId)
                 .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "主题不存在: " + topicId));
-        topic.startConcluding(operatorId);
+        topic.startConcluding();
         if (!topicRepository.update(topic)) {
             throw new BizException(ErrorCode.TOPIC_NOT_IN_PROGRESS, "主题状态已变更，请刷新后重试");
         }

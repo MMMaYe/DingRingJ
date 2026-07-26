@@ -19,6 +19,8 @@ public class AgentDTO {
     private String description;
     private String baseUrl;
     private String modelName;
+    /** 调用方式：API / CLI */
+    private String callType;
     private String systemPrompt;
     /** temperature / maxTokens 等 */
     private Map<String, Object> feature;

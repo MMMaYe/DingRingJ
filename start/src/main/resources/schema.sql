@@ -1,5 +1,6 @@
 -- =====================================================================
 -- DingRing AI 群聊学习系统 DDL（H2 MODE=MySQL / MySQL 8 兼容）
+-- 注意：生产环境表结构通过 MySQL MCP 手动管理，此文件仅作为 H2 演示模式的参考。
 -- =====================================================================
 
 -- 用户表（单用户模式，种子数据固定 id=1）
@@ -21,6 +22,7 @@ CREATE TABLE IF NOT EXISTS agent (
     base_url        VARCHAR(255) NULL COMMENT 'LLM API Base URL',
     api_key         VARCHAR(255) NULL COMMENT 'LLM API Key',
     model_name      VARCHAR(64)  NULL COMMENT '模型名',
+    call_type       VARCHAR(32)  NOT NULL DEFAULT 'API' COMMENT '调用方式: API/CLI',
     system_prompt   TEXT         NULL COMMENT '人设提示词',
     feature         TEXT         NULL COMMENT '扩展字段(JSON)',
     create_time     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
@@ -44,11 +46,11 @@ CREATE TABLE IF NOT EXISTS topic (
     id            BIGINT       PRIMARY KEY AUTO_INCREMENT COMMENT '主键',
     chat_group_id BIGINT       NOT NULL COMMENT '所属群 ID',
     title         VARCHAR(255) NOT NULL COMMENT '主题标题',
-    status        VARCHAR(32)  NOT NULL DEFAULT 'IN_PROGRESS' COMMENT 'IN_PROGRESS/CONCLUDING/CLOSED',
+    status        VARCHAR(32)  NOT NULL DEFAULT 'IN_PROGRESS' COMMENT 'IN_PROGRESS/CONCLUDING/CLOSED/ARCHIVED',
     conclusion    TEXT         NULL COMMENT '专家 STAR 结论',
     closed_at     DATETIME     NULL COMMENT '关闭时间',
-    closed_by     VARCHAR(32)  NULL COMMENT '触发方: USER/MAX_ROUNDS',
     version       INT          NOT NULL DEFAULT 0 COMMENT '乐观锁版本号',
+    feature       TEXT         NULL COMMENT '扩展字段(JSON)',
     create_time   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
     CONSTRAINT uk_topic_group_title UNIQUE (chat_group_id, title)
@@ -63,7 +65,7 @@ CREATE TABLE IF NOT EXISTS message (
     topic_id            BIGINT      NULL COMMENT '所属主题 ID（闲聊为空）',
     sender_id           BIGINT      NULL COMMENT '发送者 ID（系统消息为空）',
     sender_type         VARCHAR(16) NOT NULL COMMENT 'USER/AGENT/SYSTEM',
-    message_type        VARCHAR(16) NOT NULL DEFAULT 'TEXT' COMMENT 'TEXT/SYSTEM_NOTICE',
+    message_type        VARCHAR(16) NOT NULL DEFAULT 'TEXT' COMMENT 'TEXT/IMAGE/FILE/SYSTEM_NOTICE',
     content             TEXT        NOT NULL COMMENT '消息内容',
     reply_to_message_id BIGINT      NULL COMMENT '引用回复的消息 ID',
     feature             TEXT        NULL COMMENT '扩展字段(JSON)',

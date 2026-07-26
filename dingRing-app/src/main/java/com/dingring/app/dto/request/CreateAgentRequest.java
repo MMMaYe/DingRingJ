@@ -27,6 +27,9 @@ public class CreateAgentRequest {
     @NotBlank(message = "模型名不能为空")
     private String modelName;
 
+    /** 调用方式：API（直接调用 LLM API）/ CLI（调用 CLI 工具如 Claude Code），默认 API */
+    private String callType;
+
     private String systemPrompt;
 
     /** 扩展配置（temperature 默认 0.7，maxTokens 默认 4096） */

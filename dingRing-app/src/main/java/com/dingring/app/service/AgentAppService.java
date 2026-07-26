@@ -29,6 +29,9 @@ public class AgentAppService {
         agent.setBaseUrl(request.getBaseUrl());
         agent.setApiKey(request.getApiKey());
         agent.setModelName(request.getModelName());
+        // callType 未指定时默认 API
+        agent.setCallType(request.getCallType() == null || request.getCallType().isBlank()
+                ? "API" : request.getCallType());
         agent.setSystemPrompt(request.getSystemPrompt());
         agent.setFeature(request.getFeature());
         agentRepository.save(agent);
@@ -47,6 +50,7 @@ public class AgentAppService {
             agent.setApiKey(request.getApiKey());
         }
         agent.setModelName(request.getModelName());
+        agent.setCallType(request.getCallType());
         agent.setSystemPrompt(request.getSystemPrompt());
         agent.setFeature(request.getFeature());
         agentRepository.update(agent);
@@ -66,6 +70,7 @@ public class AgentAppService {
                 .description(agent.getDescription())
                 .baseUrl(agent.getBaseUrl())
                 .modelName(agent.getModelName())
+                .callType(agent.getCallType())
                 .systemPrompt(agent.getSystemPrompt())
                 .feature(agent.getFeature())
                 .createTime(agent.getCreateTime())

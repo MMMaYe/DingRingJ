@@ -1,23 +1,18 @@
 spring:
   application:
     name: dingring
-  # 默认使用 H2 内存库（演示模式）；生产切换 MySQL 见下方注释
+  # MySQL 生产库
   datasource:
-    url: jdbc:h2:mem:dingring;MODE=MySQL;DATABASE_TO_LOWER=TRUE;CASE_INSENSITIVE_IDENTIFIERS=TRUE;DB_CLOSE_DELAY=-1
-    driver-class-name: org.h2.Driver
-    username: sa
-    password: ""
-  # url: jdbc:mysql://localhost:3306/dingring?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
-  # driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://101.33.227.80:3306/ring_chat?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=false
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: root
+    password: "MySQL@123456"
+  # 表结构与种子数据通过 MySQL MCP 手动管理，不在启动时自动执行
   sql:
     init:
-      mode: always
+      mode: never
       schema-locations: classpath:schema.sql
       data-locations: classpath:data.sql
-  h2:
-    console:
-      enabled: true
-      path: /h2-console
 
 server:
   port: 8080

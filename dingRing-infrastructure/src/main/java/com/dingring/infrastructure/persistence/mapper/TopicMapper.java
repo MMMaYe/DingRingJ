@@ -1,6 +1,7 @@
 package com.dingring.infrastructure.persistence.mapper;
 
 import com.dingring.domain.discussion.Topic;
+import com.dingring.infrastructure.persistence.typehandler.JsonMapTypeHandler;
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Options;
@@ -18,7 +19,7 @@ import java.util.List;
 @Mapper
 public interface TopicMapper {
 
-    String COLUMNS = "id, chat_group_id, title, status, conclusion, closed_at, closed_by, version, create_time, update_time";
+    String COLUMNS = "id, chat_group_id, title, status, conclusion, closed_at, version, feature, create_time, update_time";
 
     @Select("SELECT " + COLUMNS + " FROM topic WHERE id = #{id}")
     @Results(id = "topicMap", value = {
@@ -28,8 +29,8 @@ public interface TopicMapper {
             @Result(column = "status", property = "status"),
             @Result(column = "conclusion", property = "conclusion"),
             @Result(column = "closed_at", property = "closedAt"),
-            @Result(column = "closed_by", property = "closedBy"),
             @Result(column = "version", property = "version"),
+            @Result(column = "feature", property = "feature", typeHandler = JsonMapTypeHandler.class),
             @Result(column = "create_time", property = "createTime"),
             @Result(column = "update_time", property = "updateTime")
     })
@@ -48,15 +49,18 @@ public interface TopicMapper {
     @ResultMap("topicMap")
     List<Topic> findClosedByGroupId(Long groupId);
 
-    @Insert("INSERT INTO topic (chat_group_id, title, status, conclusion, closed_at, closed_by, version, create_time, update_time) "
-            + "VALUES (#{chatGroupId}, #{title}, #{status}, #{conclusion}, #{closedAt}, #{closedBy}, #{version}, "
+    @Insert("INSERT INTO topic (chat_group_id, title, status, conclusion, closed_at, version, feature, create_time, update_time) "
+            + "VALUES (#{chatGroupId}, #{title}, #{status}, #{conclusion}, #{closedAt}, #{version}, "
+            + "#{feature,typeHandler=com.dingring.infrastructure.persistence.typehandler.JsonMapTypeHandler}, "
             + "#{createTime}, #{updateTime})")
     @Options(useGeneratedKeys = true, keyProperty = "id")
     int insert(Topic topic);
 
     /** 乐观锁更新：version 匹配才生效，成功后 version + 1 */
     @Update("UPDATE topic SET title = #{title}, status = #{status}, conclusion = #{conclusion}, "
-            + "closed_at = #{closedAt}, closed_by = #{closedBy}, version = version + 1, update_time = #{updateTime} "
+            + "closed_at = #{closedAt}, version = version + 1, "
+            + "feature = #{feature,typeHandler=com.dingring.infrastructure.persistence.typehandler.JsonMapTypeHandler}, "
+            + "update_time = #{updateTime} "
             + "WHERE id = #{id} AND version = #{version}")
     int updateWithVersion(Topic topic);
 }

@@ -5,6 +5,7 @@ import com.dingring.common.exception.ErrorCode;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 
 /**
  * 主题聚合根（表 topic），讨论域核心，状态机保证讨论生命周期正确流转。
@@ -24,10 +25,10 @@ public class Topic {
     private String conclusion;
     /** 结束时间 */
     private LocalDateTime closedAt;
-    /** 结束操作人 ID */
-    private Long closedBy;
     /** 乐观锁 */
     private Integer version;
+    /** 扩展字段（JSON） */
+    private Map<String, Object> feature;
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
 
@@ -36,9 +37,8 @@ public class Topic {
     }
 
     /** 触发结束：IN_PROGRESS -> CONCLUDING */
-    public void startConcluding(Long operatorId) {
+    public void startConcluding() {
         transitTo(TopicStatus.CONCLUDING);
-        this.closedBy = operatorId;
     }
 
     /** 结论生成成功：CONCLUDING -> CLOSED */
@@ -51,7 +51,6 @@ public class Topic {
     /** 结论生成失败回退：CONCLUDING -> IN_PROGRESS */
     public void rollbackToInProgress() {
         transitTo(TopicStatus.IN_PROGRESS);
-        this.closedBy = null;
     }
 
     /** 手动归档：CLOSED -> ARCHIVED */

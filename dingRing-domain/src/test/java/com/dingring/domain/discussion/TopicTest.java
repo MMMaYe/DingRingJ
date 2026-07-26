@@ -30,14 +30,13 @@ class TopicTest {
     class StartConcluding {
 
         @Test
-        @DisplayName("IN_PROGRESS -> CONCLUDING 并记录操作人")
+        @DisplayName("IN_PROGRESS -> CONCLUDING")
         void shouldTransitToConcluding() {
             Topic t = newTopic(TopicStatus.IN_PROGRESS);
 
-            t.startConcluding(99L);
+            t.startConcluding();
 
             assertThat(t.getStatus()).isEqualTo(TopicStatus.CONCLUDING);
-            assertThat(t.getClosedBy()).isEqualTo(99L);
         }
 
         @Test
@@ -45,7 +44,7 @@ class TopicTest {
         void shouldThrowWhenNotInProgress() {
             Topic t = newTopic(TopicStatus.CLOSED);
 
-            assertThatThrownBy(() -> t.startConcluding(1L))
+            assertThatThrownBy(t::startConcluding)
                     .isInstanceOf(BizException.class);
         }
     }
@@ -58,7 +57,6 @@ class TopicTest {
         @DisplayName("CONCLUDING -> CLOSED 并填充结论与关闭时间")
         void shouldCloseWithConclusion() {
             Topic t = newTopic(TopicStatus.CONCLUDING);
-            t.setClosedBy(99L);
 
             t.close("## STAR 结论\n...");
 
@@ -78,15 +76,13 @@ class TopicTest {
     }
 
     @Test
-    @DisplayName("rollbackToInProgress 回退状态并清空操作人")
-    void rollbackShouldClearClosedBy() {
+    @DisplayName("rollbackToInProgress 回退状态到 IN_PROGRESS")
+    void rollbackShouldReturnToInProgress() {
         Topic t = newTopic(TopicStatus.CONCLUDING);
-        t.setClosedBy(99L);
 
         t.rollbackToInProgress();
 
         assertThat(t.getStatus()).isEqualTo(TopicStatus.IN_PROGRESS);
-        assertThat(t.getClosedBy()).isNull();
     }
 
     @Test
@@ -118,7 +114,7 @@ class TopicTest {
         Topic t = new Topic();
         t.setStatus(null);
 
-        assertThatThrownBy(() -> t.startConcluding(1L))
+        assertThatThrownBy(t::startConcluding)
                 .isInstanceOf(BizException.class);
     }
 }

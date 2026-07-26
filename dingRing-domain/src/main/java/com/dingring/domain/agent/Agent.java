@@ -24,6 +24,8 @@ public class Agent {
     private String apiKey;
     /** 模型名（如 deepseek-chat, claude-3-sonnet） */
     private String modelName;
+    /** 调用方式：API（直接调用 LLM API）/ CLI（调用 CLI 工具如 Claude Code） */
+    private String callType;
     /** 系统提示词 / 人设 */
     private String systemPrompt;
     /** 扩展字段（temperature, maxTokens 等） */

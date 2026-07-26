@@ -27,6 +27,9 @@ public class UpdateAgentRequest {
     @NotBlank(message = "模型名不能为空")
     private String modelName;
 
+    /** 调用方式：API / CLI */
+    private String callType;
+
     private String systemPrompt;
 
     private Map<String, Object> feature;

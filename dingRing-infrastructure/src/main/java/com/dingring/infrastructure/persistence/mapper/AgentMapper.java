@@ -21,8 +21,8 @@ import java.util.List;
 @Mapper
 public interface AgentMapper {
 
-    String COLUMNS = "id, name, profile_picture, description, base_url, api_key, model_name, system_prompt, "
-            + "feature, create_time, update_time";
+    String COLUMNS = "id, name, profile_picture, description, base_url, api_key, model_name, call_type, "
+            + "system_prompt, feature, create_time, update_time";
 
     @Select("SELECT " + COLUMNS + " FROM agent WHERE id = #{id}")
     @Results(id = "agentMap", value = {
@@ -33,6 +33,7 @@ public interface AgentMapper {
             @Result(column = "base_url", property = "baseUrl"),
             @Result(column = "api_key", property = "apiKey"),
             @Result(column = "model_name", property = "modelName"),
+            @Result(column = "call_type", property = "callType"),
             @Result(column = "system_prompt", property = "systemPrompt"),
             @Result(column = "feature", property = "feature", typeHandler = JsonMapTypeHandler.class),
             @Result(column = "create_time", property = "createTime"),
@@ -50,16 +51,18 @@ public interface AgentMapper {
     @ResultMap("agentMap")
     List<Agent> findAll();
 
-    @Insert("INSERT INTO agent (name, profile_picture, description, base_url, api_key, model_name, system_prompt, "
-            + "feature, create_time, update_time) "
-            + "VALUES (#{name}, #{profilePicture}, #{description}, #{baseUrl}, #{apiKey}, #{modelName}, #{systemPrompt}, "
+    @Insert("INSERT INTO agent (name, profile_picture, description, base_url, api_key, model_name, call_type, "
+            + "system_prompt, feature, create_time, update_time) "
+            + "VALUES (#{name}, #{profilePicture}, #{description}, #{baseUrl}, #{apiKey}, #{modelName}, #{callType}, "
+            + "#{systemPrompt}, "
             + "#{feature,typeHandler=com.dingring.infrastructure.persistence.typehandler.JsonMapTypeHandler}, "
             + "#{createTime}, #{updateTime})")
     @Options(useGeneratedKeys = true, keyProperty = "id")
     int insert(Agent agent);
 
     @Update("UPDATE agent SET name = #{name}, profile_picture = #{profilePicture}, description = #{description}, "
-            + "base_url = #{baseUrl}, api_key = #{apiKey}, model_name = #{modelName}, system_prompt = #{systemPrompt}, "
+            + "base_url = #{baseUrl}, api_key = #{apiKey}, model_name = #{modelName}, call_type = #{callType}, "
+            + "system_prompt = #{systemPrompt}, "
             + "feature = #{feature,typeHandler=com.dingring.infrastructure.persistence.typehandler.JsonMapTypeHandler}, "
             + "update_time = #{updateTime} WHERE id = #{id}")
     int update(Agent agent);
