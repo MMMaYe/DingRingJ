@@ -1,21 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
-  <modelVersion>4.0.0</modelVersion>
-  <parent>
-    <groupId>com.dingring</groupId>
-    <artifactId>dingring</artifactId>
-    <version>0.1.0</version>
-  </parent>
-  <artifactId>dingRing-app</artifactId>
-  <packaging>jar</packaging>
-  <name>Maven Quick Start Archetype</name>
-  <url>http://maven.apache.org</url>
-  <dependencies>
-    <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-      <version>3.8.1</version>
-      <scope>test</scope>
-    </dependency>
-  </dependencies>
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>com.dingring</groupId>
+        <artifactId>dingring</artifactId>
+        <version>0.1.0</version>
+    </parent>
+    <artifactId>dingRing-app</artifactId>
+    <packaging>jar</packaging>
+    <name>dingRing-app</name>
+    <description>应用层：ChatOrchestrator 跨域编排、应用服务、DTO</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.dingring</groupId>
+            <artifactId>dingRing-domain</artifactId>
+        </dependency>
+        <!-- 事务、事件监听 -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-context</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-tx</artifactId>
+        </dependency>
+        <!-- 参数校验注解 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
 </project>

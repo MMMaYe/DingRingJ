@@ -1,5 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>com.dingring</groupId>
@@ -8,14 +9,14 @@
     </parent>
     <artifactId>dingRing-common</artifactId>
     <packaging>jar</packaging>
-    <name>Maven Quick Start Archetype</name>
-    <url>http://maven.apache.org</url>
+    <name>dingRing-common</name>
+    <description>通用层：异常定义、统一响应、常量</description>
+
     <dependencies>
+        <!-- ErrorCode 需要 HTTP 状态语义，仅依赖 web 注解不启动容器 -->
         <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
-            <version>3.8.1</version>
-            <scope>test</scope>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-json</artifactId>
         </dependency>
     </dependencies>
 </project>
