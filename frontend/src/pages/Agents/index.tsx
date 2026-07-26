@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import Sidebar from '../../components/Sidebar';
+import Sidebar, { IconPlus } from '../../components/Sidebar';
 import Avatar from '../../components/Avatar';
 import Modal from '../../components/Modal';
 import { toast } from '../../components/Toast';
@@ -68,7 +68,7 @@ export default function AgentsPage() {
 
   return (
     <div className="app-shell">
-      <Sidebar footer={<button className="btn btn--brand btn--block" onClick={openCreate}>＋ 新建 Agent</button>} />
+      <Sidebar footer={<button className="sidebar__new-group" onClick={openCreate}><IconPlus /> 新建 Agent</button>} />
 
       <section className="page">
         <header className="page__header">
@@ -79,25 +79,30 @@ export default function AgentsPage() {
           <button className="btn btn--brand" onClick={openCreate}>＋ 新建 Agent</button>
         </header>
         <div className="page__body">
-          <div className="agent-grid">
+          <div className="agent-list">
             {!agents.length ? (
-              <div className="empty" style={{ gridColumn: '1/-1' }}>
-                <div className="empty__icon">🤖</div>还没有 Agent，点击右上角「新建 Agent」创建第一位 AI 同学
+              <div className="empty">
+                <div className="empty__icon">🤖</div>还没有 Agent，点击下方「新建 Agent」创建第一位 AI 同学
               </div>
             ) : agents.map(a => (
               <div key={a.id} className="agent-card">
-                <div className="agent-card__head">
+                <div className="agent-card__avatar">
                   <Avatar name={a.name} size="lg" />
-                  <div style={{ minWidth: 0 }}>
-                    <div className="agent-card__name">{a.name}</div>
-                    <div className="agent-card__model">{a.modelName} · {shortUrl(a.baseUrl)}</div>
+                </div>
+                <div className="agent-card__info">
+                  <div className="agent-card__name">{a.name}</div>
+                  <div className="agent-card__desc">{a.description || a.modelName}</div>
+                  <div className="agent-card__tags">
+                    <span className="tag">{a.modelName}</span>
+                    <span className="tag tag--neutral">{shortUrl(a.baseUrl)}</span>
                   </div>
                 </div>
-                <div className="agent-card__desc">{a.description || '暂无人设描述'}</div>
-                <div className="agent-card__prompt">{a.systemPrompt || '（未配置系统提示词）'}</div>
-                <div className="agent-card__footer">
-                  <span className="agent-card__time">更新于 {new Date(a.updateTime || a.createTime).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}</span>
-                  <button className="btn btn--ghost" onClick={() => openEdit(a)}>编辑</button>
+                <div className="agent-card__right">
+                  <span className="tag tag--success">运行中</span>
+                  <div className="agent-card__meta">
+                    <span>最后活跃: {new Date(a.updateTime || a.createTime).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}</span>
+                  </div>
+                  <button className="btn btn--ghost" onClick={() => openEdit(a)}>配置</button>
                 </div>
               </div>
             ))}

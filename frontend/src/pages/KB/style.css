@@ -1,0 +1,27 @@
+.kb-main {
+  flex: 1;
+  overflow-y: auto;
+  padding: 32px;
+}
+.kb-header__title {
+  font-size: var(--heading-lg-font-size);
+  font-weight: 600;
+  color: var(--text-default-hover);
+  margin-bottom: 4px;
+}
+.kb-header__desc {
+  font-size: var(--body-sm-font-size);
+  color: var(--text-secondary);
+  margin-bottom: 24px;
+}
+.kb-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 16px;
+  color: var(--text-tertiary);
+  font-size: 13px;
+}
+.kb-empty__icon { font-size: 32px; margin-bottom: 12px; }
+.kb-empty__hint { font-size: 11px; color: var(--text-disabled); margin-top: 4px; }

@@ -36,7 +36,8 @@
   transition: border-color .15s;
 }
 .k-card:hover { border-color: var(--border-brand); }
-.k-card__q { font-size: 13px; font-weight: 600; color: var(--text-default-hover); line-height: 20px; }
+.k-card__header { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.k-card__q { font-size: 13px; font-weight: 600; color: var(--text-default-hover); line-height: 20px; flex: 1; min-width: 0; }
 .k-card__a {
   margin-top: 8px; font-size: 12px; color: var(--text-secondary); line-height: 19px;
   display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
@@ -48,7 +49,8 @@
   display: flex; align-items: center; gap: 8px; margin-top: 10px;
   font-size: 11px; color: var(--text-tertiary);
 }
-.k-card__topic { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.k-card__topic { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; min-width: 0; }
+.k-card__meta { margin-left: auto; flex-shrink: 0; }
 
 /* 复习模式浮层 */
 .review-mask {

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import Sidebar from '../../components/Sidebar';
+import Sidebar, { IconPlus } from '../../components/Sidebar';
 import Avatar from '../../components/Avatar';
 import Modal from '../../components/Modal';
 import { toast } from '../../components/Toast';
@@ -291,7 +291,7 @@ export default function ChatPage() {
   return (
     <div className="app-shell">
       {/* 左侧：导航 + 群列表 */}
-      <Sidebar showGroupLabel footer={<button className="btn btn--brand btn--block" onClick={openCreateGroup}>＋ 新建群聊</button>}>
+      <Sidebar showGroupLabel onSearch={q => {}} footer={<button className="sidebar__new-group" onClick={openCreateGroup}><IconPlus /> 新建群组</button>}>
         <div className="group-list">
           {!groups.length ? (
             <div className="empty"><div className="empty__icon">👥</div>还没有群，点击下方按钮创建</div>
@@ -427,37 +427,92 @@ export default function ChatPage() {
         )}
       </section>
 
-      {/* 右侧：成员 + 主题历史 */}
+      {/* 右侧：信息面板（对齐设计稿） */}
       {group && (
-        <aside className="panel">
-          <div className="panel__section">
-            <div className="panel__title">群成员 <span>{group.members.length}</span></div>
-            {group.members.map(m => (
-              <div key={`${m.type}-${m.id}`} className="panel-member">
-                <Avatar name={m.name} size="sm" />
-                <span className="panel-member__name">{m.name}</span>
-                {m.role === 'EXPERT' ? <span className="tag tag--warning">专家</span>
-                  : m.type === 'USER' ? <span className="tag">我</span>
-                  : <span className="tag tag--brand">Agent</span>}
-              </div>
-            ))}
+        <aside className="info-panel">
+          {/* 群成员 */}
+          <div className="info-panel__section">
+            <div className="info-panel__heading">群成员</div>
+            <div className="member-list">
+              {group.members.map(m => (
+                <div key={`${m.type}-${m.id}`} className="member-item">
+                  <Avatar name={m.name} size="sm" />
+                  <div className="member-item__info">
+                    <span className="member-item__name">{m.name}</span>
+                    <div className="member-item__row">
+                      {m.role === 'EXPERT' ? <span className="tag tag--warning">专家</span>
+                        : m.type === 'USER' ? <span className="tag tag--brand">群主</span>
+                        : <span className="tag tag--neutral">成员</span>}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
-          <div className="panel__section" style={{ borderBottom: 'none', flex: 1 }}>
-            <div className="panel__title">主题讨论历史</div>
-            {!topics.length ? (
-              <div className="empty" style={{ padding: '16px 0' }}>暂无主题讨论</div>
-            ) : topics.map(t => (
-              <div key={t.id} className="topic-item" onClick={() => t.status === 'CLOSED' && viewConclusion(t.id)}>
-                <div className="topic-item__title">{t.title}</div>
-                <div className="topic-item__meta">
-                  {t.status === 'IN_PROGRESS' ? <span className="tag tag--brand">讨论中</span>
-                    : t.status === 'CONCLUDING' ? <span className="tag tag--warning">总结中</span>
-                    : <span className="tag tag--closed">已结束</span>}
-                  <span>{t.messageCount} 条消息</span>
-                  <span>{formatTime(t.createTime)}</span>
+
+          {/* 当前主题 */}
+          {activeTopic && (
+            <div className="info-panel__section">
+              <div className="info-panel__heading">当前主题</div>
+              <div className="topic-panel__title">{activeTopic.title}</div>
+              <div className="topic-panel__status-row">
+                <span className="tag tag--success">讨论中</span>
+                <span className="topic-panel__round">轮次 {activeTopic.messageCount}/20</span>
+              </div>
+              <div className="topic-panel__actions">
+                <button className="topic-panel__end-btn" onClick={concludeTopic}>结束讨论</button>
+              </div>
+            </div>
+          )}
+
+          {/* 历史主题 */}
+          {topics.filter(t => t.status === 'CLOSED').length > 0 && (
+            <div className="info-panel__section">
+              <div className="info-panel__heading">历史主题</div>
+              <div className="history-list">
+                {topics.filter(t => t.status === 'CLOSED').map(t => (
+                  <div key={t.id} className="history-item history-item--clickable" onClick={() => viewConclusion(t.id)}>
+                    <span className="history-item__name">{t.title}</span>
+                    <span className="tag tag--neutral">已关闭</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* 知识卡片管理 */}
+          <div className="info-panel__section">
+            <div className="info-panel__heading">知识卡片管理</div>
+            <div className="history-list">
+              {topics.filter(t => t.status === 'CLOSED').map(t => (
+                <div key={t.id} className="history-item">
+                  <span className="history-item__name">{t.title}</span>
+                  <span className="tag tag--success">已收录</span>
+                </div>
+              ))}
+              {!topics.filter(t => t.status === 'CLOSED').length && (
+                <div className="history-item">
+                  <span className="history-item__name" style={{ color: 'var(--text-tertiary)' }}>暂无知识卡片</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* 知识库管理 */}
+          <div className="info-panel__section">
+            <div className="info-panel__heading">知识库管理</div>
+            <div className="member-list">
+              <div className="member-item">
+                <Avatar name="知识库" size="sm" />
+                <div className="member-item__info">
+                  <span className="member-item__name">主知识库</span>
+                  <div className="member-item__row">
+                    <span className="tag tag--neutral">—</span>
+                    <span className="tag tag--success">已连接</span>
+                  </div>
                 </div>
               </div>
-            ))}
+            </div>
           </div>
         </aside>
       )}

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import Sidebar from '../../components/Sidebar';
+import Sidebar, { IconPlus } from '../../components/Sidebar';
 import { toast } from '../../components/Toast';
 import { API } from '../../api';
 import type { KnowledgeCardDTO, ReviewCardDTO } from '../../types';
@@ -77,7 +77,7 @@ export default function CardsPage() {
 
   return (
     <div className="app-shell">
-      <Sidebar footer={<button className="btn btn--brand btn--block" onClick={startReview}>▶ 开始复习</button>}>
+      <Sidebar footer={<button className="sidebar__new-group" onClick={startReview}>▶ 开始复习</button>}>
         <div className="sidebar__label">按分类筛选</div>
         <div className="cat-list">
           <div className={`cat-item${currentCat === null ? ' cat-item--active' : ''}`} onClick={() => setCurrentCat(null)}>全部卡片</div>
@@ -111,12 +111,16 @@ export default function CardsPage() {
               </div>
             ) : cards.map(c => (
               <div key={c.id} className="k-card" onClick={e => (e.currentTarget as HTMLElement).classList.toggle('is-open')}>
-                <div className="k-card__q">Q: {c.question}</div>
+                <div className="k-card__header">
+                  <span className="k-card__q">Q: {c.question}</span>
+                  {c.category && <span className="tag tag--brand">{c.category}</span>}
+                </div>
                 <div className="k-card__a k-card__a--hidden">A: {c.answer}</div>
                 <div className="k-card__footer">
-                  {c.category && <span className="tag tag--brand">{c.category}</span>}
                   <span className="k-card__topic">来自「{c.topicTitle}」</span>
-                  <span style={{ marginLeft: 'auto' }}>{new Date(c.createTime).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}</span>
+                  <span className="k-card__meta">
+                    <span>创建于 {new Date(c.createTime).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit' })}</span>
+                  </span>
                 </div>
               </div>
             ))}
