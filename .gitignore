@@ -1,0 +1,20 @@
+# ---- Build output ----
+**/target/
+*.jar
+*.class
+
+# ---- Node ----
+frontend/node_modules/
+frontend/dist/
+
+# ---- IDE ----
+.idea/
+*.iml
+.vscode/
+
+# ---- OS ----
+.DS_Store
+Thumbs.db
+
+# ---- Logs ----
+*.log
