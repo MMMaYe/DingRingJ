@@ -18,5 +18,6 @@ public class ConclusionDTO {
     private String conclusion;
     private long messageCount;
     private LocalDateTime closedAt;
-    private String expertAgentName;
+    /** 总结 Agent 花名 */
+    private String concluderAgentName;
 }

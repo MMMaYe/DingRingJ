@@ -49,7 +49,7 @@ import static org.mockito.Mockito.when;
 
 /**
  * {@link ChatOrchestrator} 编排引擎单元测试。
- * <p>覆盖：接收域（onUserMessage）、收束域（conclude）、@专家短路、降级路由、重试机制。
+ * <p>覆盖：接收域（onUserMessage）、收束域（conclude）、总结意图短路、Agent 自主收束、降级路由、重试机制。
  * <p>异步执行器使用 Mockito.timeout 等待虚拟线程任务完成。
  */
 @DisplayName("ChatOrchestrator 编排引擎")
@@ -66,6 +66,7 @@ class ChatOrchestratorTest {
     private LlmService llmService;
     private DomainEventPublisher eventPublisher;
     private ChatPusher chatPusher;
+    private ConcludeIntentDetector concludeIntentDetector;
     private ChatOrchestrator orchestrator;
 
     @BeforeEach
@@ -81,9 +82,10 @@ class ChatOrchestratorTest {
         llmService = mock(LlmService.class);
         eventPublisher = mock(DomainEventPublisher.class);
         chatPusher = mock(ChatPusher.class);
+        concludeIntentDetector = mock(ConcludeIntentDetector.class);
         orchestrator = new ChatOrchestrator(groupRepository, messageRepository, topicRepository,
                 agentRepository, speakerScheduler, contextBuilder, terminator,
-                messageAssembler, llmService, eventPublisher, chatPusher);
+                messageAssembler, llmService, eventPublisher, chatPusher, concludeIntentDetector);
 
         // 默认配置：2 条自动回复，未达最大轮次
         when(terminator.getAutoReplies()).thenReturn(2);
@@ -92,14 +94,11 @@ class ChatOrchestratorTest {
 
     /* ==================== 辅助构造 ==================== */
 
-    private Group groupWithMembers(Long groupId, List<Long> memberAgentIds, Long expertId) {
+    private Group groupWithMembers(Long groupId, List<Long> memberAgentIds) {
         Group g = new Group();
         g.setId(groupId);
         java.util.List<GroupMember> members = new java.util.ArrayList<>();
         memberAgentIds.forEach(id -> members.add(new GroupMember(id, MemberType.AGENT, MemberRole.MEMBER)));
-        if (expertId != null) {
-            members.add(new GroupMember(expertId, MemberType.AGENT, MemberRole.EXPERT));
-        }
         g.setGroupMember(members);
         return g;
     }
@@ -150,7 +149,7 @@ class ChatOrchestratorTest {
         @Test
         @DisplayName("消息入库后广播 NEW_MESSAGE 并发布 MessageSent 事件")
         void shouldSaveBroadcastAndPublishEvent() {
-            Group g = groupWithMembers(1L, List.of(10L), null);
+            Group g = groupWithMembers(1L, List.of(10L));
             when(groupRepository.findById(1L)).thenReturn(Optional.of(g));
             when(topicRepository.findActiveByGroupId(1L)).thenReturn(Optional.empty());
             when(agentRepository.findByIds(any())).thenReturn(List.of());
@@ -166,7 +165,7 @@ class ChatOrchestratorTest {
         @Test
         @DisplayName("有活跃 Topic 时 topicId 自动归属消息")
         void activeTopicShouldBeAttachedToMessage() {
-            Group g = groupWithMembers(1L, List.of(10L), null);
+            Group g = groupWithMembers(1L, List.of(10L));
             when(groupRepository.findById(1L)).thenReturn(Optional.of(g));
             Topic t = new Topic();
             t.setId(100L);
@@ -185,9 +184,9 @@ class ChatOrchestratorTest {
         }
 
         @Test
-        @DisplayName("@专家时短路触发收束，不进入调度循环")
-        void mentionExpertShouldTriggerConclude() {
-            Group g = groupWithMembers(1L, List.of(10L), 99L);
+        @DisplayName("用户 @Agent 且 LLM 判定为总结意图时短路收束，不进入调度循环")
+        void mentionWithConcludeIntentShouldTriggerConclude() {
+            Group g = groupWithMembers(1L, List.of(10L, 99L));
             when(groupRepository.findById(1L)).thenReturn(Optional.of(g));
             Topic t = new Topic();
             t.setId(100L);
@@ -195,24 +194,61 @@ class ChatOrchestratorTest {
             t.setChatGroupId(1L);
             t.setTitle("主题");
             when(topicRepository.findActiveByGroupId(1L)).thenReturn(Optional.of(t));
-            when(agentRepository.findByIds(any())).thenReturn(List.of(agent(99L, "专家")));
+            Agent mentioned = agent(99L, "苏教授");
+            when(agentRepository.findByIds(any())).thenReturn(List.of(mentioned));
+            when(concludeIntentDetector.isConcludeIntent(any(), anyString())).thenReturn(true);
             when(topicRepository.findById(100L)).thenReturn(Optional.of(t));
             when(topicRepository.update(any())).thenReturn(true);
+            when(agentRepository.findById(99L)).thenReturn(Optional.of(mentioned));
+            when(contextBuilder.buildForConclusion(any(), anyLong(), anyLong(), anyString(), any()))
+                    .thenReturn(stubContext());
+            when(llmService.chat(any(), anyString(), any())).thenReturn("## STAR 结论");
             when(messageAssembler.toDto(any())).thenReturn(MessageDTO.builder().build());
 
-            orchestrator.onUserMessage(1L, 1L, "@专家 总结一下", null);
+            orchestrator.onUserMessage(1L, 1L, "@苏教授 总结一下", null);
 
             // 应当触发 startConcluding 状态流转，并发布 TopicConcluding 事件
             verify(topicRepository).update(any(Topic.class));
             verify(eventPublisher).publish(any(TopicConcluding.class));
-            // 不应触发自由调度（speakerScheduler.rank 不应被调用）
+            // 由被 @ 的 Agent 直接总结，不应触发自由调度（speakerScheduler.rank 不应被调用）
+            verify(chatPusher, timeout(2000)).pushToGroup(eq(1L), eq(WsConstants.TOPIC_CLOSED), any());
             verify(speakerScheduler, never()).rank(any(), any());
+        }
+
+        @Test
+        @DisplayName("用户 @Agent 但非总结意图时走普通调度")
+        void mentionWithoutConcludeIntentShouldSchedule() {
+            Agent mentioned = agent(10L, "老王");
+            Group g = groupWithMembers(1L, List.of(10L));
+            when(groupRepository.findById(1L)).thenReturn(Optional.of(g));
+            Topic t = new Topic();
+            t.setId(100L);
+            t.setStatus(TopicStatus.IN_PROGRESS);
+            when(topicRepository.findActiveByGroupId(1L)).thenReturn(Optional.of(t));
+            when(topicRepository.findById(100L)).thenReturn(Optional.of(t));
+            when(agentRepository.findByIds(any())).thenReturn(List.of(mentioned));
+            when(concludeIntentDetector.isConcludeIntent(any(), anyString())).thenReturn(false);
+            when(speakerScheduler.rank(any(), any())).thenReturn(List.of(scored(mentioned, "MENTIONED")));
+            when(contextBuilder.build(any(), eq(1L), eq(100L), any())).thenReturn(stubContext());
+            when(llmService.chat(any(), anyString(), any())).thenReturn("我的看法…");
+            when(messageRepository.save(any(GroupMessage.class))).thenAnswer(inv -> {
+                GroupMessage m = inv.getArgument(0);
+                m.setId(200L);
+                return 200L;
+            });
+            when(messageAssembler.toDto(any())).thenReturn(MessageDTO.builder().build());
+
+            orchestrator.onUserMessage(1L, 1L, "@老王 你怎么看", null);
+
+            // 判定非总结意图 → 正常进入调度循环
+            verify(speakerScheduler, timeout(2000)).rank(any(), any());
+            verify(eventPublisher, never()).publish(any(TopicConcluding.class));
         }
 
         @Test
         @DisplayName("引用 Agent 消息时 repliedToAgentId 被解析")
         void replyToAgentMessageShouldBeResolved() {
-            Group g = groupWithMembers(1L, List.of(10L), null);
+            Group g = groupWithMembers(1L, List.of(10L));
             when(groupRepository.findById(1L)).thenReturn(Optional.of(g));
             when(topicRepository.findActiveByGroupId(1L)).thenReturn(Optional.empty());
             GroupMessage replied = savedMessage(50L, 1L, null, 10L, SenderType.AGENT);
@@ -229,7 +265,7 @@ class ChatOrchestratorTest {
         @DisplayName("自由调度：异步触发 SpeakerScheduler 并广播 Agent 发言")
         void shouldAsyncScheduleAgentSpeak() {
             Agent a10 = agent(10L, "老王");
-            Group g = groupWithMembers(1L, List.of(10L), null);
+            Group g = groupWithMembers(1L, List.of(10L));
             when(groupRepository.findById(1L)).thenReturn(Optional.of(g));
             Topic t = new Topic();
             t.setId(100L);
@@ -258,6 +294,53 @@ class ChatOrchestratorTest {
             verify(eventPublisher, timeout(2000)).publish(any(AgentSelected.class));
             // MessageSent 发布 2 次：用户消息 + Agent 发言
             verify(eventPublisher, timeout(2000).atLeast(2)).publish(any(MessageSent.class));
+        }
+
+        @Test
+        @DisplayName("Agent 回复带 [[CONCLUDE]] 标记时剥离标记入库并由该 Agent 触发收束")
+        void agentReplyWithConcludeMarkerShouldTriggerConclude() {
+            Agent a10 = agent(10L, "老王");
+            Group g = groupWithMembers(1L, List.of(10L));
+            when(groupRepository.findById(1L)).thenReturn(Optional.of(g));
+            Topic t = new Topic();
+            t.setId(100L);
+            t.setChatGroupId(1L);
+            t.setTitle("主题");
+            t.setStatus(TopicStatus.IN_PROGRESS);
+            when(topicRepository.findActiveByGroupId(1L)).thenReturn(Optional.of(t));
+            when(topicRepository.findById(100L)).thenReturn(Optional.of(t));
+            when(topicRepository.update(any())).thenReturn(true);
+            when(agentRepository.findByIds(any())).thenReturn(List.of(a10));
+            when(agentRepository.findById(10L)).thenReturn(Optional.of(a10));
+            when(speakerScheduler.rank(any(), any())).thenReturn(List.of(scored(a10, "FREE_SCHEDULE")));
+            when(contextBuilder.build(any(), eq(1L), eq(100L), any())).thenReturn(stubContext());
+            when(contextBuilder.buildForConclusion(any(), eq(1L), eq(100L), anyString(), any()))
+                    .thenReturn(stubContext());
+            // 第一次调用：发言带收束标记；第二次调用：生成 STAR 结论
+            when(llmService.chat(any(), anyString(), any()))
+                    .thenReturn("讨论已充分，可以收尾了。\n" + ContextBuilder.CONCLUDE_MARKER)
+                    .thenReturn("## STAR 结论");
+            when(messageRepository.save(any(GroupMessage.class))).thenAnswer(inv -> {
+                GroupMessage m = inv.getArgument(0);
+                m.setId(200L);
+                return 200L;
+            });
+            when(messageAssembler.toDto(any())).thenReturn(MessageDTO.builder().id(200L).build());
+            when(terminator.getAutoReplies()).thenReturn(1);
+
+            orchestrator.onUserMessage(1L, 1L, "讨论一下", null);
+
+            // 异步等待：进入收束流程并最终关闭主题
+            verify(eventPublisher, timeout(2000)).publish(any(TopicConcluding.class));
+            verify(chatPusher, timeout(2000)).pushToGroup(eq(1L), eq(WsConstants.TOPIC_CLOSED), any());
+            assertThat(t.getStatus()).isEqualTo(TopicStatus.CLOSED);
+            // 入库的 Agent 发言不应残留收束标记
+            org.mockito.ArgumentCaptor<GroupMessage> captor =
+                    org.mockito.ArgumentCaptor.forClass(GroupMessage.class);
+            verify(messageRepository, org.mockito.Mockito.atLeastOnce()).save(captor.capture());
+            captor.getAllValues().stream()
+                    .filter(m -> m.getSenderType() == SenderType.AGENT)
+                    .forEach(m -> assertThat(m.getContent()).doesNotContain(ContextBuilder.CONCLUDE_MARKER));
         }
     }
 
@@ -301,11 +384,12 @@ class ChatOrchestratorTest {
             t.setStatus(TopicStatus.IN_PROGRESS);
             when(topicRepository.findById(1L)).thenReturn(Optional.of(t));
             when(topicRepository.update(t)).thenReturn(true);
-            // Mock 异步路径成功，避免 rollback 干扰同步验证
-            Group g = groupWithMembers(10L, List.of(), 99L);
+            // Mock 异步路径成功，避免 rollback 干扰同步验证（未指定总结人 → 调度评分兜底）
+            Group g = groupWithMembers(10L, List.of(99L));
             when(groupRepository.findById(10L)).thenReturn(Optional.of(g));
-            Agent expert = agent(99L, "专家");
-            when(agentRepository.findById(99L)).thenReturn(Optional.of(expert));
+            Agent concluder = agent(99L, "总结者");
+            when(agentRepository.findByIds(List.of(99L))).thenReturn(List.of(concluder));
+            when(speakerScheduler.rank(any(), any())).thenReturn(List.of(scored(concluder, "FALLBACK")));
             when(contextBuilder.buildForConclusion(any(), eq(10L), eq(1L), anyString(), any()))
                     .thenReturn(stubContext());
             when(llmService.chat(any(), anyString(), any())).thenReturn("## STAR 结论");
@@ -322,8 +406,8 @@ class ChatOrchestratorTest {
         }
 
         @Test
-        @DisplayName("专家生成结论成功：状态 CLOSED + 广播 TOPIC_CLOSED + 发布 TopicClosed")
-        void expertGenerateConclusionSuccessfully() {
+        @DisplayName("兜底总结 Agent 生成结论成功：状态 CLOSED + 广播 TOPIC_CLOSED + 发布 TopicClosed")
+        void fallbackConcluderGenerateConclusionSuccessfully() {
             Topic t = new Topic();
             t.setId(1L);
             t.setChatGroupId(10L);
@@ -332,10 +416,11 @@ class ChatOrchestratorTest {
             when(topicRepository.findById(1L)).thenReturn(Optional.of(t));
             when(topicRepository.update(t)).thenReturn(true);
 
-            Group g = groupWithMembers(10L, List.of(), 99L);
+            Group g = groupWithMembers(10L, List.of(99L));
             when(groupRepository.findById(10L)).thenReturn(Optional.of(g));
-            Agent expert = agent(99L, "专家");
-            when(agentRepository.findById(99L)).thenReturn(Optional.of(expert));
+            Agent concluder = agent(99L, "总结者");
+            when(agentRepository.findByIds(List.of(99L))).thenReturn(List.of(concluder));
+            when(speakerScheduler.rank(any(), any())).thenReturn(List.of(scored(concluder, "FALLBACK")));
             when(contextBuilder.buildForConclusion(any(), eq(10L), eq(1L), anyString(), any()))
                     .thenReturn(stubContext());
             when(llmService.chat(any(), anyString(), any())).thenReturn("## STAR 结论");
@@ -353,7 +438,7 @@ class ChatOrchestratorTest {
         }
 
         @Test
-        @DisplayName("专家返回空结论时回退到 IN_PROGRESS 并广播 ERROR")
+        @DisplayName("总结 Agent 返回空结论时回退到 IN_PROGRESS 并广播 ERROR")
         void emptyConclusionShouldRollback() {
             Topic t = new Topic();
             t.setId(1L);
@@ -363,10 +448,11 @@ class ChatOrchestratorTest {
             when(topicRepository.findById(1L)).thenReturn(Optional.of(t));
             when(topicRepository.update(t)).thenReturn(true);
 
-            Group g = groupWithMembers(10L, List.of(), 99L);
+            Group g = groupWithMembers(10L, List.of(99L));
             when(groupRepository.findById(10L)).thenReturn(Optional.of(g));
-            Agent expert = agent(99L, "专家");
-            when(agentRepository.findById(99L)).thenReturn(Optional.of(expert));
+            Agent concluder = agent(99L, "总结者");
+            when(agentRepository.findByIds(List.of(99L))).thenReturn(List.of(concluder));
+            when(speakerScheduler.rank(any(), any())).thenReturn(List.of(scored(concluder, "FALLBACK")));
             when(contextBuilder.buildForConclusion(any(), eq(10L), eq(1L), anyString(), any()))
                     .thenReturn(stubContext());
             when(llmService.chat(any(), anyString(), any())).thenReturn("");
@@ -379,18 +465,19 @@ class ChatOrchestratorTest {
         }
 
         @Test
-        @DisplayName("群未配置专家 Agent 时回退到 IN_PROGRESS")
-        void noExpertShouldRollback() {
+        @DisplayName("群内没有成员 Agent 时回退到 IN_PROGRESS")
+        void noAgentMemberShouldRollback() {
             Topic t = new Topic();
             t.setId(1L);
             t.setChatGroupId(10L);
-            t.setTitle("无专家测试");
+            t.setTitle("无可用总结人测试");
             t.setStatus(TopicStatus.IN_PROGRESS);
             when(topicRepository.findById(1L)).thenReturn(Optional.of(t));
             when(topicRepository.update(t)).thenReturn(true);
 
-            Group g = groupWithMembers(10L, List.of(), null); // 无专家
+            Group g = groupWithMembers(10L, List.of()); // 群内无成员 Agent
             when(groupRepository.findById(10L)).thenReturn(Optional.of(g));
+            when(agentRepository.findByIds(any())).thenReturn(List.of());
 
             orchestrator.conclude(1L, 1L, "USER");
 
@@ -409,10 +496,11 @@ class ChatOrchestratorTest {
             when(topicRepository.findById(1L)).thenReturn(Optional.of(t));
             when(topicRepository.update(t)).thenReturn(true);
 
-            Group g = groupWithMembers(10L, List.of(), 99L);
+            Group g = groupWithMembers(10L, List.of(99L));
             when(groupRepository.findById(10L)).thenReturn(Optional.of(g));
-            Agent expert = agent(99L, "专家");
-            when(agentRepository.findById(99L)).thenReturn(Optional.of(expert));
+            Agent concluder = agent(99L, "总结者");
+            when(agentRepository.findByIds(List.of(99L))).thenReturn(List.of(concluder));
+            when(speakerScheduler.rank(any(), any())).thenReturn(List.of(scored(concluder, "FALLBACK")));
             when(contextBuilder.buildForConclusion(any(), eq(10L), eq(1L), anyString(), any()))
                     .thenReturn(stubContext());
             // 第一次抛异常，第二次返回有效结论
@@ -440,7 +528,7 @@ class ChatOrchestratorTest {
         void firstAgentFailShouldFallbackToNext() {
             Agent a10 = agent(10L, "老王");
             Agent a11 = agent(11L, "小李");
-            Group g = groupWithMembers(1L, List.of(10L, 11L), null);
+            Group g = groupWithMembers(1L, List.of(10L, 11L));
             when(groupRepository.findById(1L)).thenReturn(Optional.of(g));
             Topic t = new Topic();
             t.setId(100L);
@@ -477,7 +565,7 @@ class ChatOrchestratorTest {
         @DisplayName("所有 Agent 全部失败时广播 ALL_AGENTS_FAILED 错误")
         void allAgentsFailShouldBroadcastError() {
             Agent a10 = agent(10L, "老王");
-            Group g = groupWithMembers(1L, List.of(10L), null);
+            Group g = groupWithMembers(1L, List.of(10L));
             when(groupRepository.findById(1L)).thenReturn(Optional.of(g));
             Topic t = new Topic();
             t.setId(100L);
@@ -500,7 +588,7 @@ class ChatOrchestratorTest {
         @DisplayName("Agent 返回空内容时视为选择不发言（不广播错误）")
         void emptyContentShouldBeTreatedAsNoSpeak() {
             Agent a10 = agent(10L, "老王");
-            Group g = groupWithMembers(1L, List.of(10L), null);
+            Group g = groupWithMembers(1L, List.of(10L));
             when(groupRepository.findById(1L)).thenReturn(Optional.of(g));
             Topic t = new Topic();
             t.setId(100L);

@@ -2,7 +2,6 @@ package com.dingring.app.dto.request;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
-import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 import java.util.List;
@@ -16,11 +15,7 @@ public class CreateGroupRequest {
     @NotBlank(message = "群名称不能为空")
     private String name;
 
-    /** 普通 Agent ID 列表 */
+    /** 成员 Agent ID 列表（任意 Agent 均可参与讨论与总结） */
     @NotEmpty(message = "至少选择一个 Agent")
     private List<Long> agentIds;
-
-    /** 专家 Agent ID */
-    @NotNull(message = "必须指定专家 Agent")
-    private Long expertAgentId;
 }

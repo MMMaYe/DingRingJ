@@ -13,18 +13,19 @@ public class TopicClosed extends DomainEvent {
     private final String title;
     private final String conclusion;
     private final long messageCount;
-    /** USER / MAX_ROUNDS */
+    /** USER / AGENT / MAX_ROUNDS */
     private final String triggeredBy;
-    private final Long expertAgentId;
+    /** 生成结论的 Agent（后续知识卡片也由它生成） */
+    private final Long concluderAgentId;
 
     public TopicClosed(Long topicId, Long groupId, String title, String conclusion,
-                       long messageCount, String triggeredBy, Long expertAgentId) {
+                       long messageCount, String triggeredBy, Long concluderAgentId) {
         this.topicId = topicId;
         this.groupId = groupId;
         this.title = title;
         this.conclusion = conclusion;
         this.messageCount = messageCount;
         this.triggeredBy = triggeredBy;
-        this.expertAgentId = expertAgentId;
+        this.concluderAgentId = concluderAgentId;
     }
 }

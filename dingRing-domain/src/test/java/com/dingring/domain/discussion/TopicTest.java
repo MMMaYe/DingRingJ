@@ -54,15 +54,27 @@ class TopicTest {
     class Close {
 
         @Test
-        @DisplayName("CONCLUDING -> CLOSED 并填充结论与关闭时间")
+        @DisplayName("CONCLUDING -> CLOSED 并填充结论、关闭时间与总结人")
         void shouldCloseWithConclusion() {
             Topic t = newTopic(TopicStatus.CONCLUDING);
 
-            t.close("## STAR 结论\n...");
+            t.close("## STAR 结论\n...", 99L);
 
             assertThat(t.getStatus()).isEqualTo(TopicStatus.CLOSED);
             assertThat(t.getConclusion()).isEqualTo("## STAR 结论\n...");
             assertThat(t.getClosedAt()).isNotNull();
+            assertThat(t.concludedByAgentId()).hasValue(99L);
+        }
+
+        @Test
+        @DisplayName("总结人为 null 时 concludedByAgentId 返回 empty")
+        void nullConcluderShouldReturnEmpty() {
+            Topic t = newTopic(TopicStatus.CONCLUDING);
+
+            t.close("## STAR 结论", null);
+
+            assertThat(t.getStatus()).isEqualTo(TopicStatus.CLOSED);
+            assertThat(t.concludedByAgentId()).isEmpty();
         }
 
         @Test
@@ -70,7 +82,7 @@ class TopicTest {
         void cannotCloseFromInProgress() {
             Topic t = newTopic(TopicStatus.IN_PROGRESS);
 
-            assertThatThrownBy(() -> t.close("x"))
+            assertThatThrownBy(() -> t.close("x", 99L))
                     .isInstanceOf(BizException.class);
         }
     }

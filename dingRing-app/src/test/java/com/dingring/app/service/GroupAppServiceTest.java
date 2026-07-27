@@ -75,25 +75,11 @@ class GroupAppServiceTest {
     class Create {
 
         @Test
-        @DisplayName("专家 Agent 同时在普通成员列表中时抛 ParamException")
-        void expertInAgentIdsShouldThrow() {
-            CreateGroupRequest req = new CreateGroupRequest();
-            req.setName("Java 学习群");
-            req.setAgentIds(List.of(10L, 99L));
-            req.setExpertAgentId(99L);
-
-            assertThatThrownBy(() -> service.create(req))
-                    .isInstanceOf(ParamException.class)
-                    .hasMessageContaining("专家 Agent 不能同时是普通成员");
-        }
-
-        @Test
         @DisplayName("存在无效 Agent ID 时抛 ParamException")
         void invalidAgentIdShouldThrow() {
             CreateGroupRequest req = new CreateGroupRequest();
             req.setName("群");
-            req.setAgentIds(List.of(10L));
-            req.setExpertAgentId(99L);
+            req.setAgentIds(List.of(10L, 99L));
             // 仓储只返回 1 个，缺少 99
             when(agentRepository.findByIds(List.of(10L, 99L))).thenReturn(List.of(agent(10L, "老王")));
 
@@ -103,14 +89,13 @@ class GroupAppServiceTest {
         }
 
         @Test
-        @DisplayName("成功创建群：成员含 OWNER/普通 Agent/专家 Agent")
+        @DisplayName("成功创建群：成员含 OWNER 与成员 Agent")
         void shouldCreateGroupWithCorrectMembers() {
             CreateGroupRequest req = new CreateGroupRequest();
             req.setName("Java 学习群");
             req.setAgentIds(List.of(10L, 11L));
-            req.setExpertAgentId(99L);
-            when(agentRepository.findByIds(List.of(10L, 11L, 99L))).thenReturn(List.of(
-                    agent(10L, "老王"), agent(11L, "小李"), agent(99L, "专家")
+            when(agentRepository.findByIds(List.of(10L, 11L))).thenReturn(List.of(
+                    agent(10L, "老王"), agent(11L, "小李")
             ));
             // 模拟 save 回填 id 后 detail 查询
             when(groupRepository.save(any(Group.class))).thenAnswer(inv -> {
@@ -125,12 +110,11 @@ class GroupAppServiceTest {
             saved.setGroupMember(List.of(
                     new GroupMember(1L, MemberType.USER, MemberRole.OWNER),
                     new GroupMember(10L, MemberType.AGENT, MemberRole.MEMBER),
-                    new GroupMember(11L, MemberType.AGENT, MemberRole.MEMBER),
-                    new GroupMember(99L, MemberType.AGENT, MemberRole.EXPERT)
+                    new GroupMember(11L, MemberType.AGENT, MemberRole.MEMBER)
             ));
             when(groupRepository.findById(1L)).thenReturn(Optional.of(saved));
-            when(agentRepository.findByIds(List.of(10L, 11L, 99L))).thenReturn(List.of(
-                    agent(10L, "老王"), agent(11L, "小李"), agent(99L, "专家")
+            when(agentRepository.findByIds(List.of(10L, 11L))).thenReturn(List.of(
+                    agent(10L, "老王"), agent(11L, "小李")
             ));
             User owner = new User();
             owner.setId(1L);
@@ -141,8 +125,8 @@ class GroupAppServiceTest {
 
             assertThat(detail.getId()).isEqualTo(1L);
             assertThat(detail.getName()).isEqualTo("Java 学习群");
-            // 4 个成员：1 USER + 2 普通 AGENT + 1 专家
-            assertThat(detail.getMembers()).hasSize(4);
+            // 3 个成员：1 USER + 2 成员 AGENT
+            assertThat(detail.getMembers()).hasSize(3);
             // 发布 GroupCreated 事件
             verify(eventPublisher).publish(any(GroupCreated.class));
         }

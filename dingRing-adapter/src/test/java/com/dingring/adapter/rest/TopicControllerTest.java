@@ -211,13 +211,13 @@ class TopicControllerTest {
         @DisplayName("返回结论 DTO")
         void shouldReturnConclusion() throws Exception {
             ConclusionDTO dto = ConclusionDTO.builder()
-                    .topicId(1L).conclusion("## STAR").expertAgentName("专家").messageCount(20L).build();
+                    .topicId(1L).conclusion("## STAR").concluderAgentName("总结者").messageCount(20L).build();
             when(topicAppService.conclusion(1L)).thenReturn(dto);
 
             mockMvc.perform(get("/api/topics/1/conclusion"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.data.conclusion").value("## STAR"))
-                    .andExpect(jsonPath("$.data.expertAgentName").value("专家"));
+                    .andExpect(jsonPath("$.data.concluderAgentName").value("总结者"));
         }
 
         @Test

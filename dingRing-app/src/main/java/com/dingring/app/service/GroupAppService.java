@@ -52,13 +52,8 @@ public class GroupAppService {
     private final DomainEventPublisher eventPublisher;
 
     public GroupDetail create(CreateGroupRequest request) {
-        if (request.getAgentIds().contains(request.getExpertAgentId())) {
-            throw new ParamException("专家 Agent 不能同时是普通成员");
-        }
-        List<Long> allIds = new ArrayList<>(request.getAgentIds());
-        allIds.add(request.getExpertAgentId());
-        List<Agent> agents = agentRepository.findByIds(allIds);
-        if (agents.size() != allIds.size()) {
+        List<Agent> agents = agentRepository.findByIds(request.getAgentIds());
+        if (agents.size() != request.getAgentIds().size()) {
             throw new ParamException("存在无效的 Agent ID");
         }
 
@@ -70,7 +65,6 @@ public class GroupAppService {
         for (Long agentId : request.getAgentIds()) {
             members.add(new GroupMember(agentId, MemberType.AGENT, MemberRole.MEMBER));
         }
-        members.add(new GroupMember(request.getExpertAgentId(), MemberType.AGENT, MemberRole.EXPERT));
         group.setGroupMember(members);
         groupRepository.save(group);
         eventPublisher.publish(new GroupCreated(group.getId(), group.getName()));
@@ -105,21 +99,16 @@ public class GroupAppService {
 
     /**
      * 更新群成员配置（群设置-成员管理）。
-     * <p>整体覆盖语义：用请求中的 agentIds / expertAgentId 完整替换原有 Agent 成员，
+     * <p>整体覆盖语义：用请求中的 agentIds 完整替换原有 Agent 成员，
      * 群主 USER 成员自动保留。校验逻辑与 create 一致。
      */
     public GroupDetail updateMembers(Long groupId, UpdateMembersRequest request) {
-        if (request.getAgentIds().contains(request.getExpertAgentId())) {
-            throw new ParamException("专家 Agent 不能同时是普通成员");
-        }
         Group group = groupRepository.findById(groupId)
                 .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "群不存在: " + groupId));
 
         // 校验所有 Agent ID 有效
-        List<Long> allIds = new ArrayList<>(request.getAgentIds());
-        allIds.add(request.getExpertAgentId());
-        List<Agent> agents = agentRepository.findByIds(allIds);
-        if (agents.size() != allIds.size()) {
+        List<Agent> agents = agentRepository.findByIds(request.getAgentIds());
+        if (agents.size() != request.getAgentIds().size()) {
             throw new ParamException("存在无效的 Agent ID");
         }
 
@@ -131,7 +120,6 @@ public class GroupAppService {
         for (Long agentId : request.getAgentIds()) {
             members.add(new GroupMember(agentId, MemberType.AGENT, MemberRole.MEMBER));
         }
-        members.add(new GroupMember(request.getExpertAgentId(), MemberType.AGENT, MemberRole.EXPERT));
 
         group.setGroupMember(members);
         group.setUpdateTime(LocalDateTime.now());

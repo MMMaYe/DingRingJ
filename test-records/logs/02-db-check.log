@@ -1,0 +1,21 @@
+[OK] 数据库连接成功: jdbc:mysql://101.33.227.80:3306/ring_chat?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=false
+现有表: [agent, chat_group, knowledge_card, message, topic, user]
+  表 user -> 存在
+  表 agent -> 存在
+  表 chat_group -> 存在
+  表 topic -> 存在
+  表 message -> 存在
+  表 knowledge_card -> 存在
+  行数 user = 1
+  行数 agent = 5
+  行数 chat_group = 2
+  行数 topic = 0
+  行数 message = 6
+  行数 knowledge_card = 0
+[OK] 种子用户 id=1 存在: 冲吧！中年🌬️
+现有 Agent:
+  id=1 name=老王 baseUrl=https://api.stepfun.com/step_plan/v1 model=step-3.7-flash
+  id=2 name=小林 baseUrl=https://api.deepseek.com model=deepseek-chat
+  id=3 name=阿源 baseUrl=https://api.deepseek.com model=deepseek-chat
+  id=4 name=苏教授 baseUrl=https://api.deepseek.com model=deepseek-chat
+  id=5 name=测试Agent baseUrl=https://api.test.com model=test-model

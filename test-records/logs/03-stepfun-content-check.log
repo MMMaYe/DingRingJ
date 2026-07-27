@@ -1,0 +1,5 @@
+finish_reason: stop
+content长度: 41
+content: '参考公式（CPU核心数×2+有效磁盘数）压测调整，通常几十到上百足够，别盲目设大。'
+reasoning长度: 358
+usage: {'prompt_tokens': 38, 'completion_tokens': 268, 'total_tokens': 306, 'prompt_tokens_details': {'cached_tokens': 0}, 'completion_tokens_details': {'reasoning_tokens': 0}}

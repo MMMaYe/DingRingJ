@@ -5,7 +5,9 @@ import com.dingring.common.exception.ErrorCode;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * 主题聚合根（表 topic），讨论域核心，状态机保证讨论生命周期正确流转。
@@ -41,12 +43,29 @@ public class Topic {
         transitTo(TopicStatus.CONCLUDING);
     }
 
-    /** 结论生成成功：CONCLUDING -> CLOSED */
-    public void close(String conclusion) {
+    /** 结论生成成功：CONCLUDING -> CLOSED（记录总结 Agent） */
+    public void close(String conclusion, Long concluderAgentId) {
         transitTo(TopicStatus.CLOSED);
         this.conclusion = conclusion;
         this.closedAt = LocalDateTime.now();
+        if (concluderAgentId != null) {
+            if (feature == null) {
+                feature = new HashMap<>();
+            }
+            feature.put(CONCLUDER_KEY, concluderAgentId);
+        }
     }
+
+    /** 总结 Agent ID（存于 feature JSON，兼容历史数据无此字段） */
+    public Optional<Long> concludedByAgentId() {
+        if (feature == null) {
+            return Optional.empty();
+        }
+        Object v = feature.get(CONCLUDER_KEY);
+        return v instanceof Number n ? Optional.of(n.longValue()) : Optional.empty();
+    }
+
+    private static final String CONCLUDER_KEY = "concludedByAgentId";
 
     /** 结论生成失败回退：CONCLUDING -> IN_PROGRESS */
     public void rollbackToInProgress() {

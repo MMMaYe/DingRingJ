@@ -50,14 +50,14 @@ public class CardEventHandler {
     }
 
     private void generateCards(TopicClosed event) {
-        Agent expert = agentRepository.findById(event.getExpertAgentId()).orElse(null);
-        if (expert == null) {
-            log.warn("卡片生成跳过：专家 Agent 不存在, topicId={}", event.getTopicId());
+        Agent concluder = agentRepository.findById(event.getConcluderAgentId()).orElse(null);
+        if (concluder == null) {
+            log.warn("卡片生成跳过：总结 Agent 不存在, topicId={}", event.getTopicId());
             return;
         }
         for (int attempt = 1; attempt <= MAX_RETRY; attempt++) {
             try {
-                String raw = llmService.chat(expert, CARD_PROMPT,
+                String raw = llmService.chat(concluder, CARD_PROMPT,
                         List.of(LlmService.ChatTurn.user("讨论主题：" + event.getTitle()
                                 + "\n\n讨论结论：\n" + event.getConclusion())));
                 List<KnowledgeCard> cards = parseCards(raw, event.getTopicId());

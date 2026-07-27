@@ -189,7 +189,7 @@ export default function CardsPage() {
               <div className="empty empty--editorial" style={{ gridColumn: '1/-1' }}>
                 <div className="empty__icon">🗂️</div>
                 <div className="empty__title">暂无知识卡片</div>
-                <div className="empty__hint">在群里发起讨论并 @专家 结束后会自动生成</div>
+                <div className="empty__hint">在群里发起讨论并结束后会自动生成</div>
               </div>
             ) : !filteredCards.length ? (
               <div className="empty empty--editorial" style={{ gridColumn: '1/-1' }}>

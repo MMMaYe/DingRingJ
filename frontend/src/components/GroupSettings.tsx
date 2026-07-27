@@ -19,39 +19,28 @@ interface GroupSettingsProps {
  * 设计要点：
  * - 顶部「刊头」：大号衬线群名 + 头像堆叠 + 装饰性元数据
  * - 章节式排版：左侧大号编号 + 细横线 + 标题描述，呈现目录感
- * - 成员/专家卡片：印章式选中态、错峰入场动画
+ * - 成员卡片：印章式选中态、错峰入场动画
  * - 改动检测：精确计数「N 项改动」徽章 + 脉冲提示
- * - 专家与普通成员互斥：专家卡片不可勾选为普通成员（锁态）
  */
 export default function GroupSettings({ open, onClose, group, agents, onUpdated }: GroupSettingsProps) {
   const [selectedAgents, setSelectedAgents] = useState<Set<number>>(new Set());
-  const [expertId, setExpertId] = useState<number>(0);
   const [saving, setSaving] = useState(false);
 
   // 打开时根据当前群成员初始化勾选状态，并作为改动检测基线
   useEffect(() => {
     if (!open) return;
     const members = group.members.filter(m => m.type === 'AGENT');
-    const initMembers = new Set(members.filter(m => m.role === 'MEMBER').map(m => m.id));
-    const initExpert = members.find(m => m.role === 'EXPERT')?.id ?? 0;
-    setSelectedAgents(initMembers);
-    setExpertId(initExpert);
+    setSelectedAgents(new Set(members.map(m => m.id)));
   }, [open, group]);
 
-  // 改动检测：精确计算「成员变化数」与「专家是否变更」
-  const { memberDelta, expertChanged, dirtyCount } = useMemo(() => {
-    const members = group.members.filter(m => m.type === 'AGENT');
-    const baseMembers = new Set(members.filter(m => m.role === 'MEMBER').map(m => m.id));
-    const baseExpert = members.find(m => m.role === 'EXPERT')?.id ?? 0;
-
+  // 改动检测：精确计算「成员变化数」
+  const dirtyCount = useMemo(() => {
+    const baseMembers = new Set(group.members.filter(m => m.type === 'AGENT').map(m => m.id));
     let added = 0, removed = 0;
     for (const id of selectedAgents) if (!baseMembers.has(id)) added++;
     for (const id of baseMembers) if (!selectedAgents.has(id)) removed++;
-    const memberDelta = added + removed;
-    const expertChanged = expertId !== baseExpert;
-    const dirtyCount = memberDelta + (expertChanged ? 1 : 0);
-    return { memberDelta, expertChanged, dirtyCount };
-  }, [selectedAgents, expertId, group]);
+    return added + removed;
+  }, [selectedAgents, group]);
 
   if (!open) return null;
 
@@ -64,7 +53,6 @@ export default function GroupSettings({ open, onClose, group, agents, onUpdated 
   const stackOverflow = Math.max(0, group.members.length - stackSources.length);
 
   const toggleAgent = (id: number) => {
-    if (id === expertId) return; // 专家不可作为普通成员勾选
     setSelectedAgents(prev => {
       const next = new Set(prev);
       next.has(id) ? next.delete(id) : next.add(id);
@@ -74,18 +62,13 @@ export default function GroupSettings({ open, onClose, group, agents, onUpdated 
 
   const handleSave = async () => {
     if (selectedAgents.size === 0) {
-      toast('至少保留一个普通成员 Agent', 'error');
-      return;
-    }
-    if (!expertId) {
-      toast('请指定专家 Agent', 'error');
+      toast('至少保留一个成员 Agent', 'error');
       return;
     }
     setSaving(true);
     try {
       const payload: UpdateMembersRequest = {
         agentIds: [...selectedAgents],
-        expertAgentId: expertId,
       };
       const detail = await API.put<GroupDetail>(`/api/groups/${group.id}/members`, payload);
       toast('成员已更新', 'success');
@@ -147,7 +130,7 @@ export default function GroupSettings({ open, onClose, group, agents, onUpdated 
               <span className="chapter__num">01</span>
               <div className="chapter__title-wrap">
                 <h3 className="chapter__title">讨论成员</h3>
-                <span className="chapter__hint">参与普通讨论的 Agent，可多选</span>
+                <span className="chapter__hint">参与讨论的 Agent，任意成员均可总结，可多选</span>
               </div>
               <span className="chapter__count">{selectedAgents.size}<span className="chapter__count-sep">/</span>{agents.length}</span>
             </header>
@@ -155,18 +138,16 @@ export default function GroupSettings({ open, onClose, group, agents, onUpdated 
               {agents.map((a, idx) => {
                 const checked = selectedAgents.has(a.id);
                 const order = checked ? [...selectedAgents].indexOf(a.id) + 1 : 0;
-                const isExpert = a.id === expertId;
                 return (
                   <div
                     key={a.id}
-                    className={`member-card${checked ? ' is-checked' : ''}${isExpert ? ' is-locked' : ''}`}
+                    className={`member-card${checked ? ' is-checked' : ''}`}
                     style={{ animationDelay: `${idx * 28}ms` }}
                     onClick={() => toggleAgent(a.id)}
                     role="checkbox"
                     aria-checked={checked}
-                    aria-disabled={isExpert}
-                    tabIndex={isExpert ? -1 : 0}
-                    onKeyDown={e => { if (!isExpert && (e.key === ' ' || e.key === 'Enter')) { e.preventDefault(); toggleAgent(a.id); } }}
+                    tabIndex={0}
+                    onKeyDown={e => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); toggleAgent(a.id); } }}
                   >
                     {checked && <span className="member-card__order" aria-hidden>{order}</span>}
                     {checked && (
@@ -179,48 +160,6 @@ export default function GroupSettings({ open, onClose, group, agents, onUpdated 
                       <div className="member-card__name">{a.name}</div>
                       <div className="member-card__desc">{a.description || a.modelName}</div>
                     </div>
-                    {isExpert && <span className="tag tag--warning member-card__role-tag">已选为专家</span>}
-                  </div>
-                );
-              })}
-            </div>
-          </section>
-
-          {/* 章节 02：专家 Agent */}
-          <section className="chapter">
-            <header className="chapter__head">
-              <span className="chapter__num">02</span>
-              <div className="chapter__title-wrap">
-                <h3 className="chapter__title">专家 Agent</h3>
-                <span className="chapter__hint">负责讨论结束时的总结陈词，不参与普通讨论</span>
-              </div>
-            </header>
-            <div className="expert-grid expert-grid--drawer">
-              {agents.map(a => {
-                const selected = a.id === expertId;
-                const inMembers = selectedAgents.has(a.id);
-                return (
-                  <div
-                    key={a.id}
-                    className={`expert-card${selected ? ' is-selected' : ''}${inMembers ? ' is-conflict' : ''}`}
-                    onClick={() => {
-                      if (inMembers) return;
-                      setExpertId(a.id);
-                    }}
-                    title={inMembers ? '请先取消该 Agent 的普通成员勾选' : ''}
-                  >
-                    <Avatar name={a.name} size="sm" />
-                    <div className="expert-card__meta">
-                      <div className="expert-card__name">{a.name}</div>
-                      <div className="expert-card__desc">{a.description || a.modelName}</div>
-                    </div>
-                    {selected ? (
-                      <span className="tag tag--warning">已选专家</span>
-                    ) : inMembers ? (
-                      <span className="tag tag--neutral">成员中</span>
-                    ) : (
-                      <span className="expert-card__pick">点击提名</span>
-                    )}
                   </div>
                 );
               })}
@@ -234,11 +173,7 @@ export default function GroupSettings({ open, onClose, group, agents, onUpdated 
               <span className="dirty-badge" role="status">
                 <span className="dirty-badge__dot" aria-hidden />
                 {dirtyCount} 项改动未保存
-                <span className="dirty-badge__detail">
-                  {memberDelta > 0 && `成员 ${memberDelta}`}
-                  {memberDelta > 0 && expertChanged && ' · '}
-                  {expertChanged && '专家已变更'}
-                </span>
+                <span className="dirty-badge__detail">成员 {dirtyCount}</span>
               </span>
             ) : (
               <span className="drawer__saved-hint">

@@ -18,3 +18,11 @@ Thumbs.db
 
 # ---- Logs ----
 *.log
+
+# ---- 联调测试留痕（供 review，纳入版本管理）----
+!test-records/logs/
+!test-records/logs/*.log
+
+# ---- 密钥文件（绝不入库）----
+test-records/scripts/.cloudbase_key
+test-records/scripts/.stepfun_key

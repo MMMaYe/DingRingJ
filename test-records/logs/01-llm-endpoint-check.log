@@ -1,0 +1,29 @@
+==============================================
+[2026-07-27 22:40:15] 测试端点: Agent-1 腾讯云 CloudBase 网关 (qwen3.5-plus)
+URL: https://come-d7grhnf176744e01b.api.tcloudbasegateway.com/v1/ai/cloudbase/chat/completions
+Model: qwen3.5-plus
+HTTP 状态码: 401
+响应体:
+{"code":"INVALID_CREDENTIALS","message":"Credentials are invalid. For more information, please refer to https://docs.cloudbase.net/error-code/service/INVALID_CREDENTIALS","requestId":"7b86c7c1-c2c9-4d9d-9ca7-ba502f5133c2"}
+
+==============================================
+[2026-07-27 22:40:15] 测试端点: Agent-2 阶跃星辰 StepFun (step-3.7-flash)
+URL: https://api.stepfun.com/step_plan/v1/chat/completions
+Model: step-3.7-flash
+HTTP 状态码: 200
+响应体:
+{"id":"c5d58d714734134dfd9505532794789b.71cc64f6111343f60a983b1aa479b91f","object":"chat.completion","created":1785163216,"model":"step-3.7-flash","choices":[{"index":0,"message":{"role":"assistant","content":"","reasoning":"用户要求只回复两个字：\"收到\"。这是一个非常明确的指令，我需要完全遵守。
+
+用户说\"请只回复两个字：收到\"，意思是让我只回复\"收到\"这两个字。
+
+所以我应该只回复：收到
+
+不需要任何其他内容，不需要解释，不需要标点符号（除了可能的句号，但\"","reasoning_content":"用户要求只回复两个字：\"收到\"。这是一个非常明确的指令，我需要完全遵守。
+
+用户说\"请只回复两个字：收到\"，意思是让我只回复\"收到\"这两个字。
+
+所以我应该只回复：收到
+
+不需要任何其他内容，不需要解释，不需要标点符号（除了可能的句号，但\""},"finish_reason":"length"}],"usage":{"prompt_tokens":18,"completion_tokens":64,"total_tokens":82,"prompt_tokens_details":{"cached_tokens":0},"completion_tokens_details":{"reasoning_tokens":0}}}
+
+[2026-07-27 22:40:17] 端点连通性测试完成

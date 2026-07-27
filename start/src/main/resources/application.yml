@@ -27,7 +27,7 @@ mybatis:
 dingring:
   llm:
     # true = 使用 Mock LLM（无需真实 API Key，演示完整闭环）
-    mock: true
+    mock: false
   orchestrator:
     # 上下文滑动窗口（条）
     context-window: 200

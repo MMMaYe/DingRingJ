@@ -197,29 +197,28 @@ class TopicAppServiceTest {
         }
 
         @Test
-        @DisplayName("返回结论 DTO 含专家 Agent 名称")
-        void shouldReturnConclusionWithExpertName() {
+        @DisplayName("返回结论 DTO 含总结 Agent 名称")
+        void shouldReturnConclusionWithConcluderName() {
             Topic t = new Topic();
             t.setId(1L);
             t.setChatGroupId(10L);
             t.setTitle("Java 内存模型");
             t.setConclusion("## STAR\n...");
+            // 总结人存于 feature JSON
+            t.setFeature(new java.util.HashMap<>(java.util.Map.of("concludedByAgentId", 99L)));
             when(topicRepository.findById(1L)).thenReturn(Optional.of(t));
 
-            Group g = new Group();
-            g.setGroupMember(List.of(new GroupMember(99L, MemberType.AGENT, MemberRole.EXPERT)));
-            when(groupRepository.findById(10L)).thenReturn(Optional.of(g));
-            Agent expert = new Agent();
-            expert.setId(99L);
-            expert.setName("专家");
-            when(agentRepository.findById(99L)).thenReturn(Optional.of(expert));
+            Agent concluder = new Agent();
+            concluder.setId(99L);
+            concluder.setName("总结者");
+            when(agentRepository.findById(99L)).thenReturn(Optional.of(concluder));
             when(messageRepository.countByTopicId(1L)).thenReturn(50L);
 
             ConclusionDTO result = service.conclusion(1L);
 
             assertThat(result.getTopicId()).isEqualTo(1L);
             assertThat(result.getConclusion()).isEqualTo("## STAR\n...");
-            assertThat(result.getExpertAgentName()).isEqualTo("专家");
+            assertThat(result.getConcluderAgentName()).isEqualTo("总结者");
             assertThat(result.getMessageCount()).isEqualTo(50L);
         }
     }

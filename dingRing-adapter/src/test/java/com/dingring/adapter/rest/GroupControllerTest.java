@@ -65,7 +65,6 @@ class GroupControllerTest {
             CreateGroupRequest req = new CreateGroupRequest();
             req.setName("Java 学习群");
             req.setAgentIds(List.of(10L));
-            req.setExpertAgentId(99L);
 
             GroupDetail detail = GroupDetail.builder().id(1L).name("Java 学习群").build();
             when(groupAppService.create(any())).thenReturn(detail);
@@ -83,7 +82,7 @@ class GroupControllerTest {
         @DisplayName("name 为空时返回 400 + PARAM_INVALID")
         void blankNameShouldReturn400() throws Exception {
             String body = """
-                    {"name":"","agentIds":[10],"expertAgentId":99}
+                    {"name":"","agentIds":[10]}
                     """;
             mockMvc.perform(post("/api/groups")
                             .contentType(MediaType.APPLICATION_JSON)
@@ -97,20 +96,7 @@ class GroupControllerTest {
         @DisplayName("agentIds 为空时返回 400")
         void emptyAgentIdsShouldReturn400() throws Exception {
             String body = """
-                    {"name":"群","agentIds":[],"expertAgentId":99}
-                    """;
-            mockMvc.perform(post("/api/groups")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(body))
-                    .andExpect(status().isBadRequest())
-                    .andExpect(jsonPath("$.errorCode").value("PARAM_INVALID"));
-        }
-
-        @Test
-        @DisplayName("expertAgentId 为 null 时返回 400")
-        void nullExpertShouldReturn400() throws Exception {
-            String body = """
-                    {"name":"群","agentIds":[10]}
+                    {"name":"群","agentIds":[]}
                     """;
             mockMvc.perform(post("/api/groups")
                             .contentType(MediaType.APPLICATION_JSON)
@@ -126,7 +112,7 @@ class GroupControllerTest {
                     .thenThrow(new BizException(ErrorCode.NOT_FOUND, "Agent 不存在"));
 
             String body = """
-                    {"name":"群","agentIds":[10],"expertAgentId":99}
+                    {"name":"群","agentIds":[10]}
                     """;
             mockMvc.perform(post("/api/groups")
                             .contentType(MediaType.APPLICATION_JSON)

@@ -8,7 +8,7 @@ import lombok.NoArgsConstructor;
  * 群成员（chat_group.group_member JSON 数组元素）。
  *
  * <pre>{"id": 10, "type": "AGENT", "role": "MEMBER"}</pre>
- * <p>用 type 区分 USER / AGENT（两表 id 可能重复），role 区分群主/成员/专家。
+ * <p>用 type 区分 USER / AGENT（两表 id 可能重复），role 区分群主/成员。
  */
 @Data
 @NoArgsConstructor
@@ -21,9 +21,5 @@ public class GroupMember {
 
     public boolean isAgent() {
         return type == MemberType.AGENT;
-    }
-
-    public boolean isExpert() {
-        return role == MemberRole.EXPERT;
     }
 }

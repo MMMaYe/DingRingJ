@@ -56,16 +56,16 @@ class CardEventHandlerTest {
                 eventPublisher, chatPusher, objectMapper);
     }
 
-    private Agent expert(Long id, String name) {
+    private Agent agent(Long id, String name) {
         Agent a = new Agent();
         a.setId(id);
         a.setName(name);
         return a;
     }
 
-    private TopicClosed topicClosedEvent(Long topicId, Long groupId, Long expertId) {
+    private TopicClosed topicClosedEvent(Long topicId, Long groupId, Long concluderAgentId) {
         return new TopicClosed(topicId, groupId, "Java 内存模型",
-                "## STAR 结论", 10L, "USER", expertId);
+                "## STAR 结论", 10L, "USER", concluderAgentId);
     }
 
     /**
@@ -89,8 +89,8 @@ class CardEventHandlerTest {
     class OnTopicClosed {
 
         @Test
-        @DisplayName("专家 Agent 不存在时跳过生成（不调用 LLM）")
-        void expertNotExistShouldSkip() throws InterruptedException {
+        @DisplayName("总结 Agent 不存在时跳过生成（不调用 LLM）")
+        void concluderNotExistShouldSkip() throws InterruptedException {
             when(agentRepository.findById(99L)).thenReturn(Optional.empty());
 
             handler.onTopicClosed(topicClosedEvent(1L, 10L, 99L));
@@ -104,8 +104,8 @@ class CardEventHandlerTest {
         @Test
         @DisplayName("LLM 返回标准 JSON 数组时正常生成卡片")
         void shouldGenerateCardsFromStandardJson() {
-            Agent expert = expert(99L, "专家");
-            when(agentRepository.findById(99L)).thenReturn(Optional.of(expert));
+            Agent concluder = agent(99L, "总结者");
+            when(agentRepository.findById(99L)).thenReturn(Optional.of(concluder));
             String json = """
                     [
                       {"question":"什么是 JVM?","answer":"Java 虚拟机","category":"Java"},
@@ -127,8 +127,8 @@ class CardEventHandlerTest {
         @Test
         @DisplayName("LLM 返回 ```json 代码块包裹时也能正确解析")
         void shouldParseMarkdownCodeBlockWrappedJson() {
-            Agent expert = expert(99L, "专家");
-            when(agentRepository.findById(99L)).thenReturn(Optional.of(expert));
+            Agent concluder = agent(99L, "总结者");
+            when(agentRepository.findById(99L)).thenReturn(Optional.of(concluder));
             String raw = """
                     ```json
                     [{"question":"Q1","answer":"A1","category":"c1"}]
@@ -146,8 +146,8 @@ class CardEventHandlerTest {
         @Test
         @DisplayName("LLM 输出前后包含其他文本时仍能提取 JSON 数组")
         void shouldExtractJsonArrayFromNoisyOutput() {
-            Agent expert = expert(99L, "专家");
-            when(agentRepository.findById(99L)).thenReturn(Optional.of(expert));
+            Agent concluder = agent(99L, "总结者");
+            when(agentRepository.findById(99L)).thenReturn(Optional.of(concluder));
             String noisy = """
                     好的，已为你提取卡片：
                     [{"question":"Q1","answer":"A1"}]
@@ -164,8 +164,8 @@ class CardEventHandlerTest {
         @Test
         @DisplayName("LLM 返回空数组（未提取到卡片）触发重试")
         void emptyArrayShouldTriggerRetry() {
-            Agent expert = expert(99L, "专家");
-            when(agentRepository.findById(99L)).thenReturn(Optional.of(expert));
+            Agent concluder = agent(99L, "总结者");
+            when(agentRepository.findById(99L)).thenReturn(Optional.of(concluder));
             when(llmService.chat(any(), anyString(), any())).thenReturn("[]");
 
             handler.onTopicClosed(topicClosedEvent(1L, 10L, 99L));
@@ -180,8 +180,8 @@ class CardEventHandlerTest {
         @Test
         @DisplayName("LLM 调用抛异常时重试 3 次，最终失败不阻塞主流程")
         void exceptionShouldRetryThreeTimesAndNotThrow() {
-            Agent expert = expert(99L, "专家");
-            when(agentRepository.findById(99L)).thenReturn(Optional.of(expert));
+            Agent concluder = agent(99L, "总结者");
+            when(agentRepository.findById(99L)).thenReturn(Optional.of(concluder));
             when(llmService.chat(any(), anyString(), any()))
                     .thenThrow(new RuntimeException("LLM 服务不可用"));
 
@@ -195,8 +195,8 @@ class CardEventHandlerTest {
         @Test
         @DisplayName("首次失败第二次成功时正常生成卡片（重试机制有效）")
         void shouldSucceedOnRetryAfterFirstFailure() {
-            Agent expert = expert(99L, "专家");
-            when(agentRepository.findById(99L)).thenReturn(Optional.of(expert));
+            Agent concluder = agent(99L, "总结者");
+            when(agentRepository.findById(99L)).thenReturn(Optional.of(concluder));
             String validJson = """
                     [{"question":"Q1","answer":"A1","category":"c1"}]
                     """;
@@ -215,8 +215,8 @@ class CardEventHandlerTest {
         @Test
         @DisplayName("卡片缺少 category 字段时回退为「未分类」")
         void missingCategoryShouldFallbackToUnclassified() {
-            Agent expert = expert(99L, "专家");
-            when(agentRepository.findById(99L)).thenReturn(Optional.of(expert));
+            Agent concluder = agent(99L, "总结者");
+            when(agentRepository.findById(99L)).thenReturn(Optional.of(concluder));
             String json = """
                     [{"question":"Q1","answer":"A1"}]
                     """;
@@ -235,8 +235,8 @@ class CardEventHandlerTest {
         @Test
         @DisplayName("卡片缺少 question 或 answer 时被过滤")
         void cardsMissingQuestionOrAnswerShouldBeFiltered() {
-            Agent expert = expert(99L, "专家");
-            when(agentRepository.findById(99L)).thenReturn(Optional.of(expert));
+            Agent concluder = agent(99L, "总结者");
+            when(agentRepository.findById(99L)).thenReturn(Optional.of(concluder));
             // 一张有效卡片 + 一张缺 answer + 一张缺 question
             String json = """
                     [
@@ -260,8 +260,8 @@ class CardEventHandlerTest {
         @Test
         @DisplayName("生成的卡片携带 topicId 与 LLM 输出字段")
         void generatedCardsShouldCarryTopicIdAndFields() {
-            Agent expert = expert(99L, "专家");
-            when(agentRepository.findById(99L)).thenReturn(Optional.of(expert));
+            Agent concluder = agent(99L, "总结者");
+            when(agentRepository.findById(99L)).thenReturn(Optional.of(concluder));
             String json = """
                     [{"question":"什么是 GC?","answer":"垃圾回收","category":"JVM"}]
                     """;

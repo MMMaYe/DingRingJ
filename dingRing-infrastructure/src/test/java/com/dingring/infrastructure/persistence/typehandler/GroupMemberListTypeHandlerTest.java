@@ -33,7 +33,7 @@ class GroupMemberListTypeHandlerTest {
         PreparedStatement ps = mock(PreparedStatement.class);
         List<GroupMember> members = List.of(
                 new GroupMember(1L, MemberType.USER, MemberRole.OWNER),
-                new GroupMember(10L, MemberType.AGENT, MemberRole.EXPERT)
+                new GroupMember(10L, MemberType.AGENT, MemberRole.MEMBER)
         );
 
         handler.setNonNullParameter(ps, 3, members, JdbcType.VARCHAR);
@@ -44,7 +44,7 @@ class GroupMemberListTypeHandlerTest {
         String json = captor.getValue();
         assertThat(json).contains("\"id\":1").contains("\"id\":10")
                 .contains("\"type\":\"USER\"").contains("\"type\":\"AGENT\"")
-                .contains("\"role\":\"OWNER\"").contains("\"role\":\"EXPERT\"");
+                .contains("\"role\":\"OWNER\"").contains("\"role\":\"MEMBER\"");
     }
 
     @Test

@@ -1,0 +1,25 @@
+[2026-07-27 23:12:47] GET /api/topics/2/conclusion
+{"success":true,"errorCode":null,"message":"操作成功","data":{"topicId":2,"title":"MySQL 索引失效的常见场景","conclusion":"各位群友好，我是苏教授。本次讨论围绕「MySQL索引失效的常见场景」展开，我基于大家的分享内容，按STAR框架输出结构化结论，同时对各成员的观点做简要点评如下：\n\n---\n## 一、Situation（讨论背景）\n本次讨论由群友「冲吧！中年\uD83C\uDF2C️」发起，核心背景是：MySQL索引优化是线上慢查询排查、SQL性能调优的核心手段，不少开发同学对索引失效�
+
+[2026-07-27 23:12:47] GET /api/topics/2/cards
+{"success":true,"errorCode":null,"message":"操作成功","data":[{"id":1,"topicId":2,"topicTitle":"MySQL 索引失效的常见场景","question":"MySQL索引失效的最高频场景是什么？触发根因是什么？","answer":"最高频场景是隐式类型转换导致索引失效，触发根因为查询条件类型与索引字段定义类型不匹配触发隐式类型转换，例如索引字段为varchar类型时，查询条件传入无引号的数字/字符串，MySQL会逐行转换索引列再对比，无法利用B+树有序性，最终退化为全表扫描。","category":"MySQL索引失效场景","createTime":"2026-07-27T23:12:20"},{"id":2,"topicId":2,"topicTitle":"MySQL 索引失效的常见场景","question":"索引列使用函数/表达式导致索引失效的根因是什么？对应的规避方案是什么？","answer":"根因是对索引列做运算、函数调用会破坏B+树的有序性，MySQL无法直接使用索引加速，必须逐行计算函数值再对比。规避方案是将函数/运算转移到查询条件的值侧，改写为范围查询（如BETWEEN）。","category":"MySQL索引失效场景","createTime":"2026-07-27T23:12:20"},{"id":3,"topicId":2,"topicT
+
+[2026-07-27 23:12:47] GET /api/groups/4/messages
+  File "<string>", line 1
+    import sys,json; d=json.load(sys.stdin)["data"]; print("消息总数:", d["total"]); [print(f"  #{m[\"id\"]} [{m[\"senderType\"]}] {m[\"senderName\"]}: {m[\"content\"][:40]}") for m in d["list"]]
+                                                                                                 ^
+SyntaxError: unexpected character after line continuation character
+Traceback (most recent call last):
+  File "<string>", line 5, in <module>
+    for m in d['list']:
+             ~^^^^^^^^
+KeyError: 'list'
+消息总数: 7
+消息总数: 7
+  #8 [USER] 冲吧！中年🌬️: 大家聊聊 MySQL 索引失效都有哪些常见场景？最好举个实际例子
+  #9 [USER] 冲吧！中年🌬️: @苏教授 请总结一下今天的讨论
+  #10 [USER] 冲吧！中年🌬️: 大家聊聊 MySQL 索引失效都有哪些常见场景？最好举个实际例子
+  #11 [AGENT] 老王: 说个最常见的，隐式类型转换。字段定义 varchar，查询却传个数字。比如 ph
+  #12 [AGENT] 老王: 再说个典型的，对索引列做函数。比如 WHERE DATE(create_time
+  #13 [USER] 冲吧！中年🌬️: @苏教授 请总结一下今天的讨论
+  #14 [SYSTEM] 系统: 讨论「MySQL 索引失效的常见场景」已结束，专家结论已生成

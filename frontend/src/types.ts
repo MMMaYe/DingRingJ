@@ -6,7 +6,7 @@
 export interface MemberInfo {
   id: number;
   type: 'USER' | 'AGENT';
-  role: 'OWNER' | 'MEMBER' | 'EXPERT';
+  role: 'OWNER' | 'MEMBER';
   name: string;
   avatar: string | null;
 }
@@ -111,7 +111,7 @@ export interface ConclusionDTO {
   conclusion: string;
   messageCount: number;
   closedAt: string;
-  expertAgentName: string;
+  concluderAgentName: string;
 }
 
 // ---- 分页 ----
@@ -139,11 +139,9 @@ export interface WsPayload {
 export interface CreateGroupRequest {
   name: string;
   agentIds: number[];
-  expertAgentId: number;
 }
 
 /** PUT /api/groups/{id}/members 更新群成员请求 */
 export interface UpdateMembersRequest {
   agentIds: number[];
-  expertAgentId: number;
 }

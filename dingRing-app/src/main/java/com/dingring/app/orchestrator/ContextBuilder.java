@@ -24,6 +24,14 @@ import java.util.function.Function;
 @RequiredArgsConstructor
 public class ContextBuilder {
 
+    /** Agent 自主收束标记：Agent 认为讨论可总结时在回复末尾输出，编排器检测到后触发结束流程 */
+    public static final String CONCLUDE_MARKER = "[[CONCLUDE]]";
+
+    /** 剥离收束标记（消息入库/结论落库前调用） */
+    public static String stripConcludeMarker(String content) {
+        return content == null ? null : content.replace(CONCLUDE_MARKER, "").trim();
+    }
+
     private final MessageRepository messageRepository;
     private final MemoryService memoryService;
 
@@ -42,22 +50,28 @@ public class ContextBuilder {
      */
     public LlmContext build(Agent agent, Long groupId, Long topicId,
                             Function<GroupMessage, String> senderNameOf) {
-        String systemPrompt = buildSystemPrompt(agent, groupId);
+        StringBuilder systemPrompt = new StringBuilder(buildSystemPrompt(agent, groupId));
+        if (topicId != null) {
+            // 自主收束约定：任意 Agent 觉得讨论可以总结时，用标记告知编排器
+            systemPrompt.append("\n\n如果你认为当前主题已经讨论充分、可以收尾总结，")
+                    .append("请在本次发言的末尾另起一行输出标记 ").append(CONCLUDE_MARKER)
+                    .append("（仅在确实认为可以结束时输出，其他情况绝不要提及或输出该标记）。");
+        }
         List<GroupMessage> window = topicId != null
                 ? messageRepository.findRecentByTopicId(topicId, contextWindow)
                 : messageRepository.findRecentByGroupId(groupId, contextWindow);
         List<ChatTurn> turns = toTurns(agent, window, senderNameOf);
-        return new LlmContext(systemPrompt, turns);
+        return new LlmContext(systemPrompt.toString(), turns);
     }
 
     /** 结论生成上下文：当前 Topic 全部消息 + 历史记忆（不走滑动窗口截断的 system 部分） */
-    public LlmContext buildForConclusion(Agent expert, Long groupId, Long topicId, String topicTitle,
+    public LlmContext buildForConclusion(Agent concluder, Long groupId, Long topicId, String topicTitle,
                                          Function<GroupMessage, String> senderNameOf) {
         StringBuilder sp = new StringBuilder();
-        if (expert.getSystemPrompt() != null && !expert.getSystemPrompt().isBlank()) {
-            sp.append(expert.getSystemPrompt()).append("\n\n");
+        if (concluder.getSystemPrompt() != null && !concluder.getSystemPrompt().isBlank()) {
+            sp.append(concluder.getSystemPrompt()).append("\n\n");
         }
-        sp.append("你是本次群讨论的专家总结者。请针对主题「").append(topicTitle)
+        sp.append("你被推选为本次群讨论的总结者。请针对主题「").append(topicTitle)
                 .append("」，基于完整讨论记录，用 STAR 框架（Situation/Task/Action/Result）")
                 .append("输出 Markdown 格式的讨论结论，并对各成员观点做简要点评。");
         String memory = memoryService.retrieveMemory(groupId);
@@ -65,7 +79,7 @@ public class ContextBuilder {
             sp.append("\n\n").append(memory);
         }
         List<GroupMessage> all = messageRepository.findRecentByTopicId(topicId, contextWindow);
-        return new LlmContext(sp.toString(), toTurns(expert, all, senderNameOf));
+        return new LlmContext(sp.toString(), toTurns(concluder, all, senderNameOf));
     }
 
     private String buildSystemPrompt(Agent agent, Long groupId) {

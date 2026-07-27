@@ -13,7 +13,6 @@ import com.dingring.domain.discussion.Topic;
 import com.dingring.domain.discussion.TopicRepository;
 import com.dingring.domain.discussion.TopicStatus;
 import com.dingring.domain.event.TopicCreated;
-import com.dingring.domain.group.Group;
 import com.dingring.domain.group.GroupRepository;
 import com.dingring.domain.group.MessageRepository;
 import com.dingring.domain.agent.AgentRepository;
@@ -102,8 +101,7 @@ public class TopicAppService {
         if (topic.getConclusion() == null) {
             throw new BizException(ErrorCode.NOT_FOUND, "主题尚未生成结论");
         }
-        String expertName = groupRepository.findById(topic.getChatGroupId())
-                .flatMap(Group::expertAgentId)
+        String concluderName = topic.concludedByAgentId()
                 .flatMap(agentRepository::findById)
                 .map(Agent::getName)
                 .orElse(null);
@@ -113,7 +111,7 @@ public class TopicAppService {
                 .conclusion(topic.getConclusion())
                 .messageCount(messageRepository.countByTopicId(topicId))
                 .closedAt(topic.getClosedAt())
-                .expertAgentName(expertName)
+                .concluderAgentName(concluderName)
                 .build();
     }
 

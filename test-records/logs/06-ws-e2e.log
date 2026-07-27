@@ -1,0 +1,19 @@
+[22:56:28] 连接 WebSocket: ws://localhost:8080/ws/chat?groupId=4
+[22:56:28] [OK] WebSocket 已连接
+[22:56:28] >>> 发送用户消息: {"type":"SEND_MESSAGE","data":{"content":"大家聊聊 MySQL 索引失效都有哪些常见场景？最好举个实际例子"}}
+[22:56:29] <<< 收到帧: {"data":{"id":8,"groupId":4,"topicId":2,"senderId":1,"senderName":"冲吧！中年🌬️","senderType":"USER","senderAvatar":null,"messageType":"TEXT","content":"大家聊聊 MySQL 索引失效都有哪些常见场景？最好举个实际例子","replyToMessageId":null,"replyToSenderName":null,"replyToContent":null,"createTime":"2026-07-27T22:56:28.915139"},"type":"NEW_MESSAGE"}
+[22:56:29] <<< 收到帧: {"data":{"groupId":4,"agentName":"老王","agentId":1,"isTyping":true},"type":"AGENT_TYPING"}
+[22:56:29] <<< 收到帧: {"data":{"groupId":4,"agentName":"老王","agentId":1,"isTyping":false},"type":"AGENT_TYPING"}
+[22:56:29] <<< 收到帧: {"data":{"success":false,"errorCode":"ALL_AGENTS_FAILED","message":"所有 Agent 暂时不可用，请稍后重试"},"type":"ERROR"}
+[22:59:29] 阶段1结束: 收到 Agent 回复 0 条
+[22:59:29] >>> 发送收束消息: {"type":"SEND_MESSAGE","data":{"content":"@苏教授 请总结一下今天的讨论"}}
+[22:59:29] <<< 收到帧: {"data":{"id":9,"groupId":4,"topicId":2,"senderId":1,"senderName":"冲吧！中年🌬️","senderType":"USER","senderAvatar":null,"messageType":"TEXT","content":"@苏教授 请总结一下今天的讨论","replyToMessageId":null,"replyToSenderName":null,"replyToContent":null,"createTime":"2026-07-27T22:59:29.767559"},"type":"NEW_MESSAGE"}
+[22:59:30] <<< 收到帧: {"data":{"status":"CONCLUDING","previousStatus":"IN_PROGRESS","groupId":4,"title":"MySQL 索引失效的常见场景","topicId":2},"type":"TOPIC_STATUS_CHANGED"}
+[22:59:30] <<< 收到帧: {"data":{"groupId":4,"agentName":"苏教授","agentId":4,"isTyping":true},"type":"AGENT_TYPING"}
+[22:59:30] <<< 收到帧: {"data":{"status":"IN_PROGRESS","previousStatus":"CONCLUDING","groupId":4,"title":"MySQL 索引失效的常见场景","topicId":2},"type":"TOPIC_STATUS_CHANGED"}
+[22:59:30] <<< 收到帧: {"data":{"success":false,"errorCode":"TOPIC_CONCLUSION_FAILED","message":"结论生成失败，讨论已恢复：LLM 调用失败: 苏教授 - 404 - "},"type":"ERROR"}
+[22:59:30] <<< 收到帧: {"data":{"groupId":4,"agentName":"苏教授","agentId":4,"isTyping":false},"type":"AGENT_TYPING"}
+[23:03:30] 阶段2结束: TOPIC_CLOSED=false
+[23:05:31] 阶段3结束: CARD_GENERATED=false
+[23:05:31] 联调汇总: agent回复=0, 主题收束=false, 卡片生成=false
+[23:05:31] [WS关闭] code=1000 reason=done

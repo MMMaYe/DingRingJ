@@ -53,7 +53,6 @@ export default function ChatPage() {
   // create group form
   const [cgName, setCgName] = useState('');
   const [cgSelectedAgents, setCgSelectedAgents] = useState<Set<number>>(new Set());
-  const [cgExpert, setCgExpert] = useState<number>(0);
   // create topic form
   const [ctTitle, setCtTitle] = useState('');
 
@@ -68,10 +67,6 @@ export default function ChatPage() {
   // ---- 稳定派生数据（供 memo 化的 MessageItem 使用） ----
   const agentNames = useMemo(
     () => group ? group.members.filter(m => m.type === 'AGENT').map(m => m.name) : [],
-    [group],
-  );
-  const expertIds = useMemo(
-    () => new Set(group?.members.filter(m => m.type === 'AGENT' && m.role === 'EXPERT').map(m => m.id) ?? []),
     [group],
   );
 
@@ -352,7 +347,7 @@ export default function ChatPage() {
     if (!activeTopic) return;
     try {
       await API.post(`/api/topics/${activeTopic.id}/conclude`);
-      toast('已发起结束讨论，专家正在总结…', 'success');
+      toast('已发起结束讨论，正在生成总结…', 'success');
     } catch (e: any) { toast(e.message, 'error'); }
   }, [activeTopic]);
 
@@ -372,7 +367,6 @@ export default function ChatPage() {
       setAgents(list);
       setCgName('');
       setCgSelectedAgents(new Set());
-      setCgExpert(list[list.length - 1].id);
       setShowCreateGroup(true);
     } catch (e: any) { toast(e.message, 'error'); }
   }, []);
@@ -393,15 +387,14 @@ export default function ChatPage() {
     const agentIds = [...cgSelectedAgents];
     if (!cgName.trim()) { toast('请输入群名称', 'error'); return; }
     if (!agentIds.length) { toast('请至少选择一个成员 Agent', 'error'); return; }
-    if (agentIds.includes(cgExpert)) { toast('专家不能同时是普通成员', 'error'); return; }
     try {
-      const detail = await API.post<GroupDetail>('/api/groups', { name: cgName.trim(), agentIds, expertAgentId: cgExpert });
+      const detail = await API.post<GroupDetail>('/api/groups', { name: cgName.trim(), agentIds });
       setShowCreateGroup(false);
       toast('群创建成功', 'success');
       await loadGroups();
       selectGroup(detail.id);
     } catch (e: any) { toast(e.message, 'error'); }
-  }, [cgName, cgSelectedAgents, cgExpert, loadGroups, selectGroup]);
+  }, [cgName, cgSelectedAgents, loadGroups, selectGroup]);
 
   // ---- 发起讨论 ----
   const submitCreateTopic = useCallback(async () => {
@@ -528,7 +521,6 @@ export default function ChatPage() {
                   <MessageItem
                     key={m.id}
                     m={m}
-                    expert={m.senderType === 'AGENT' && expertIds.has(m.senderId)}
                     isMatch={matchSet.has(m.id)}
                     isCurrent={currentMatchId === m.id}
                     agentNames={agentNames}
@@ -571,7 +563,7 @@ export default function ChatPage() {
                           <Avatar name={m.name} size="sm" />
                           <span>{m.name}</span>
                           <span className="mention-pop__role">
-                            {m.role === 'EXPERT' ? <span className="tag tag--warning">专家</span> : <span className="tag">成员</span>}
+                            <span className="tag">成员</span>
                           </span>
                         </div>
                       ))}
@@ -582,7 +574,7 @@ export default function ChatPage() {
                     className="input"
                     rows={1}
                     value={inputText}
-                    placeholder="输入消息，@ 可提及 Agent，@专家 结束讨论并生成结论…"
+                    placeholder="输入消息，@ 可提及 Agent，@成员说「总结一下」可结束讨论并生成结论…"
                     onKeyDown={handleKeyDown}
                     onChange={e => {
                       setInputText(e.target.value);
@@ -595,7 +587,7 @@ export default function ChatPage() {
                 </div>
                 <button className="btn btn--brand" onClick={sendMessage} disabled={!inputText.trim() || !connected}>发送</button>
               </div>
-              <div className="chat-input__hint">Enter 发送 · Shift+Enter 换行 · @专家花名 触发总结陈词</div>
+              <div className="chat-input__hint">Enter 发送 · Shift+Enter 换行 · @成员说「总结一下」触发总结陈词</div>
             </div>
           </>
         )}
@@ -614,8 +606,7 @@ export default function ChatPage() {
                   <div className="member-item__info">
                     <span className="member-item__name">{m.name}</span>
                     <div className="member-item__row">
-                      {m.role === 'EXPERT' ? <span className="tag tag--warning">专家</span>
-                        : m.type === 'USER' ? <span className="tag tag--brand">群主</span>
+                      {m.type === 'USER' ? <span className="tag tag--brand">群主</span>
                         : <span className="tag tag--neutral">成员</span>}
                     </div>
                   </div>
@@ -725,17 +716,13 @@ export default function ChatPage() {
         width={540}
         footer={<>
           <div className="modal__preview">
-            {/* 头像串联预览：成员 + 专家 */}
+            {/* 头像串联预览：已选成员 */}
             <div className="preview-stack" aria-hidden>
-              {[...cgSelectedAgents].slice(0, 4).map(id => {
+              {[...cgSelectedAgents].slice(0, 5).map(id => {
                 const a = agents.find(x => x.id === id);
                 return a ? <div key={id} className="preview-stack__item"><Avatar name={a.name} size="sm" /></div> : null;
               })}
-              {cgExpert && (() => {
-                const ex = agents.find(x => x.id === cgExpert);
-                return ex ? <div className="preview-stack__item preview-stack__item--expert"><Avatar name={ex.name} size="sm" /></div> : null;
-              })()}
-              {cgSelectedAgents.size === 0 && !cgExpert && (
+              {cgSelectedAgents.size === 0 && (
                 <div className="preview-stack__empty">未选择</div>
               )}
             </div>
@@ -743,10 +730,6 @@ export default function ChatPage() {
               <span className="preview-pill">
                 <span className="preview-pill__dot" />
                 {cgSelectedAgents.size} 位成员
-              </span>
-              <span className="preview-pill preview-pill--expert">
-                <span className="preview-pill__dot" />
-                {cgExpert ? '1 位专家' : '未指定'}
               </span>
             </div>
           </div>
@@ -788,7 +771,7 @@ export default function ChatPage() {
             <span className="chapter__num">02</span>
             <div className="chapter__title-wrap">
               <h3 className="chapter__title">讨论成员</h3>
-              <span className="chapter__hint">参与普通讨论的 Agent，可多选</span>
+              <span className="chapter__hint">参与讨论的 Agent，任意成员均可总结，可多选</span>
             </div>
             <span className="chapter__count">{cgSelectedAgents.size}<span className="chapter__count-sep">/</span>{agents.length}</span>
           </header>
@@ -796,14 +779,12 @@ export default function ChatPage() {
             {agents.map((a, idx) => {
               const checked = cgSelectedAgents.has(a.id);
               const order = checked ? [...cgSelectedAgents].indexOf(a.id) + 1 : 0;
-              const isExpert = a.id === cgExpert;
               return (
                 <div
                   key={a.id}
-                  className={`member-card${checked ? ' is-checked' : ''}${isExpert ? ' is-locked' : ''}`}
+                  className={`member-card${checked ? ' is-checked' : ''}`}
                   style={{ animationDelay: `${idx * 28}ms` }}
                   onClick={() => {
-                    if (isExpert) return;
                     setCgSelectedAgents(prev => {
                       const next = new Set(prev);
                       next.has(a.id) ? next.delete(a.id) : next.add(a.id);
@@ -812,9 +793,8 @@ export default function ChatPage() {
                   }}
                   role="checkbox"
                   aria-checked={checked}
-                  aria-disabled={isExpert}
-                  tabIndex={isExpert ? -1 : 0}
-                  onKeyDown={e => { if (!isExpert && (e.key === ' ' || e.key === 'Enter')) { e.preventDefault(); setCgSelectedAgents(prev => { const next = new Set(prev); next.has(a.id) ? next.delete(a.id) : next.add(a.id); return next; }); } }}
+                  tabIndex={0}
+                  onKeyDown={e => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); setCgSelectedAgents(prev => { const next = new Set(prev); next.has(a.id) ? next.delete(a.id) : next.add(a.id); return next; }); } }}
                 >
                   {checked && <span className="member-card__order" aria-hidden>{order}</span>}
                   {checked && (
@@ -827,48 +807,6 @@ export default function ChatPage() {
                     <div className="member-card__name">{a.name}</div>
                     <div className="member-card__desc">{a.description || a.modelName}</div>
                   </div>
-                  {isExpert && <span className="tag tag--warning member-card__role-tag">已选为专家</span>}
-                </div>
-              );
-            })}
-          </div>
-        </section>
-
-        {/* 章节 03：选专家 */}
-        <section className="chapter">
-          <header className="chapter__head">
-            <span className="chapter__num">03</span>
-            <div className="chapter__title-wrap">
-              <h3 className="chapter__title">专家 Agent</h3>
-              <span className="chapter__hint">负责讨论结束时的总结陈词，不参与普通讨论</span>
-            </div>
-          </header>
-          <div className="expert-grid">
-            {agents.map(a => {
-              const selected = a.id === cgExpert;
-              const inMembers = cgSelectedAgents.has(a.id);
-              return (
-                <div
-                  key={a.id}
-                  className={`expert-card${selected ? ' is-selected' : ''}${inMembers ? ' is-conflict' : ''}`}
-                  onClick={() => {
-                    if (inMembers) return;
-                    setCgExpert(a.id);
-                  }}
-                  title={inMembers ? '请先取消该 Agent 的普通成员勾选' : ''}
-                >
-                  <Avatar name={a.name} size="sm" />
-                  <div className="expert-card__meta">
-                    <div className="expert-card__name">{a.name}</div>
-                    <div className="expert-card__desc">{a.description || a.modelName}</div>
-                  </div>
-                  {selected ? (
-                    <span className="tag tag--warning">已选专家</span>
-                  ) : inMembers ? (
-                    <span className="tag tag--neutral">成员中</span>
-                  ) : (
-                    <span className="expert-card__pick">点击提名</span>
-                  )}
                 </div>
               );
             })}

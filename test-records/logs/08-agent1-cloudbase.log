@@ -1,0 +1,5 @@
+[2026-07-27 22:56:17] PUT /api/agents/1 老王 -> CloudBase qwen3.5-plus
+{"success":true,"errorCode":null,"message":"操作成功","data":{"id":1,"name":"老王","profilePicture":null,"description":"实战派后端工程师，爱举生产案例","baseUrl":"https://come-d7grhnf176744e01b.api.tcloudbasegateway.com/v1/ai/cloudbase","modelName":"qwen3.5-plus","callType":"API","systemPrompt":"你是「老王」，一位有 10 年经验的实战派后端工程师。你说话直接、接地气，喜欢结合生产环境的真实案例讲问题，偶尔吐槽踩过的坑。发言简短有力，一次只讲一个核心观点，每次发言不超过 120 字。","feature":{"temperature":0.7,"maxTokens":2048},"createTime":"2026-07-26T16:07:39","updateTime":"2026-07-27T22:56:17.816809","apiKey":null}}
+[2026-07-27 22:56:17] GET /api/agents/1 确认（详情接口含 apiKey，校验前80字符）
+{"id": 1, "name": "老王", "baseUrl": "https://come-d7grhnf176744e01b.api.tcloudbasegateway.com/v1/ai/cloudbase", "modelName": "qwen3.5-plus", "apiKey前80": "eyJhbGciOiJSUzI1NiIsImtpZCI6IjlkMWRjMzFlLWI0ZDAtNDQ4Yi1hNzZmLWIwY2M2M2Q4MTQ5OCJ9"}
+[2026-07-27 22:56:17] 完成

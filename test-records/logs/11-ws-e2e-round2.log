@@ -1,0 +1,27 @@
+[23:10:04] 连接 WebSocket: ws://localhost:8080/ws/chat?groupId=4
+[23:10:04] [OK] WebSocket 已连接
+[23:10:04] >>> 发送用户消息: {"type":"SEND_MESSAGE","data":{"content":"大家聊聊 MySQL 索引失效都有哪些常见场景？最好举个实际例子"}}
+[23:10:04] <<< 收到帧: {"data":{"id":10,"groupId":4,"topicId":2,"senderId":1,"senderName":"冲吧！中年🌬️","senderType":"USER","senderAvatar":null,"messageType":"TEXT","content":"大家聊聊 MySQL 索引失效都有哪些常见场景？最好举个实际例子","replyToMessageId":null,"replyToSenderName":null,"replyToContent":null,"createTime":"2026-07-27T23:10:04.330555"},"type":"NEW_MESSAGE"}
+[23:10:04] <<< 收到帧: {"data":{"isTyping":true,"groupId":4,"agentName":"老王","agentId":1},"type":"AGENT_TYPING"}
+[23:10:33] <<< 收到帧: {"data":{"id":11,"groupId":4,"topicId":2,"senderId":1,"senderName":"老王","senderType":"AGENT","senderAvatar":null,"messageType":"TEXT","content":"说个最常见的，隐式类型转换。字段定义 varchar，查询却传个数字。比如 phone 字段，你写 WHERE phone = 13800000000，没加引号。MySQL 被迫逐行转换对比，索引直接废掉，全表扫描。线上慢查询一大半是这原因，SQL 写得严谨点！","replyToMessageId":null,"replyToSenderName":null,"replyToContent":null,"createTime":"2026-07-27T23:10:32.928145"},"type":"NEW_MESSAGE"}
+[23:10:33] *** Agent 回复计数 = 1
+[23:10:33] <<< 收到帧: {"data":{"isTyping":false,"groupId":4,"agentName":"老王","agentId":1},"type":"AGENT_TYPING"}
+[23:10:33] <<< 收到帧: {"data":{"isTyping":true,"groupId":4,"agentName":"老王","agentId":1},"type":"AGENT_TYPING"}
+[23:11:41] <<< 收到帧: {"data":{"id":12,"groupId":4,"topicId":2,"senderId":1,"senderName":"老王","senderType":"AGENT","senderAvatar":null,"messageType":"TEXT","content":"再说个典型的，对索引列做函数。比如 WHERE DATE(create_time) = '2023-01-01'，索引直接废了！改成范围查询：WHERE create_time BETWEEN '2023-01-01' AND '2023-01-01 23:59:59'。这种低级错误 Code Review 必须拦住，别等上线报警才哭。","replyToMessageId":null,"replyToSenderName":null,"replyToContent":null,"createTime":"2026-07-27T23:11:41.090941"},"type":"NEW_MESSAGE"}
+[23:11:41] *** Agent 回复计数 = 2
+[23:11:41] <<< 收到帧: {"data":{"isTyping":false,"groupId":4,"agentName":"老王","agentId":1},"type":"AGENT_TYPING"}
+[23:11:41] 阶段1结束: 收到 Agent 回复 2 条
+[23:11:41] >>> 发送收束消息: {"type":"SEND_MESSAGE","data":{"content":"@苏教授 请总结一下今天的讨论"}}
+[23:11:41] <<< 收到帧: {"data":{"id":13,"groupId":4,"topicId":2,"senderId":1,"senderName":"冲吧！中年🌬️","senderType":"USER","senderAvatar":null,"messageType":"TEXT","content":"@苏教授 请总结一下今天的讨论","replyToMessageId":null,"replyToSenderName":null,"replyToContent":null,"createTime":"2026-07-27T23:11:41.648103"},"type":"NEW_MESSAGE"}
+[23:11:41] <<< 收到帧: {"data":{"topicId":2,"status":"CONCLUDING","previousStatus":"IN_PROGRESS","groupId":4,"title":"MySQL 索引失效的常见场景"},"type":"TOPIC_STATUS_CHANGED"}
+[23:11:41] <<< 收到帧: {"data":{"isTyping":true,"groupId":4,"agentName":"苏教授","agentId":4},"type":"AGENT_TYPING"}
+[23:12:06] <<< 收到帧: {"data":{"id":14,"groupId":4,"topicId":2,"senderId":0,"senderName":"系统","senderType":"SYSTEM","senderAvatar":null,"messageType":"SYSTEM_NOTICE","content":"讨论「MySQL 索引失效的常见场景」已结束，专家结论已生成","replyToMessageId":null,"replyToSenderName":null,"replyToContent":null,"createTime":"2026-07-27T23:12:06.602773"},"type":"NEW_MESSAGE"}
+[23:12:06] <<< 收到帧: {"data":{"groupId":4,"closedAt":"2026-07-27T23:12:06.449834","messageCount":6,"title":"MySQL 索引失效的常见场景","conclusion":"各位群友好，我是苏教授。本次讨论围绕「MySQL索引失效的常见场景」展开，我基于大家的分享内容，按STAR框架输出结构化结论，同时对各成员的观点做简要点评如下：\n\n---\n## 一、Situation（讨论背景）\n本次讨论由群友「冲吧！中年🌬️」发起，核心背景是：MySQL索引优化是线上慢查询排查、SQL性能调优的核心手段，不少开发同学对索引失效的触发场景认知不足，导致线上频繁出现本可避免的全表扫描慢查询，希望通过实际案例梳理常见失效原因，沉淀可落地的规避经验。\n## 二、Task（讨论目标）\n本次讨论的核心任务：梳理MySQL索引失效的高频触发场景，结合真实业务案例给出可落地的规避方案，帮助群友掌握索引优化的核心注意事项，降低线上慢查询故障概率。\n## 三、Action（讨论过程与观点点评）\n本次讨论共2位群友参与分享，观点点评如下：\n1. **发起人「冲吧！中年🌬️」**：明确提出「结合实际案例分享索引失效场景」的讨论要求，引导讨论聚焦实战场景，避免空泛理论，为讨论落地提供了明确方向。\n2. **群友「老王」**：分享了2个线上最高频的索引失效场景，观点质量高、案例典型，点评如下：\n   - 观点1：隐式类型转换导致索引失效\n     点评：该场景是线上慢查询中索引失效的Top1原因，案例完全符合实际业务情况。当索引字段为字符串类型（如`varchar`）时，若查询条件传入无引号的数字/字符串，MySQL会触发隐式类型转换，将索引列逐行转换为对应类型再对比，无法利用B+树的有序性，最终退化为全表扫描。给出的规避方向（严格保证查询条件与字段类型一致）完全正确，是Code Review中必须卡点的核心规则。\n   - 观点2：索引列使用函数/表达式导致索引失效\n     点评：该场景是第二高频的索引失效原因...(截断,总长1598)
+[23:12:06] *** 主题已收束（专家结论已生成）
+[23:12:06] <<< 收到帧: {"data":{"isTyping":false,"groupId":4,"agentName":"苏教授","agentId":4},"type":"AGENT_TYPING"}
+[23:12:07] 阶段2结束: TOPIC_CLOSED=true
+[23:12:19] <<< 收到帧: {"data":{"cardCount":4,"cards":[{"id":1,"category":"MySQL索引失效场景","question":"MySQL索引失效的最高频场景是什么？触发根因是什么？"},{"id":2,"category":"MySQL索引失效场景","question":"索引列使用函数/表达式导致索引失效的根因是什么？对应的规避方案是什么？"},{"id":3,"category":"MySQL索引优化","question":"如何避免隐式类型转换导致的MySQL索引失效？"},{"id":4,"category":"MySQL运维最佳实践","question":"降低线上因索引失效出现慢查询故障的常规手段有哪些？"}],"topicId":2},"type":"CARD_GENERATED"}
+[23:12:19] *** 知识卡片已生成
+[23:12:20] 阶段3结束: CARD_GENERATED=true
+[23:12:20] 联调汇总: agent回复=2, 主题收束=true, 卡片生成=true
+[23:12:20] [WS关闭] code=1000 reason=done

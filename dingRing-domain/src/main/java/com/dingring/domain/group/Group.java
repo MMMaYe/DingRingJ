@@ -5,7 +5,6 @@ import lombok.Data;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 /**
  * 群聚合根（表 chat_group）。
@@ -27,25 +26,14 @@ public class Group {
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
 
-    /** 普通成员 Agent ID 列表（不含专家） */
+    /** 成员 Agent ID 列表（所有 Agent 地位平等，均可参与讨论与总结） */
     public List<Long> memberAgentIds() {
         if (groupMember == null) {
             return List.of();
         }
         return groupMember.stream()
-                .filter(m -> m.isAgent() && !m.isExpert())
+                .filter(GroupMember::isAgent)
                 .map(GroupMember::getId)
                 .toList();
-    }
-
-    /** 专家 Agent ID */
-    public Optional<Long> expertAgentId() {
-        if (groupMember == null) {
-            return Optional.empty();
-        }
-        return groupMember.stream()
-                .filter(m -> m.isAgent() && m.isExpert())
-                .map(GroupMember::getId)
-                .findFirst();
     }
 }

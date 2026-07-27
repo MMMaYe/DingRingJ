@@ -1,0 +1,723 @@
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v3.4.7)
+
+2026-07-27T22:44:59.454+08:00  INFO 9228 --- [dingring] [           main] com.dingring.DingRingApplication         : Starting DingRingApplication v0.1.0 using Java 21.0.11 with PID 9228 (/Users/Zhuanz/IdeaProjects/DingRingJ/start/target/start-0.1.0.jar started by Zhuanz in /Users/Zhuanz/IdeaProjects/DingRingJ)
+2026-07-27T22:44:59.456+08:00  INFO 9228 --- [dingring] [           main] com.dingring.DingRingApplication         : No active profile set, falling back to 1 default profile: "default"
+2026-07-27T22:45:00.343+08:00  INFO 9228 --- [dingring] [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8080 (http)
+2026-07-27T22:45:00.353+08:00  INFO 9228 --- [dingring] [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-07-27T22:45:00.353+08:00  INFO 9228 --- [dingring] [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.42]
+2026-07-27T22:45:00.372+08:00  INFO 9228 --- [dingring] [           main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2026-07-27T22:45:00.373+08:00  INFO 9228 --- [dingring] [           main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 762 ms
+2026-07-27T22:45:00.766+08:00  INFO 9228 --- [dingring] [           main] o.s.b.a.w.s.WelcomePageHandlerMapping    : Adding welcome page: class path resource [static/index.html]
+2026-07-27T22:45:00.943+08:00  INFO 9228 --- [dingring] [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8080 (http) with context path '/'
+2026-07-27T22:45:00.956+08:00  INFO 9228 --- [dingring] [           main] com.dingring.DingRingApplication         : Started DingRingApplication in 1.883 seconds (process running for 2.185)
+2026-07-27T22:45:02.622+08:00  INFO 9228 --- [dingring] [nio-8080-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-07-27T22:45:02.622+08:00  INFO 9228 --- [dingring] [nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-07-27T22:45:02.623+08:00  INFO 9228 --- [dingring] [nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 1 ms
+2026-07-27T22:45:02.667+08:00  INFO 9228 --- [dingring] [nio-8080-exec-1] c.d.adapter.websocket.WsSessionManager   : WS 连接注册: groupId=2, sessionId=e6eb126a-5ed8-6c29-7ec6-f3ffc0014f9d, 在线数=1
+2026-07-27T22:45:16.745+08:00  INFO 9228 --- [dingring] [nio-8080-exec-2] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-07-27T22:45:17.154+08:00  INFO 9228 --- [dingring] [nio-8080-exec-2] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection com.mysql.cj.jdbc.ConnectionImpl@823f053
+2026-07-27T22:45:17.155+08:00  INFO 9228 --- [dingring] [nio-8080-exec-2] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-07-27T22:47:18.767+08:00  INFO 9228 --- [dingring] [nio-8080-exec-7] c.d.adapter.websocket.WsSessionManager   : WS 连接注册: groupId=2, sessionId=02bc0680-dac3-1b4b-c506-dad59deeac0f, 在线数=2
+2026-07-27T22:48:02.899+08:00  INFO 9228 --- [dingring] [nio-8080-exec-7] c.d.adapter.websocket.WsSessionManager   : WS 连接注册: groupId=3, sessionId=9c2bb948-01db-5dc4-61f3-b934b1e934a1, 在线数=1
+2026-07-27T22:48:02.900+08:00  INFO 9228 --- [dingring] [nio-8080-exec-2] c.d.adapter.websocket.WsSessionManager   : WS 连接注销: groupId=2, sessionId=02bc0680-dac3-1b4b-c506-dad59deeac0f
+2026-07-27T22:48:55.036+08:00  WARN 9228 --- [dingring] [      group-3-0] o.springframework.ai.retry.RetryUtils    : Retry error. Retry count:1
+
+org.springframework.ai.retry.NonTransientAiException: 404 - 
+	at org.springframework.ai.retry.RetryUtils$1.handleError(RetryUtils.java:63) ~[spring-ai-retry-1.0.0-M6.jar!/:1.0.0-M6]
+	at org.springframework.web.client.ResponseErrorHandler.handleError(ResponseErrorHandler.java:58) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.StatusHandler.lambda$fromErrorHandler$1(StatusHandler.java:71) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.StatusHandler.handle(StatusHandler.java:146) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultResponseSpec.applyStatusHandlers(DefaultRestClient.java:831) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultResponseSpec.lambda$readBody$4(DefaultRestClient.java:820) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient.readWithMessageConverters(DefaultRestClient.java:216) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultResponseSpec.readBody(DefaultRestClient.java:819) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultResponseSpec.lambda$toEntityInternal$2(DefaultRestClient.java:775) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultRequestBodyUriSpec.exchangeInternal(DefaultRestClient.java:579) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultRequestBodyUriSpec.exchange(DefaultRestClient.java:533) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.RestClient$RequestHeadersSpec.exchange(RestClient.java:680) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultResponseSpec.executeAndExtract(DefaultRestClient.java:814) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultResponseSpec.toEntityInternal(DefaultRestClient.java:774) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultResponseSpec.toEntity(DefaultRestClient.java:763) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.ai.openai.api.OpenAiApi.chatCompletionEntity(OpenAiApi.java:257) ~[spring-ai-openai-1.0.0-M6.jar!/:1.0.0-M6]
+	at org.springframework.ai.openai.OpenAiChatModel.lambda$internalCall$1(OpenAiChatModel.java:274) ~[spring-ai-openai-1.0.0-M6.jar!/:1.0.0-M6]
+	at org.springframework.retry.support.RetryTemplate.doExecute(RetryTemplate.java:357) ~[spring-retry-2.0.12.jar!/:na]
+	at org.springframework.retry.support.RetryTemplate.execute(RetryTemplate.java:230) ~[spring-retry-2.0.12.jar!/:na]
+	at org.springframework.ai.openai.OpenAiChatModel.lambda$internalCall$3(OpenAiChatModel.java:274) ~[spring-ai-openai-1.0.0-M6.jar!/:1.0.0-M6]
+	at io.micrometer.observation.Observation.observe(Observation.java:564) ~[micrometer-observation-1.14.8.jar!/:1.14.8]
+	at org.springframework.ai.openai.OpenAiChatModel.internalCall(OpenAiChatModel.java:271) ~[spring-ai-openai-1.0.0-M6.jar!/:1.0.0-M6]
+	at org.springframework.ai.openai.OpenAiChatModel.call(OpenAiChatModel.java:255) ~[spring-ai-openai-1.0.0-M6.jar!/:1.0.0-M6]
+	at com.dingring.infrastructure.llm.SpringAiLlmService.chat(SpringAiLlmService.java:47) ~[dingRing-infrastructure-0.1.0.jar!/:0.1.0]
+	at com.dingring.app.orchestrator.ChatOrchestrator.chatWithRetry(ChatOrchestrator.java:297) ~[dingRing-app-0.1.0.jar!/:0.1.0]
+	at com.dingring.app.orchestrator.ChatOrchestrator.speakOnce(ChatOrchestrator.java:262) ~[dingRing-app-0.1.0.jar!/:0.1.0]
+	at com.dingring.app.orchestrator.ChatOrchestrator.runScheduleLoop(ChatOrchestrator.java:211) ~[dingRing-app-0.1.0.jar!/:0.1.0]
+	at com.dingring.app.orchestrator.ChatOrchestrator.lambda$onUserMessage$1(ChatOrchestrator.java:111) ~[dingRing-app-0.1.0.jar!/:0.1.0]
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144) ~[na:na]
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642) ~[na:na]
+	at java.base/java.lang.VirtualThread.run(VirtualThread.java:329) ~[na:na]
+
+2026-07-27T22:48:55.038+08:00  WARN 9228 --- [dingring] [      group-3-0] c.d.i.llm.SpringAiLlmService             : LLM 调用失败, agent=老王, model=step-3.7-flash
+
+org.springframework.ai.retry.NonTransientAiException: 404 - 
+	at org.springframework.ai.retry.RetryUtils$1.handleError(RetryUtils.java:63) ~[spring-ai-retry-1.0.0-M6.jar!/:1.0.0-M6]
+	at org.springframework.web.client.ResponseErrorHandler.handleError(ResponseErrorHandler.java:58) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.StatusHandler.lambda$fromErrorHandler$1(StatusHandler.java:71) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.StatusHandler.handle(StatusHandler.java:146) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultResponseSpec.applyStatusHandlers(DefaultRestClient.java:831) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultResponseSpec.lambda$readBody$4(DefaultRestClient.java:820) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient.readWithMessageConverters(DefaultRestClient.java:216) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultResponseSpec.readBody(DefaultRestClient.java:819) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultResponseSpec.lambda$toEntityInternal$2(DefaultRestClient.java:775) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultRequestBodyUriSpec.exchangeInternal(DefaultRestClient.java:579) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultRequestBodyUriSpec.exchange(DefaultRestClient.java:533) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.RestClient$RequestHeadersSpec.exchange(RestClient.java:680) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultResponseSpec.executeAndExtract(DefaultRestClient.java:814) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultResponseSpec.toEntityInternal(DefaultRestClient.java:774) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultResponseSpec.toEntity(DefaultRestClient.java:763) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.ai.openai.api.OpenAiApi.chatCompletionEntity(OpenAiApi.java:257) ~[spring-ai-openai-1.0.0-M6.jar!/:1.0.0-M6]
+	at org.springframework.ai.openai.OpenAiChatModel.lambda$internalCall$1(OpenAiChatModel.java:274) ~[spring-ai-openai-1.0.0-M6.jar!/:1.0.0-M6]
+	at org.springframework.retry.support.RetryTemplate.doExecute(RetryTemplate.java:357) ~[spring-retry-2.0.12.jar!/:na]
+	at org.springframework.retry.support.RetryTemplate.execute(RetryTemplate.java:230) ~[spring-retry-2.0.12.jar!/:na]
+	at org.springframework.ai.openai.OpenAiChatModel.lambda$internalCall$3(OpenAiChatModel.java:274) ~[spring-ai-openai-1.0.0-M6.jar!/:1.0.0-M6]
+	at io.micrometer.observation.Observation.observe(Observation.java:564) ~[micrometer-observation-1.14.8.jar!/:1.14.8]
+	at org.springframework.ai.openai.OpenAiChatModel.internalCall(OpenAiChatModel.java:271) ~[spring-ai-openai-1.0.0-M6.jar!/:1.0.0-M6]
+	at org.springframework.ai.openai.OpenAiChatModel.call(OpenAiChatModel.java:255) ~[spring-ai-openai-1.0.0-M6.jar!/:1.0.0-M6]
+	at com.dingring.infrastructure.llm.SpringAiLlmService.chat(SpringAiLlmService.java:47) ~[dingRing-infrastructure-0.1.0.jar!/:0.1.0]
+	at com.dingring.app.orchestrator.ChatOrchestrator.chatWithRetry(ChatOrchestrator.java:297) ~[dingRing-app-0.1.0.jar!/:0.1.0]
+	at com.dingring.app.orchestrator.ChatOrchestrator.speakOnce(ChatOrchestrator.java:262) ~[dingRing-app-0.1.0.jar!/:0.1.0]
+	at com.dingring.app.orchestrator.ChatOrchestrator.runScheduleLoop(ChatOrchestrator.java:211) ~[dingRing-app-0.1.0.jar!/:0.1.0]
+	at com.dingring.app.orchestrator.ChatOrchestrator.lambda$onUserMessage$1(ChatOrchestrator.java:111) ~[dingRing-app-0.1.0.jar!/:0.1.0]
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144) ~[na:na]
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642) ~[na:na]
+	at java.base/java.lang.VirtualThread.run(VirtualThread.java:329) ~[na:na]
+
+2026-07-27T22:48:55.039+08:00  INFO 9228 --- [dingring] [      group-3-0] c.d.app.orchestrator.ChatOrchestrator    : LLM 首次调用失败，重试 1 次, agent=老王
+2026-07-27T22:48:55.129+08:00  WARN 9228 --- [dingring] [      group-3-0] o.springframework.ai.retry.RetryUtils    : Retry error. Retry count:1
+
+org.springframework.ai.retry.NonTransientAiException: 404 - 
+	at org.springframework.ai.retry.RetryUtils$1.handleError(RetryUtils.java:63) ~[spring-ai-retry-1.0.0-M6.jar!/:1.0.0-M6]
+	at org.springframework.web.client.ResponseErrorHandler.handleError(ResponseErrorHandler.java:58) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.StatusHandler.lambda$fromErrorHandler$1(StatusHandler.java:71) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.StatusHandler.handle(StatusHandler.java:146) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultResponseSpec.applyStatusHandlers(DefaultRestClient.java:831) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultResponseSpec.lambda$readBody$4(DefaultRestClient.java:820) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient.readWithMessageConverters(DefaultRestClient.java:216) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultResponseSpec.readBody(DefaultRestClient.java:819) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultResponseSpec.lambda$toEntityInternal$2(DefaultRestClient.java:775) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultRequestBodyUriSpec.exchangeInternal(DefaultRestClient.java:579) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultRequestBodyUriSpec.exchange(DefaultRestClient.java:533) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.RestClient$RequestHeadersSpec.exchange(RestClient.java:680) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultResponseSpec.executeAndExtract(DefaultRestClient.java:814) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultResponseSpec.toEntityInternal(DefaultRestClient.java:774) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultResponseSpec.toEntity(DefaultRestClient.java:763) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.ai.openai.api.OpenAiApi.chatCompletionEntity(OpenAiApi.java:257) ~[spring-ai-openai-1.0.0-M6.jar!/:1.0.0-M6]
+	at org.springframework.ai.openai.OpenAiChatModel.lambda$internalCall$1(OpenAiChatModel.java:274) ~[spring-ai-openai-1.0.0-M6.jar!/:1.0.0-M6]
+	at org.springframework.retry.support.RetryTemplate.doExecute(RetryTemplate.java:357) ~[spring-retry-2.0.12.jar!/:na]
+	at org.springframework.retry.support.RetryTemplate.execute(RetryTemplate.java:230) ~[spring-retry-2.0.12.jar!/:na]
+	at org.springframework.ai.openai.OpenAiChatModel.lambda$internalCall$3(OpenAiChatModel.java:274) ~[spring-ai-openai-1.0.0-M6.jar!/:1.0.0-M6]
+	at io.micrometer.observation.Observation.observe(Observation.java:564) ~[micrometer-observation-1.14.8.jar!/:1.14.8]
+	at org.springframework.ai.openai.OpenAiChatModel.internalCall(OpenAiChatModel.java:271) ~[spring-ai-openai-1.0.0-M6.jar!/:1.0.0-M6]
+	at org.springframework.ai.openai.OpenAiChatModel.call(OpenAiChatModel.java:255) ~[spring-ai-openai-1.0.0-M6.jar!/:1.0.0-M6]
+	at com.dingring.infrastructure.llm.SpringAiLlmService.chat(SpringAiLlmService.java:47) ~[dingRing-infrastructure-0.1.0.jar!/:0.1.0]
+	at com.dingring.app.orchestrator.ChatOrchestrator.chatWithRetry(ChatOrchestrator.java:300) ~[dingRing-app-0.1.0.jar!/:0.1.0]
+	at com.dingring.app.orchestrator.ChatOrchestrator.speakOnce(ChatOrchestrator.java:262) ~[dingRing-app-0.1.0.jar!/:0.1.0]
+	at com.dingring.app.orchestrator.ChatOrchestrator.runScheduleLoop(ChatOrchestrator.java:211) ~[dingRing-app-0.1.0.jar!/:0.1.0]
+	at com.dingring.app.orchestrator.ChatOrchestrator.lambda$onUserMessage$1(ChatOrchestrator.java:111) ~[dingRing-app-0.1.0.jar!/:0.1.0]
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144) ~[na:na]
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642) ~[na:na]
+	at java.base/java.lang.VirtualThread.run(VirtualThread.java:329) ~[na:na]
+
+2026-07-27T22:48:55.130+08:00  WARN 9228 --- [dingring] [      group-3-0] c.d.i.llm.SpringAiLlmService             : LLM 调用失败, agent=老王, model=step-3.7-flash
+
+org.springframework.ai.retry.NonTransientAiException: 404 - 
+	at org.springframework.ai.retry.RetryUtils$1.handleError(RetryUtils.java:63) ~[spring-ai-retry-1.0.0-M6.jar!/:1.0.0-M6]
+	at org.springframework.web.client.ResponseErrorHandler.handleError(ResponseErrorHandler.java:58) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.StatusHandler.lambda$fromErrorHandler$1(StatusHandler.java:71) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.StatusHandler.handle(StatusHandler.java:146) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultResponseSpec.applyStatusHandlers(DefaultRestClient.java:831) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultResponseSpec.lambda$readBody$4(DefaultRestClient.java:820) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient.readWithMessageConverters(DefaultRestClient.java:216) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultResponseSpec.readBody(DefaultRestClient.java:819) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultResponseSpec.lambda$toEntityInternal$2(DefaultRestClient.java:775) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultRequestBodyUriSpec.exchangeInternal(DefaultRestClient.java:579) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultRequestBodyUriSpec.exchange(DefaultRestClient.java:533) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.RestClient$RequestHeadersSpec.exchange(RestClient.java:680) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultResponseSpec.executeAndExtract(DefaultRestClient.java:814) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultResponseSpec.toEntityInternal(DefaultRestClient.java:774) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultResponseSpec.toEntity(DefaultRestClient.java:763) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.ai.openai.api.OpenAiApi.chatCompletionEntity(OpenAiApi.java:257) ~[spring-ai-openai-1.0.0-M6.jar!/:1.0.0-M6]
+	at org.springframework.ai.openai.OpenAiChatModel.lambda$internalCall$1(OpenAiChatModel.java:274) ~[spring-ai-openai-1.0.0-M6.jar!/:1.0.0-M6]
+	at org.springframework.retry.support.RetryTemplate.doExecute(RetryTemplate.java:357) ~[spring-retry-2.0.12.jar!/:na]
+	at org.springframework.retry.support.RetryTemplate.execute(RetryTemplate.java:230) ~[spring-retry-2.0.12.jar!/:na]
+	at org.springframework.ai.openai.OpenAiChatModel.lambda$internalCall$3(OpenAiChatModel.java:274) ~[spring-ai-openai-1.0.0-M6.jar!/:1.0.0-M6]
+	at io.micrometer.observation.Observation.observe(Observation.java:564) ~[micrometer-observation-1.14.8.jar!/:1.14.8]
+	at org.springframework.ai.openai.OpenAiChatModel.internalCall(OpenAiChatModel.java:271) ~[spring-ai-openai-1.0.0-M6.jar!/:1.0.0-M6]
+	at org.springframework.ai.openai.OpenAiChatModel.call(OpenAiChatModel.java:255) ~[spring-ai-openai-1.0.0-M6.jar!/:1.0.0-M6]
+	at com.dingring.infrastructure.llm.SpringAiLlmService.chat(SpringAiLlmService.java:47) ~[dingRing-infrastructure-0.1.0.jar!/:0.1.0]
+	at com.dingring.app.orchestrator.ChatOrchestrator.chatWithRetry(ChatOrchestrator.java:300) ~[dingRing-app-0.1.0.jar!/:0.1.0]
+	at com.dingring.app.orchestrator.ChatOrchestrator.speakOnce(ChatOrchestrator.java:262) ~[dingRing-app-0.1.0.jar!/:0.1.0]
+	at com.dingring.app.orchestrator.ChatOrchestrator.runScheduleLoop(ChatOrchestrator.java:211) ~[dingRing-app-0.1.0.jar!/:0.1.0]
+	at com.dingring.app.orchestrator.ChatOrchestrator.lambda$onUserMessage$1(ChatOrchestrator.java:111) ~[dingRing-app-0.1.0.jar!/:0.1.0]
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144) ~[na:na]
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642) ~[na:na]
+	at java.base/java.lang.VirtualThread.run(VirtualThread.java:329) ~[na:na]
+
+2026-07-27T22:48:55.130+08:00  WARN 9228 --- [dingring] [      group-3-0] c.d.app.orchestrator.ChatOrchestrator    : Agent 调用失败降级, agent=老王, fallback=无
+
+com.dingring.common.exception.BizException: LLM 调用失败: 老王 - 404 - 
+	at com.dingring.infrastructure.llm.SpringAiLlmService.chat(SpringAiLlmService.java:55) ~[dingRing-infrastructure-0.1.0.jar!/:0.1.0]
+	at com.dingring.app.orchestrator.ChatOrchestrator.chatWithRetry(ChatOrchestrator.java:300) ~[dingRing-app-0.1.0.jar!/:0.1.0]
+	at com.dingring.app.orchestrator.ChatOrchestrator.speakOnce(ChatOrchestrator.java:262) ~[dingRing-app-0.1.0.jar!/:0.1.0]
+	at com.dingring.app.orchestrator.ChatOrchestrator.runScheduleLoop(ChatOrchestrator.java:211) ~[dingRing-app-0.1.0.jar!/:0.1.0]
+	at com.dingring.app.orchestrator.ChatOrchestrator.lambda$onUserMessage$1(ChatOrchestrator.java:111) ~[dingRing-app-0.1.0.jar!/:0.1.0]
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144) ~[na:na]
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642) ~[na:na]
+	at java.base/java.lang.VirtualThread.run(VirtualThread.java:329) ~[na:na]
+
+2026-07-27T22:55:19.784+08:00 ERROR 9228 --- [dingring] [nio-8080-exec-4] c.d.adapter.rest.GlobalExceptionHandler  : 系统内部异常
+
+org.springframework.dao.DataIntegrityViolationException: 
+### Error updating database.  Cause: com.mysql.cj.jdbc.exceptions.MysqlDataTruncation: Data truncation: Data too long for column 'api_key' at row 1
+### The error may exist in URL [jar:nested:/Users/Zhuanz/IdeaProjects/DingRingJ/start/target/start-0.1.0.jar/!BOOT-INF/lib/dingRing-infrastructure-0.1.0.jar!/mapper/AgentMapper.xml]
+### The error may involve com.dingring.infrastructure.persistence.mapper.AgentMapper.update-Inline
+### The error occurred while setting parameters
+### SQL: UPDATE agent         SET name          = ?,             profile_picture = ?,             description   = ?,             base_url      = ?,             api_key       = ?,             model_name    = ?,             call_type     = ?,             system_prompt = ?,             feature       = ?,             update_time   = ?         WHERE id = ?
+### Cause: com.mysql.cj.jdbc.exceptions.MysqlDataTruncation: Data truncation: Data too long for column 'api_key' at row 1
+; Data truncation: Data too long for column 'api_key' at row 1
+	at org.springframework.jdbc.support.SQLStateSQLExceptionTranslator.doTranslate(SQLStateSQLExceptionTranslator.java:118) ~[spring-jdbc-6.2.8.jar!/:6.2.8]
+	at org.springframework.jdbc.support.AbstractFallbackSQLExceptionTranslator.translate(AbstractFallbackSQLExceptionTranslator.java:107) ~[spring-jdbc-6.2.8.jar!/:6.2.8]
+	at org.springframework.jdbc.support.AbstractFallbackSQLExceptionTranslator.translate(AbstractFallbackSQLExceptionTranslator.java:116) ~[spring-jdbc-6.2.8.jar!/:6.2.8]
+	at org.springframework.jdbc.support.AbstractFallbackSQLExceptionTranslator.translate(AbstractFallbackSQLExceptionTranslator.java:116) ~[spring-jdbc-6.2.8.jar!/:6.2.8]
+	at org.mybatis.spring.MyBatisExceptionTranslator.translateExceptionIfPossible(MyBatisExceptionTranslator.java:93) ~[mybatis-spring-3.0.4.jar!/:3.0.4]
+	at org.mybatis.spring.SqlSessionTemplate$SqlSessionInterceptor.invoke(SqlSessionTemplate.java:347) ~[mybatis-spring-3.0.4.jar!/:3.0.4]
+	at jdk.proxy2/jdk.proxy2.$Proxy61.update(Unknown Source) ~[na:na]
+	at org.mybatis.spring.SqlSessionTemplate.update(SqlSessionTemplate.java:234) ~[mybatis-spring-3.0.4.jar!/:3.0.4]
+	at org.apache.ibatis.binding.MapperMethod.execute(MapperMethod.java:67) ~[mybatis-3.5.17.jar!/:3.5.17]
+	at org.apache.ibatis.binding.MapperProxy$PlainMethodInvoker.invoke(MapperProxy.java:141) ~[mybatis-3.5.17.jar!/:3.5.17]
+	at org.apache.ibatis.binding.MapperProxy.invoke(MapperProxy.java:86) ~[mybatis-3.5.17.jar!/:3.5.17]
+	at jdk.proxy2/jdk.proxy2.$Proxy62.update(Unknown Source) ~[na:na]
+	at com.dingring.infrastructure.persistence.repository.AgentRepositoryImpl.update(AgentRepositoryImpl.java:52) ~[dingRing-infrastructure-0.1.0.jar!/:0.1.0]
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103) ~[na:na]
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580) ~[na:na]
+	at org.springframework.aop.support.AopUtils.invokeJoinpointUsingReflection(AopUtils.java:359) ~[spring-aop-6.2.8.jar!/:6.2.8]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.invokeJoinpoint(ReflectiveMethodInvocation.java:196) ~[spring-aop-6.2.8.jar!/:6.2.8]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:163) ~[spring-aop-6.2.8.jar!/:6.2.8]
+	at org.springframework.dao.support.PersistenceExceptionTranslationInterceptor.invoke(PersistenceExceptionTranslationInterceptor.java:138) ~[spring-tx-6.2.8.jar!/:6.2.8]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:184) ~[spring-aop-6.2.8.jar!/:6.2.8]
+	at org.springframework.aop.framework.CglibAopProxy$DynamicAdvisedInterceptor.intercept(CglibAopProxy.java:728) ~[spring-aop-6.2.8.jar!/:6.2.8]
+	at com.dingring.infrastructure.persistence.repository.AgentRepositoryImpl$$SpringCGLIB$$0.update(<generated>) ~[dingRing-infrastructure-0.1.0.jar!/:0.1.0]
+	at com.dingring.app.service.AgentAppService.update(AgentAppService.java:53) ~[dingRing-app-0.1.0.jar!/:0.1.0]
+	at com.dingring.adapter.rest.AgentController.update(AgentController.java:38) ~[dingRing-adapter-0.1.0.jar!/:0.1.0]
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103) ~[na:na]
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580) ~[na:na]
+	at org.springframework.web.method.support.InvocableHandlerMethod.doInvoke(InvocableHandlerMethod.java:258) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.method.support.InvocableHandlerMethod.invokeForRequest(InvocableHandlerMethod.java:191) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.servlet.mvc.method.annotation.ServletInvocableHandlerMethod.invokeAndHandle(ServletInvocableHandlerMethod.java:118) ~[spring-webmvc-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.invokeHandlerMethod(RequestMappingHandlerAdapter.java:986) ~[spring-webmvc-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.handleInternal(RequestMappingHandlerAdapter.java:891) ~[spring-webmvc-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.servlet.mvc.method.AbstractHandlerMethodAdapter.handle(AbstractHandlerMethodAdapter.java:87) ~[spring-webmvc-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.servlet.DispatcherServlet.doDispatch(DispatcherServlet.java:1089) ~[spring-webmvc-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.servlet.DispatcherServlet.doService(DispatcherServlet.java:979) ~[spring-webmvc-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.servlet.FrameworkServlet.processRequest(FrameworkServlet.java:1014) ~[spring-webmvc-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.servlet.FrameworkServlet.doPut(FrameworkServlet.java:925) ~[spring-webmvc-6.2.8.jar!/:6.2.8]
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:593) ~[tomcat-embed-core-10.1.42.jar!/:na]
+	at org.springframework.web.servlet.FrameworkServlet.service(FrameworkServlet.java:885) ~[spring-webmvc-6.2.8.jar!/:6.2.8]
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:658) ~[tomcat-embed-core-10.1.42.jar!/:na]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:195) ~[tomcat-embed-core-10.1.42.jar!/:na]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140) ~[tomcat-embed-core-10.1.42.jar!/:na]
+	at org.apache.tomcat.websocket.server.WsFilter.doFilter(WsFilter.java:51) ~[tomcat-embed-websocket-10.1.42.jar!/:na]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164) ~[tomcat-embed-core-10.1.42.jar!/:na]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140) ~[tomcat-embed-core-10.1.42.jar!/:na]
+	at org.springframework.web.filter.RequestContextFilter.doFilterInternal(RequestContextFilter.java:100) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164) ~[tomcat-embed-core-10.1.42.jar!/:na]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140) ~[tomcat-embed-core-10.1.42.jar!/:na]
+	at org.springframework.web.filter.FormContentFilter.doFilterInternal(FormContentFilter.java:93) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164) ~[tomcat-embed-core-10.1.42.jar!/:na]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140) ~[tomcat-embed-core-10.1.42.jar!/:na]
+	at org.springframework.web.filter.CharacterEncodingFilter.doFilterInternal(CharacterEncodingFilter.java:201) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164) ~[tomcat-embed-core-10.1.42.jar!/:na]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140) ~[tomcat-embed-core-10.1.42.jar!/:na]
+	at org.apache.catalina.core.StandardWrapperValve.invoke(StandardWrapperValve.java:167) ~[tomcat-embed-core-10.1.42.jar!/:na]
+	at org.apache.catalina.core.StandardContextValve.invoke(StandardContextValve.java:90) ~[tomcat-embed-core-10.1.42.jar!/:na]
+	at org.apache.catalina.authenticator.AuthenticatorBase.invoke(AuthenticatorBase.java:483) ~[tomcat-embed-core-10.1.42.jar!/:na]
+	at org.apache.catalina.core.StandardHostValve.invoke(StandardHostValve.java:116) ~[tomcat-embed-core-10.1.42.jar!/:na]
+	at org.apache.catalina.valves.ErrorReportValve.invoke(ErrorReportValve.java:93) ~[tomcat-embed-core-10.1.42.jar!/:na]
+	at org.apache.catalina.core.StandardEngineValve.invoke(StandardEngineValve.java:74) ~[tomcat-embed-core-10.1.42.jar!/:na]
+	at org.apache.catalina.connector.CoyoteAdapter.service(CoyoteAdapter.java:344) ~[tomcat-embed-core-10.1.42.jar!/:na]
+	at org.apache.coyote.http11.Http11Processor.service(Http11Processor.java:398) ~[tomcat-embed-core-10.1.42.jar!/:na]
+	at org.apache.coyote.AbstractProcessorLight.process(AbstractProcessorLight.java:63) ~[tomcat-embed-core-10.1.42.jar!/:na]
+	at org.apache.coyote.AbstractProtocol$ConnectionHandler.process(AbstractProtocol.java:903) ~[tomcat-embed-core-10.1.42.jar!/:na]
+	at org.apache.tomcat.util.net.NioEndpoint$SocketProcessor.doRun(NioEndpoint.java:1769) ~[tomcat-embed-core-10.1.42.jar!/:na]
+	at org.apache.tomcat.util.net.SocketProcessorBase.run(SocketProcessorBase.java:52) ~[tomcat-embed-core-10.1.42.jar!/:na]
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1189) ~[tomcat-embed-core-10.1.42.jar!/:na]
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:658) ~[tomcat-embed-core-10.1.42.jar!/:na]
+	at org.apache.tomcat.util.threads.TaskThread$WrappingRunnable.run(TaskThread.java:63) ~[tomcat-embed-core-10.1.42.jar!/:na]
+	at java.base/java.lang.Thread.run(Thread.java:1583) ~[na:na]
+Caused by: com.mysql.cj.jdbc.exceptions.MysqlDataTruncation: Data truncation: Data too long for column 'api_key' at row 1
+	at com.mysql.cj.jdbc.exceptions.SQLExceptionsMapping.translateException(SQLExceptionsMapping.java:96) ~[mysql-connector-j-9.1.0.jar!/:9.1.0]
+	at com.mysql.cj.jdbc.ClientPreparedStatement.executeInternal(ClientPreparedStatement.java:988) ~[mysql-connector-j-9.1.0.jar!/:9.1.0]
+	at com.mysql.cj.jdbc.ClientPreparedStatement.execute(ClientPreparedStatement.java:382) ~[mysql-connector-j-9.1.0.jar!/:9.1.0]
+	at com.zaxxer.hikari.pool.ProxyPreparedStatement.execute(ProxyPreparedStatement.java:44) ~[HikariCP-5.1.0.jar!/:na]
+	at com.zaxxer.hikari.pool.HikariProxyPreparedStatement.execute(HikariProxyPreparedStatement.java) ~[HikariCP-5.1.0.jar!/:na]
+	at org.apache.ibatis.executor.statement.PreparedStatementHandler.update(PreparedStatementHandler.java:48) ~[mybatis-3.5.17.jar!/:3.5.17]
+	at org.apache.ibatis.executor.statement.RoutingStatementHandler.update(RoutingStatementHandler.java:75) ~[mybatis-3.5.17.jar!/:3.5.17]
+	at org.apache.ibatis.executor.SimpleExecutor.doUpdate(SimpleExecutor.java:50) ~[mybatis-3.5.17.jar!/:3.5.17]
+	at org.apache.ibatis.executor.BaseExecutor.update(BaseExecutor.java:117) ~[mybatis-3.5.17.jar!/:3.5.17]
+	at org.apache.ibatis.executor.CachingExecutor.update(CachingExecutor.java:76) ~[mybatis-3.5.17.jar!/:3.5.17]
+	at org.apache.ibatis.session.defaults.DefaultSqlSession.update(DefaultSqlSession.java:197) ~[mybatis-3.5.17.jar!/:3.5.17]
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103) ~[na:na]
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580) ~[na:na]
+	at org.mybatis.spring.SqlSessionTemplate$SqlSessionInterceptor.invoke(SqlSessionTemplate.java:333) ~[mybatis-spring-3.0.4.jar!/:3.0.4]
+	... 66 common frames omitted
+
+2026-07-27T22:56:28.797+08:00  INFO 9228 --- [dingring] [nio-8080-exec-7] c.d.adapter.websocket.WsSessionManager   : WS 连接注册: groupId=4, sessionId=21b2c90a-101c-273d-e755-43096a1ff8b2, 在线数=1
+2026-07-27T22:56:29.544+08:00  WARN 9228 --- [dingring] [      group-4-0] o.springframework.ai.retry.RetryUtils    : Retry error. Retry count:1
+
+org.springframework.ai.retry.NonTransientAiException: 404 - 404 page not found
+
+	at org.springframework.ai.retry.RetryUtils$1.handleError(RetryUtils.java:63) ~[spring-ai-retry-1.0.0-M6.jar!/:1.0.0-M6]
+	at org.springframework.web.client.ResponseErrorHandler.handleError(ResponseErrorHandler.java:58) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.StatusHandler.lambda$fromErrorHandler$1(StatusHandler.java:71) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.StatusHandler.handle(StatusHandler.java:146) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultResponseSpec.applyStatusHandlers(DefaultRestClient.java:831) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultResponseSpec.lambda$readBody$4(DefaultRestClient.java:820) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient.readWithMessageConverters(DefaultRestClient.java:216) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultResponseSpec.readBody(DefaultRestClient.java:819) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultResponseSpec.lambda$toEntityInternal$2(DefaultRestClient.java:775) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultRequestBodyUriSpec.exchangeInternal(DefaultRestClient.java:579) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultRequestBodyUriSpec.exchange(DefaultRestClient.java:533) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.RestClient$RequestHeadersSpec.exchange(RestClient.java:680) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultResponseSpec.executeAndExtract(DefaultRestClient.java:814) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultResponseSpec.toEntityInternal(DefaultRestClient.java:774) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultResponseSpec.toEntity(DefaultRestClient.java:763) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.ai.openai.api.OpenAiApi.chatCompletionEntity(OpenAiApi.java:257) ~[spring-ai-openai-1.0.0-M6.jar!/:1.0.0-M6]
+	at org.springframework.ai.openai.OpenAiChatModel.lambda$internalCall$1(OpenAiChatModel.java:274) ~[spring-ai-openai-1.0.0-M6.jar!/:1.0.0-M6]
+	at org.springframework.retry.support.RetryTemplate.doExecute(RetryTemplate.java:357) ~[spring-retry-2.0.12.jar!/:na]
+	at org.springframework.retry.support.RetryTemplate.execute(RetryTemplate.java:230) ~[spring-retry-2.0.12.jar!/:na]
+	at org.springframework.ai.openai.OpenAiChatModel.lambda$internalCall$3(OpenAiChatModel.java:274) ~[spring-ai-openai-1.0.0-M6.jar!/:1.0.0-M6]
+	at io.micrometer.observation.Observation.observe(Observation.java:564) ~[micrometer-observation-1.14.8.jar!/:1.14.8]
+	at org.springframework.ai.openai.OpenAiChatModel.internalCall(OpenAiChatModel.java:271) ~[spring-ai-openai-1.0.0-M6.jar!/:1.0.0-M6]
+	at org.springframework.ai.openai.OpenAiChatModel.call(OpenAiChatModel.java:255) ~[spring-ai-openai-1.0.0-M6.jar!/:1.0.0-M6]
+	at com.dingring.infrastructure.llm.SpringAiLlmService.chat(SpringAiLlmService.java:47) ~[dingRing-infrastructure-0.1.0.jar!/:0.1.0]
+	at com.dingring.app.orchestrator.ChatOrchestrator.chatWithRetry(ChatOrchestrator.java:297) ~[dingRing-app-0.1.0.jar!/:0.1.0]
+	at com.dingring.app.orchestrator.ChatOrchestrator.speakOnce(ChatOrchestrator.java:262) ~[dingRing-app-0.1.0.jar!/:0.1.0]
+	at com.dingring.app.orchestrator.ChatOrchestrator.runScheduleLoop(ChatOrchestrator.java:211) ~[dingRing-app-0.1.0.jar!/:0.1.0]
+	at com.dingring.app.orchestrator.ChatOrchestrator.lambda$onUserMessage$1(ChatOrchestrator.java:111) ~[dingRing-app-0.1.0.jar!/:0.1.0]
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144) ~[na:na]
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642) ~[na:na]
+	at java.base/java.lang.VirtualThread.run(VirtualThread.java:329) ~[na:na]
+
+2026-07-27T22:56:29.545+08:00  WARN 9228 --- [dingring] [      group-4-0] c.d.i.llm.SpringAiLlmService             : LLM 调用失败, agent=老王, model=qwen3.5-plus
+
+org.springframework.ai.retry.NonTransientAiException: 404 - 404 page not found
+
+	at org.springframework.ai.retry.RetryUtils$1.handleError(RetryUtils.java:63) ~[spring-ai-retry-1.0.0-M6.jar!/:1.0.0-M6]
+	at org.springframework.web.client.ResponseErrorHandler.handleError(ResponseErrorHandler.java:58) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.StatusHandler.lambda$fromErrorHandler$1(StatusHandler.java:71) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.StatusHandler.handle(StatusHandler.java:146) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultResponseSpec.applyStatusHandlers(DefaultRestClient.java:831) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultResponseSpec.lambda$readBody$4(DefaultRestClient.java:820) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient.readWithMessageConverters(DefaultRestClient.java:216) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultResponseSpec.readBody(DefaultRestClient.java:819) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultResponseSpec.lambda$toEntityInternal$2(DefaultRestClient.java:775) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultRequestBodyUriSpec.exchangeInternal(DefaultRestClient.java:579) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultRequestBodyUriSpec.exchange(DefaultRestClient.java:533) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.RestClient$RequestHeadersSpec.exchange(RestClient.java:680) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultResponseSpec.executeAndExtract(DefaultRestClient.java:814) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultResponseSpec.toEntityInternal(DefaultRestClient.java:774) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultResponseSpec.toEntity(DefaultRestClient.java:763) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.ai.openai.api.OpenAiApi.chatCompletionEntity(OpenAiApi.java:257) ~[spring-ai-openai-1.0.0-M6.jar!/:1.0.0-M6]
+	at org.springframework.ai.openai.OpenAiChatModel.lambda$internalCall$1(OpenAiChatModel.java:274) ~[spring-ai-openai-1.0.0-M6.jar!/:1.0.0-M6]
+	at org.springframework.retry.support.RetryTemplate.doExecute(RetryTemplate.java:357) ~[spring-retry-2.0.12.jar!/:na]
+	at org.springframework.retry.support.RetryTemplate.execute(RetryTemplate.java:230) ~[spring-retry-2.0.12.jar!/:na]
+	at org.springframework.ai.openai.OpenAiChatModel.lambda$internalCall$3(OpenAiChatModel.java:274) ~[spring-ai-openai-1.0.0-M6.jar!/:1.0.0-M6]
+	at io.micrometer.observation.Observation.observe(Observation.java:564) ~[micrometer-observation-1.14.8.jar!/:1.14.8]
+	at org.springframework.ai.openai.OpenAiChatModel.internalCall(OpenAiChatModel.java:271) ~[spring-ai-openai-1.0.0-M6.jar!/:1.0.0-M6]
+	at org.springframework.ai.openai.OpenAiChatModel.call(OpenAiChatModel.java:255) ~[spring-ai-openai-1.0.0-M6.jar!/:1.0.0-M6]
+	at com.dingring.infrastructure.llm.SpringAiLlmService.chat(SpringAiLlmService.java:47) ~[dingRing-infrastructure-0.1.0.jar!/:0.1.0]
+	at com.dingring.app.orchestrator.ChatOrchestrator.chatWithRetry(ChatOrchestrator.java:297) ~[dingRing-app-0.1.0.jar!/:0.1.0]
+	at com.dingring.app.orchestrator.ChatOrchestrator.speakOnce(ChatOrchestrator.java:262) ~[dingRing-app-0.1.0.jar!/:0.1.0]
+	at com.dingring.app.orchestrator.ChatOrchestrator.runScheduleLoop(ChatOrchestrator.java:211) ~[dingRing-app-0.1.0.jar!/:0.1.0]
+	at com.dingring.app.orchestrator.ChatOrchestrator.lambda$onUserMessage$1(ChatOrchestrator.java:111) ~[dingRing-app-0.1.0.jar!/:0.1.0]
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144) ~[na:na]
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642) ~[na:na]
+	at java.base/java.lang.VirtualThread.run(VirtualThread.java:329) ~[na:na]
+
+2026-07-27T22:56:29.545+08:00  INFO 9228 --- [dingring] [      group-4-0] c.d.app.orchestrator.ChatOrchestrator    : LLM 首次调用失败，重试 1 次, agent=老王
+2026-07-27T22:56:29.751+08:00  WARN 9228 --- [dingring] [      group-4-0] o.springframework.ai.retry.RetryUtils    : Retry error. Retry count:1
+
+org.springframework.ai.retry.NonTransientAiException: 404 - 404 page not found
+
+	at org.springframework.ai.retry.RetryUtils$1.handleError(RetryUtils.java:63) ~[spring-ai-retry-1.0.0-M6.jar!/:1.0.0-M6]
+	at org.springframework.web.client.ResponseErrorHandler.handleError(ResponseErrorHandler.java:58) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.StatusHandler.lambda$fromErrorHandler$1(StatusHandler.java:71) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.StatusHandler.handle(StatusHandler.java:146) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultResponseSpec.applyStatusHandlers(DefaultRestClient.java:831) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultResponseSpec.lambda$readBody$4(DefaultRestClient.java:820) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient.readWithMessageConverters(DefaultRestClient.java:216) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultResponseSpec.readBody(DefaultRestClient.java:819) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultResponseSpec.lambda$toEntityInternal$2(DefaultRestClient.java:775) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultRequestBodyUriSpec.exchangeInternal(DefaultRestClient.java:579) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultRequestBodyUriSpec.exchange(DefaultRestClient.java:533) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.RestClient$RequestHeadersSpec.exchange(RestClient.java:680) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultResponseSpec.executeAndExtract(DefaultRestClient.java:814) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultResponseSpec.toEntityInternal(DefaultRestClient.java:774) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultResponseSpec.toEntity(DefaultRestClient.java:763) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.ai.openai.api.OpenAiApi.chatCompletionEntity(OpenAiApi.java:257) ~[spring-ai-openai-1.0.0-M6.jar!/:1.0.0-M6]
+	at org.springframework.ai.openai.OpenAiChatModel.lambda$internalCall$1(OpenAiChatModel.java:274) ~[spring-ai-openai-1.0.0-M6.jar!/:1.0.0-M6]
+	at org.springframework.retry.support.RetryTemplate.doExecute(RetryTemplate.java:357) ~[spring-retry-2.0.12.jar!/:na]
+	at org.springframework.retry.support.RetryTemplate.execute(RetryTemplate.java:230) ~[spring-retry-2.0.12.jar!/:na]
+	at org.springframework.ai.openai.OpenAiChatModel.lambda$internalCall$3(OpenAiChatModel.java:274) ~[spring-ai-openai-1.0.0-M6.jar!/:1.0.0-M6]
+	at io.micrometer.observation.Observation.observe(Observation.java:564) ~[micrometer-observation-1.14.8.jar!/:1.14.8]
+	at org.springframework.ai.openai.OpenAiChatModel.internalCall(OpenAiChatModel.java:271) ~[spring-ai-openai-1.0.0-M6.jar!/:1.0.0-M6]
+	at org.springframework.ai.openai.OpenAiChatModel.call(OpenAiChatModel.java:255) ~[spring-ai-openai-1.0.0-M6.jar!/:1.0.0-M6]
+	at com.dingring.infrastructure.llm.SpringAiLlmService.chat(SpringAiLlmService.java:47) ~[dingRing-infrastructure-0.1.0.jar!/:0.1.0]
+	at com.dingring.app.orchestrator.ChatOrchestrator.chatWithRetry(ChatOrchestrator.java:300) ~[dingRing-app-0.1.0.jar!/:0.1.0]
+	at com.dingring.app.orchestrator.ChatOrchestrator.speakOnce(ChatOrchestrator.java:262) ~[dingRing-app-0.1.0.jar!/:0.1.0]
+	at com.dingring.app.orchestrator.ChatOrchestrator.runScheduleLoop(ChatOrchestrator.java:211) ~[dingRing-app-0.1.0.jar!/:0.1.0]
+	at com.dingring.app.orchestrator.ChatOrchestrator.lambda$onUserMessage$1(ChatOrchestrator.java:111) ~[dingRing-app-0.1.0.jar!/:0.1.0]
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144) ~[na:na]
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642) ~[na:na]
+	at java.base/java.lang.VirtualThread.run(VirtualThread.java:329) ~[na:na]
+
+2026-07-27T22:56:29.751+08:00  WARN 9228 --- [dingring] [      group-4-0] c.d.i.llm.SpringAiLlmService             : LLM 调用失败, agent=老王, model=qwen3.5-plus
+
+org.springframework.ai.retry.NonTransientAiException: 404 - 404 page not found
+
+	at org.springframework.ai.retry.RetryUtils$1.handleError(RetryUtils.java:63) ~[spring-ai-retry-1.0.0-M6.jar!/:1.0.0-M6]
+	at org.springframework.web.client.ResponseErrorHandler.handleError(ResponseErrorHandler.java:58) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.StatusHandler.lambda$fromErrorHandler$1(StatusHandler.java:71) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.StatusHandler.handle(StatusHandler.java:146) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultResponseSpec.applyStatusHandlers(DefaultRestClient.java:831) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultResponseSpec.lambda$readBody$4(DefaultRestClient.java:820) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient.readWithMessageConverters(DefaultRestClient.java:216) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultResponseSpec.readBody(DefaultRestClient.java:819) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultResponseSpec.lambda$toEntityInternal$2(DefaultRestClient.java:775) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultRequestBodyUriSpec.exchangeInternal(DefaultRestClient.java:579) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultRequestBodyUriSpec.exchange(DefaultRestClient.java:533) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.RestClient$RequestHeadersSpec.exchange(RestClient.java:680) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultResponseSpec.executeAndExtract(DefaultRestClient.java:814) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultResponseSpec.toEntityInternal(DefaultRestClient.java:774) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultResponseSpec.toEntity(DefaultRestClient.java:763) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.ai.openai.api.OpenAiApi.chatCompletionEntity(OpenAiApi.java:257) ~[spring-ai-openai-1.0.0-M6.jar!/:1.0.0-M6]
+	at org.springframework.ai.openai.OpenAiChatModel.lambda$internalCall$1(OpenAiChatModel.java:274) ~[spring-ai-openai-1.0.0-M6.jar!/:1.0.0-M6]
+	at org.springframework.retry.support.RetryTemplate.doExecute(RetryTemplate.java:357) ~[spring-retry-2.0.12.jar!/:na]
+	at org.springframework.retry.support.RetryTemplate.execute(RetryTemplate.java:230) ~[spring-retry-2.0.12.jar!/:na]
+	at org.springframework.ai.openai.OpenAiChatModel.lambda$internalCall$3(OpenAiChatModel.java:274) ~[spring-ai-openai-1.0.0-M6.jar!/:1.0.0-M6]
+	at io.micrometer.observation.Observation.observe(Observation.java:564) ~[micrometer-observation-1.14.8.jar!/:1.14.8]
+	at org.springframework.ai.openai.OpenAiChatModel.internalCall(OpenAiChatModel.java:271) ~[spring-ai-openai-1.0.0-M6.jar!/:1.0.0-M6]
+	at org.springframework.ai.openai.OpenAiChatModel.call(OpenAiChatModel.java:255) ~[spring-ai-openai-1.0.0-M6.jar!/:1.0.0-M6]
+	at com.dingring.infrastructure.llm.SpringAiLlmService.chat(SpringAiLlmService.java:47) ~[dingRing-infrastructure-0.1.0.jar!/:0.1.0]
+	at com.dingring.app.orchestrator.ChatOrchestrator.chatWithRetry(ChatOrchestrator.java:300) ~[dingRing-app-0.1.0.jar!/:0.1.0]
+	at com.dingring.app.orchestrator.ChatOrchestrator.speakOnce(ChatOrchestrator.java:262) ~[dingRing-app-0.1.0.jar!/:0.1.0]
+	at com.dingring.app.orchestrator.ChatOrchestrator.runScheduleLoop(ChatOrchestrator.java:211) ~[dingRing-app-0.1.0.jar!/:0.1.0]
+	at com.dingring.app.orchestrator.ChatOrchestrator.lambda$onUserMessage$1(ChatOrchestrator.java:111) ~[dingRing-app-0.1.0.jar!/:0.1.0]
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144) ~[na:na]
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642) ~[na:na]
+	at java.base/java.lang.VirtualThread.run(VirtualThread.java:329) ~[na:na]
+
+2026-07-27T22:56:29.752+08:00  WARN 9228 --- [dingring] [      group-4-0] c.d.app.orchestrator.ChatOrchestrator    : Agent 调用失败降级, agent=老王, fallback=无
+
+com.dingring.common.exception.BizException: LLM 调用失败: 老王 - 404 - 404 page not found
+
+	at com.dingring.infrastructure.llm.SpringAiLlmService.chat(SpringAiLlmService.java:55) ~[dingRing-infrastructure-0.1.0.jar!/:0.1.0]
+	at com.dingring.app.orchestrator.ChatOrchestrator.chatWithRetry(ChatOrchestrator.java:300) ~[dingRing-app-0.1.0.jar!/:0.1.0]
+	at com.dingring.app.orchestrator.ChatOrchestrator.speakOnce(ChatOrchestrator.java:262) ~[dingRing-app-0.1.0.jar!/:0.1.0]
+	at com.dingring.app.orchestrator.ChatOrchestrator.runScheduleLoop(ChatOrchestrator.java:211) ~[dingRing-app-0.1.0.jar!/:0.1.0]
+	at com.dingring.app.orchestrator.ChatOrchestrator.lambda$onUserMessage$1(ChatOrchestrator.java:111) ~[dingRing-app-0.1.0.jar!/:0.1.0]
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144) ~[na:na]
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642) ~[na:na]
+	at java.base/java.lang.VirtualThread.run(VirtualThread.java:329) ~[na:na]
+
+2026-07-27T22:59:30.325+08:00  WARN 9228 --- [dingring] [      group-4-0] o.springframework.ai.retry.RetryUtils    : Retry error. Retry count:1
+
+org.springframework.ai.retry.NonTransientAiException: 404 - 
+	at org.springframework.ai.retry.RetryUtils$1.handleError(RetryUtils.java:63) ~[spring-ai-retry-1.0.0-M6.jar!/:1.0.0-M6]
+	at org.springframework.web.client.ResponseErrorHandler.handleError(ResponseErrorHandler.java:58) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.StatusHandler.lambda$fromErrorHandler$1(StatusHandler.java:71) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.StatusHandler.handle(StatusHandler.java:146) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultResponseSpec.applyStatusHandlers(DefaultRestClient.java:831) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultResponseSpec.lambda$readBody$4(DefaultRestClient.java:820) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient.readWithMessageConverters(DefaultRestClient.java:216) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultResponseSpec.readBody(DefaultRestClient.java:819) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultResponseSpec.lambda$toEntityInternal$2(DefaultRestClient.java:775) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultRequestBodyUriSpec.exchangeInternal(DefaultRestClient.java:579) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultRequestBodyUriSpec.exchange(DefaultRestClient.java:533) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.RestClient$RequestHeadersSpec.exchange(RestClient.java:680) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultResponseSpec.executeAndExtract(DefaultRestClient.java:814) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultResponseSpec.toEntityInternal(DefaultRestClient.java:774) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultResponseSpec.toEntity(DefaultRestClient.java:763) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.ai.openai.api.OpenAiApi.chatCompletionEntity(OpenAiApi.java:257) ~[spring-ai-openai-1.0.0-M6.jar!/:1.0.0-M6]
+	at org.springframework.ai.openai.OpenAiChatModel.lambda$internalCall$1(OpenAiChatModel.java:274) ~[spring-ai-openai-1.0.0-M6.jar!/:1.0.0-M6]
+	at org.springframework.retry.support.RetryTemplate.doExecute(RetryTemplate.java:357) ~[spring-retry-2.0.12.jar!/:na]
+	at org.springframework.retry.support.RetryTemplate.execute(RetryTemplate.java:230) ~[spring-retry-2.0.12.jar!/:na]
+	at org.springframework.ai.openai.OpenAiChatModel.lambda$internalCall$3(OpenAiChatModel.java:274) ~[spring-ai-openai-1.0.0-M6.jar!/:1.0.0-M6]
+	at io.micrometer.observation.Observation.observe(Observation.java:564) ~[micrometer-observation-1.14.8.jar!/:1.14.8]
+	at org.springframework.ai.openai.OpenAiChatModel.internalCall(OpenAiChatModel.java:271) ~[spring-ai-openai-1.0.0-M6.jar!/:1.0.0-M6]
+	at org.springframework.ai.openai.OpenAiChatModel.call(OpenAiChatModel.java:255) ~[spring-ai-openai-1.0.0-M6.jar!/:1.0.0-M6]
+	at com.dingring.infrastructure.llm.SpringAiLlmService.chat(SpringAiLlmService.java:47) ~[dingRing-infrastructure-0.1.0.jar!/:0.1.0]
+	at com.dingring.app.orchestrator.ChatOrchestrator.chatWithRetry(ChatOrchestrator.java:297) ~[dingRing-app-0.1.0.jar!/:0.1.0]
+	at com.dingring.app.orchestrator.ChatOrchestrator.generateConclusion(ChatOrchestrator.java:151) ~[dingRing-app-0.1.0.jar!/:0.1.0]
+	at com.dingring.app.orchestrator.ChatOrchestrator.lambda$conclude$3(ChatOrchestrator.java:131) ~[dingRing-app-0.1.0.jar!/:0.1.0]
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144) ~[na:na]
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642) ~[na:na]
+	at java.base/java.lang.VirtualThread.run(VirtualThread.java:329) ~[na:na]
+
+2026-07-27T22:59:30.325+08:00  WARN 9228 --- [dingring] [      group-4-0] c.d.i.llm.SpringAiLlmService             : LLM 调用失败, agent=苏教授, model=step-3.7-flash
+
+org.springframework.ai.retry.NonTransientAiException: 404 - 
+	at org.springframework.ai.retry.RetryUtils$1.handleError(RetryUtils.java:63) ~[spring-ai-retry-1.0.0-M6.jar!/:1.0.0-M6]
+	at org.springframework.web.client.ResponseErrorHandler.handleError(ResponseErrorHandler.java:58) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.StatusHandler.lambda$fromErrorHandler$1(StatusHandler.java:71) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.StatusHandler.handle(StatusHandler.java:146) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultResponseSpec.applyStatusHandlers(DefaultRestClient.java:831) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultResponseSpec.lambda$readBody$4(DefaultRestClient.java:820) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient.readWithMessageConverters(DefaultRestClient.java:216) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultResponseSpec.readBody(DefaultRestClient.java:819) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultResponseSpec.lambda$toEntityInternal$2(DefaultRestClient.java:775) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultRequestBodyUriSpec.exchangeInternal(DefaultRestClient.java:579) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultRequestBodyUriSpec.exchange(DefaultRestClient.java:533) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.RestClient$RequestHeadersSpec.exchange(RestClient.java:680) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultResponseSpec.executeAndExtract(DefaultRestClient.java:814) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultResponseSpec.toEntityInternal(DefaultRestClient.java:774) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultResponseSpec.toEntity(DefaultRestClient.java:763) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.ai.openai.api.OpenAiApi.chatCompletionEntity(OpenAiApi.java:257) ~[spring-ai-openai-1.0.0-M6.jar!/:1.0.0-M6]
+	at org.springframework.ai.openai.OpenAiChatModel.lambda$internalCall$1(OpenAiChatModel.java:274) ~[spring-ai-openai-1.0.0-M6.jar!/:1.0.0-M6]
+	at org.springframework.retry.support.RetryTemplate.doExecute(RetryTemplate.java:357) ~[spring-retry-2.0.12.jar!/:na]
+	at org.springframework.retry.support.RetryTemplate.execute(RetryTemplate.java:230) ~[spring-retry-2.0.12.jar!/:na]
+	at org.springframework.ai.openai.OpenAiChatModel.lambda$internalCall$3(OpenAiChatModel.java:274) ~[spring-ai-openai-1.0.0-M6.jar!/:1.0.0-M6]
+	at io.micrometer.observation.Observation.observe(Observation.java:564) ~[micrometer-observation-1.14.8.jar!/:1.14.8]
+	at org.springframework.ai.openai.OpenAiChatModel.internalCall(OpenAiChatModel.java:271) ~[spring-ai-openai-1.0.0-M6.jar!/:1.0.0-M6]
+	at org.springframework.ai.openai.OpenAiChatModel.call(OpenAiChatModel.java:255) ~[spring-ai-openai-1.0.0-M6.jar!/:1.0.0-M6]
+	at com.dingring.infrastructure.llm.SpringAiLlmService.chat(SpringAiLlmService.java:47) ~[dingRing-infrastructure-0.1.0.jar!/:0.1.0]
+	at com.dingring.app.orchestrator.ChatOrchestrator.chatWithRetry(ChatOrchestrator.java:297) ~[dingRing-app-0.1.0.jar!/:0.1.0]
+	at com.dingring.app.orchestrator.ChatOrchestrator.generateConclusion(ChatOrchestrator.java:151) ~[dingRing-app-0.1.0.jar!/:0.1.0]
+	at com.dingring.app.orchestrator.ChatOrchestrator.lambda$conclude$3(ChatOrchestrator.java:131) ~[dingRing-app-0.1.0.jar!/:0.1.0]
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144) ~[na:na]
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642) ~[na:na]
+	at java.base/java.lang.VirtualThread.run(VirtualThread.java:329) ~[na:na]
+
+2026-07-27T22:59:30.326+08:00  INFO 9228 --- [dingring] [      group-4-0] c.d.app.orchestrator.ChatOrchestrator    : LLM 首次调用失败，重试 1 次, agent=苏教授
+2026-07-27T22:59:30.434+08:00  WARN 9228 --- [dingring] [      group-4-0] o.springframework.ai.retry.RetryUtils    : Retry error. Retry count:1
+
+org.springframework.ai.retry.NonTransientAiException: 404 - 
+	at org.springframework.ai.retry.RetryUtils$1.handleError(RetryUtils.java:63) ~[spring-ai-retry-1.0.0-M6.jar!/:1.0.0-M6]
+	at org.springframework.web.client.ResponseErrorHandler.handleError(ResponseErrorHandler.java:58) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.StatusHandler.lambda$fromErrorHandler$1(StatusHandler.java:71) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.StatusHandler.handle(StatusHandler.java:146) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultResponseSpec.applyStatusHandlers(DefaultRestClient.java:831) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultResponseSpec.lambda$readBody$4(DefaultRestClient.java:820) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient.readWithMessageConverters(DefaultRestClient.java:216) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultResponseSpec.readBody(DefaultRestClient.java:819) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultResponseSpec.lambda$toEntityInternal$2(DefaultRestClient.java:775) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultRequestBodyUriSpec.exchangeInternal(DefaultRestClient.java:579) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultRequestBodyUriSpec.exchange(DefaultRestClient.java:533) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.RestClient$RequestHeadersSpec.exchange(RestClient.java:680) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultResponseSpec.executeAndExtract(DefaultRestClient.java:814) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultResponseSpec.toEntityInternal(DefaultRestClient.java:774) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultResponseSpec.toEntity(DefaultRestClient.java:763) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.ai.openai.api.OpenAiApi.chatCompletionEntity(OpenAiApi.java:257) ~[spring-ai-openai-1.0.0-M6.jar!/:1.0.0-M6]
+	at org.springframework.ai.openai.OpenAiChatModel.lambda$internalCall$1(OpenAiChatModel.java:274) ~[spring-ai-openai-1.0.0-M6.jar!/:1.0.0-M6]
+	at org.springframework.retry.support.RetryTemplate.doExecute(RetryTemplate.java:357) ~[spring-retry-2.0.12.jar!/:na]
+	at org.springframework.retry.support.RetryTemplate.execute(RetryTemplate.java:230) ~[spring-retry-2.0.12.jar!/:na]
+	at org.springframework.ai.openai.OpenAiChatModel.lambda$internalCall$3(OpenAiChatModel.java:274) ~[spring-ai-openai-1.0.0-M6.jar!/:1.0.0-M6]
+	at io.micrometer.observation.Observation.observe(Observation.java:564) ~[micrometer-observation-1.14.8.jar!/:1.14.8]
+	at org.springframework.ai.openai.OpenAiChatModel.internalCall(OpenAiChatModel.java:271) ~[spring-ai-openai-1.0.0-M6.jar!/:1.0.0-M6]
+	at org.springframework.ai.openai.OpenAiChatModel.call(OpenAiChatModel.java:255) ~[spring-ai-openai-1.0.0-M6.jar!/:1.0.0-M6]
+	at com.dingring.infrastructure.llm.SpringAiLlmService.chat(SpringAiLlmService.java:47) ~[dingRing-infrastructure-0.1.0.jar!/:0.1.0]
+	at com.dingring.app.orchestrator.ChatOrchestrator.chatWithRetry(ChatOrchestrator.java:300) ~[dingRing-app-0.1.0.jar!/:0.1.0]
+	at com.dingring.app.orchestrator.ChatOrchestrator.generateConclusion(ChatOrchestrator.java:151) ~[dingRing-app-0.1.0.jar!/:0.1.0]
+	at com.dingring.app.orchestrator.ChatOrchestrator.lambda$conclude$3(ChatOrchestrator.java:131) ~[dingRing-app-0.1.0.jar!/:0.1.0]
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144) ~[na:na]
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642) ~[na:na]
+	at java.base/java.lang.VirtualThread.run(VirtualThread.java:329) ~[na:na]
+
+2026-07-27T22:59:30.434+08:00  WARN 9228 --- [dingring] [      group-4-0] c.d.i.llm.SpringAiLlmService             : LLM 调用失败, agent=苏教授, model=step-3.7-flash
+
+org.springframework.ai.retry.NonTransientAiException: 404 - 
+	at org.springframework.ai.retry.RetryUtils$1.handleError(RetryUtils.java:63) ~[spring-ai-retry-1.0.0-M6.jar!/:1.0.0-M6]
+	at org.springframework.web.client.ResponseErrorHandler.handleError(ResponseErrorHandler.java:58) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.StatusHandler.lambda$fromErrorHandler$1(StatusHandler.java:71) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.StatusHandler.handle(StatusHandler.java:146) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultResponseSpec.applyStatusHandlers(DefaultRestClient.java:831) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultResponseSpec.lambda$readBody$4(DefaultRestClient.java:820) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient.readWithMessageConverters(DefaultRestClient.java:216) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultResponseSpec.readBody(DefaultRestClient.java:819) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultResponseSpec.lambda$toEntityInternal$2(DefaultRestClient.java:775) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultRequestBodyUriSpec.exchangeInternal(DefaultRestClient.java:579) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultRequestBodyUriSpec.exchange(DefaultRestClient.java:533) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.RestClient$RequestHeadersSpec.exchange(RestClient.java:680) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultResponseSpec.executeAndExtract(DefaultRestClient.java:814) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultResponseSpec.toEntityInternal(DefaultRestClient.java:774) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.web.client.DefaultRestClient$DefaultResponseSpec.toEntity(DefaultRestClient.java:763) ~[spring-web-6.2.8.jar!/:6.2.8]
+	at org.springframework.ai.openai.api.OpenAiApi.chatCompletionEntity(OpenAiApi.java:257) ~[spring-ai-openai-1.0.0-M6.jar!/:1.0.0-M6]
+	at org.springframework.ai.openai.OpenAiChatModel.lambda$internalCall$1(OpenAiChatModel.java:274) ~[spring-ai-openai-1.0.0-M6.jar!/:1.0.0-M6]
+	at org.springframework.retry.support.RetryTemplate.doExecute(RetryTemplate.java:357) ~[spring-retry-2.0.12.jar!/:na]
+	at org.springframework.retry.support.RetryTemplate.execute(RetryTemplate.java:230) ~[spring-retry-2.0.12.jar!/:na]
+	at org.springframework.ai.openai.OpenAiChatModel.lambda$internalCall$3(OpenAiChatModel.java:274) ~[spring-ai-openai-1.0.0-M6.jar!/:1.0.0-M6]
+	at io.micrometer.observation.Observation.observe(Observation.java:564) ~[micrometer-observation-1.14.8.jar!/:1.14.8]
+	at org.springframework.ai.openai.OpenAiChatModel.internalCall(OpenAiChatModel.java:271) ~[spring-ai-openai-1.0.0-M6.jar!/:1.0.0-M6]
+	at org.springframework.ai.openai.OpenAiChatModel.call(OpenAiChatModel.java:255) ~[spring-ai-openai-1.0.0-M6.jar!/:1.0.0-M6]
+	at com.dingring.infrastructure.llm.SpringAiLlmService.chat(SpringAiLlmService.java:47) ~[dingRing-infrastructure-0.1.0.jar!/:0.1.0]
+	at com.dingring.app.orchestrator.ChatOrchestrator.chatWithRetry(ChatOrchestrator.java:300) ~[dingRing-app-0.1.0.jar!/:0.1.0]
+	at com.dingring.app.orchestrator.ChatOrchestrator.generateConclusion(ChatOrchestrator.java:151) ~[dingRing-app-0.1.0.jar!/:0.1.0]
+	at com.dingring.app.orchestrator.ChatOrchestrator.lambda$conclude$3(ChatOrchestrator.java:131) ~[dingRing-app-0.1.0.jar!/:0.1.0]
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144) ~[na:na]
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642) ~[na:na]
+	at java.base/java.lang.VirtualThread.run(VirtualThread.java:329) ~[na:na]
+
+2026-07-27T22:59:30.435+08:00 ERROR 9228 --- [dingring] [      group-4-0] c.d.app.orchestrator.ChatOrchestrator    : 结论生成失败, topicId=2
+
+com.dingring.common.exception.BizException: LLM 调用失败: 苏教授 - 404 - 
+	at com.dingring.infrastructure.llm.SpringAiLlmService.chat(SpringAiLlmService.java:55) ~[dingRing-infrastructure-0.1.0.jar!/:0.1.0]
+	at com.dingring.app.orchestrator.ChatOrchestrator.chatWithRetry(ChatOrchestrator.java:300) ~[dingRing-app-0.1.0.jar!/:0.1.0]
+	at com.dingring.app.orchestrator.ChatOrchestrator.generateConclusion(ChatOrchestrator.java:151) ~[dingRing-app-0.1.0.jar!/:0.1.0]
+	at com.dingring.app.orchestrator.ChatOrchestrator.lambda$conclude$3(ChatOrchestrator.java:131) ~[dingRing-app-0.1.0.jar!/:0.1.0]
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144) ~[na:na]
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642) ~[na:na]
+	at java.base/java.lang.VirtualThread.run(VirtualThread.java:329) ~[na:na]
+
+2026-07-27T23:05:31.034+08:00  INFO 9228 --- [dingring] [nio-8080-exec-4] c.d.adapter.websocket.WsSessionManager   : WS 连接注销: groupId=4, sessionId=21b2c90a-101c-273d-e755-43096a1ff8b2
+2026-07-27T23:08:02.653+08:00  INFO 9228 --- [dingring] [ionShutdownHook] o.s.b.w.e.tomcat.GracefulShutdown        : Commencing graceful shutdown. Waiting for active requests to complete
+2026-07-27T23:08:02.666+08:00  INFO 9228 --- [dingring] [tomcat-shutdown] o.s.b.w.e.tomcat.GracefulShutdown        : Graceful shutdown complete
+2026-07-27T23:08:02.673+08:00  INFO 9228 --- [dingring] [ionShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown initiated...
+2026-07-27T23:08:02.679+08:00  INFO 9228 --- [dingring] [ionShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown completed.
+2026-07-27T23:08:02.682+08:00  INFO 9228 --- [dingring] [ionShutdownHook] c.d.adapter.websocket.WsSessionManager   : WS 连接注销: groupId=2, sessionId=e6eb126a-5ed8-6c29-7ec6-f3ffc0014f9d
+2026-07-27T23:08:02.683+08:00  INFO 9228 --- [dingring] [ionShutdownHook] c.d.adapter.websocket.WsSessionManager   : WS 连接注销: groupId=3, sessionId=9c2bb948-01db-5dc4-61f3-b934b1e934a1
+The operation couldn’t be completed. Unable to locate a Java Runtime.
+Please visit http://www.java.com for information on installing Java.
+
+zsh: no such file or directory: /bin/java
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v3.4.7)
+
+2026-07-27T23:09:30.341+08:00  INFO 19933 --- [dingring] [           main] com.dingring.DingRingApplication         : Starting DingRingApplication v0.1.0 using Java 21.0.11 with PID 19933 (/Users/Zhuanz/IdeaProjects/DingRingJ/start/target/start-0.1.0.jar started by Zhuanz in /Users/Zhuanz/IdeaProjects/DingRingJ)
+2026-07-27T23:09:30.342+08:00  INFO 19933 --- [dingring] [           main] com.dingring.DingRingApplication         : No active profile set, falling back to 1 default profile: "default"
+2026-07-27T23:09:31.293+08:00  INFO 19933 --- [dingring] [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8080 (http)
+2026-07-27T23:09:31.303+08:00  INFO 19933 --- [dingring] [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-07-27T23:09:31.303+08:00  INFO 19933 --- [dingring] [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.42]
+2026-07-27T23:09:31.322+08:00  INFO 19933 --- [dingring] [           main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2026-07-27T23:09:31.322+08:00  INFO 19933 --- [dingring] [           main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 809 ms
+2026-07-27T23:09:31.702+08:00  INFO 19933 --- [dingring] [           main] o.s.b.a.w.s.WelcomePageHandlerMapping    : Adding welcome page: class path resource [static/index.html]
+2026-07-27T23:09:31.893+08:00  INFO 19933 --- [dingring] [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8080 (http) with context path '/'
+2026-07-27T23:09:31.906+08:00  INFO 19933 --- [dingring] [           main] com.dingring.DingRingApplication         : Started DingRingApplication in 1.902 seconds (process running for 2.247)
+2026-07-27T23:09:34.575+08:00  INFO 19933 --- [dingring] [nio-8080-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-07-27T23:09:34.576+08:00  INFO 19933 --- [dingring] [nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-07-27T23:09:34.576+08:00  INFO 19933 --- [dingring] [nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 0 ms
+2026-07-27T23:09:34.619+08:00  INFO 19933 --- [dingring] [nio-8080-exec-1] c.d.adapter.websocket.WsSessionManager   : WS 连接注册: groupId=2, sessionId=617911c8-f337-bfd3-6e7d-c0b5d0a21f03, 在线数=1
+2026-07-27T23:09:36.627+08:00  INFO 19933 --- [dingring] [nio-8080-exec-2] c.d.adapter.websocket.WsSessionManager   : WS 连接注册: groupId=3, sessionId=4540f6e3-2514-3071-1f1f-c436df951389, 在线数=1
+2026-07-27T23:09:55.101+08:00  INFO 19933 --- [dingring] [nio-8080-exec-3] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-07-27T23:09:55.538+08:00  INFO 19933 --- [dingring] [nio-8080-exec-3] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection com.mysql.cj.jdbc.ConnectionImpl@30ebb576
+2026-07-27T23:09:55.539+08:00  INFO 19933 --- [dingring] [nio-8080-exec-3] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-07-27T23:10:04.182+08:00  INFO 19933 --- [dingring] [nio-8080-exec-5] c.d.adapter.websocket.WsSessionManager   : WS 连接注册: groupId=4, sessionId=bf8285e9-3dab-dd76-a666-81e6435ddc9a, 在线数=1
+2026-07-27T23:12:19.876+08:00  INFO 19933 --- [dingring] [     card-gen-2] c.dingring.app.event.CardEventHandler    : 知识卡片生成成功, topicId=2, count=4
+2026-07-27T23:12:20.733+08:00  INFO 19933 --- [dingring] [nio-8080-exec-8] c.d.adapter.websocket.WsSessionManager   : WS 连接注销: groupId=4, sessionId=bf8285e9-3dab-dd76-a666-81e6435ddc9a
+2026-07-27T23:14:18.697+08:00  INFO 19933 --- [dingring] [io-8080-exec-10] c.d.adapter.websocket.WsSessionManager   : WS 连接注销: groupId=3, sessionId=4540f6e3-2514-3071-1f1f-c436df951389
+2026-07-27T23:14:19.314+08:00  INFO 19933 --- [dingring] [nio-8080-exec-5] c.d.adapter.websocket.WsSessionManager   : WS 连接注册: groupId=4, sessionId=28fbced8-8aab-9f83-7cc4-2ce8841c7b3b, 在线数=1
+2026-07-27T23:17:14.867+08:00  INFO 19933 --- [dingring] [nio-8080-exec-1] c.d.adapter.websocket.WsSessionManager   : WS 连接注销: groupId=4, sessionId=28fbced8-8aab-9f83-7cc4-2ce8841c7b3b
+2026-07-27T23:17:15.474+08:00  INFO 19933 --- [dingring] [nio-8080-exec-7] c.d.adapter.websocket.WsSessionManager   : WS 连接注册: groupId=4, sessionId=34098f36-7173-3805-cdec-579690ef4b07, 在线数=1
+2026-07-27T23:20:39.416+08:00  INFO 19933 --- [dingring] [nio-8080-exec-4] c.d.adapter.websocket.WsSessionManager   : WS 连接注销: groupId=4, sessionId=34098f36-7173-3805-cdec-579690ef4b07
+2026-07-27T23:38:51.243+08:00  INFO 19933 --- [dingring] [nio-8080-exec-8] c.d.adapter.websocket.WsSessionManager   : WS 连接注销: groupId=2, sessionId=617911c8-f337-bfd3-6e7d-c0b5d0a21f03
+2026-07-27T23:38:51.857+08:00  INFO 19933 --- [dingring] [nio-8080-exec-7] c.d.adapter.websocket.WsSessionManager   : WS 连接注册: groupId=2, sessionId=30c73f99-5b37-6634-5a38-48d3cc030a0e, 在线数=1
+2026-07-27T23:38:57.370+08:00  INFO 19933 --- [dingring] [io-8080-exec-10] c.d.adapter.websocket.WsSessionManager   : WS 连接注销: groupId=2, sessionId=30c73f99-5b37-6634-5a38-48d3cc030a0e
+2026-07-27T23:38:57.375+08:00  INFO 19933 --- [dingring] [nio-8080-exec-4] c.d.adapter.websocket.WsSessionManager   : WS 连接注册: groupId=1, sessionId=8aafcfa1-f112-0c21-a0af-d70f6baed36d, 在线数=1
+2026-07-27T23:39:00.382+08:00  INFO 19933 --- [dingring] [nio-8080-exec-3] c.d.adapter.websocket.WsSessionManager   : WS 连接注销: groupId=1, sessionId=8aafcfa1-f112-0c21-a0af-d70f6baed36d
+2026-07-27T23:39:00.390+08:00  INFO 19933 --- [dingring] [nio-8080-exec-5] c.d.adapter.websocket.WsSessionManager   : WS 连接注册: groupId=4, sessionId=9696de15-8679-3edf-3a24-b9e903142905, 在线数=1
+2026-07-27T23:39:41.533+08:00  INFO 19933 --- [dingring] [nio-8080-exec-2] c.d.adapter.websocket.WsSessionManager   : WS 连接注销: groupId=4, sessionId=9696de15-8679-3edf-3a24-b9e903142905
+2026-07-27T23:39:41.541+08:00  INFO 19933 --- [dingring] [nio-8080-exec-1] c.d.adapter.websocket.WsSessionManager   : WS 连接注册: groupId=3, sessionId=8ffc2948-d5b9-c162-83fc-99cc5d35755e, 在线数=1
+2026-07-27T23:39:48.355+08:00  INFO 19933 --- [dingring] [nio-8080-exec-6] c.d.adapter.websocket.WsSessionManager   : WS 连接注销: groupId=3, sessionId=8ffc2948-d5b9-c162-83fc-99cc5d35755e
+2026-07-27T23:39:48.370+08:00  INFO 19933 --- [dingring] [io-8080-exec-10] c.d.adapter.websocket.WsSessionManager   : WS 连接注册: groupId=4, sessionId=dbfbdd2e-eb88-4054-7f95-226c8c755af0, 在线数=1
+2026-07-27T23:39:49.705+08:00  INFO 19933 --- [dingring] [nio-8080-exec-2] c.d.adapter.websocket.WsSessionManager   : WS 连接注销: groupId=4, sessionId=dbfbdd2e-eb88-4054-7f95-226c8c755af0
+2026-07-27T23:39:49.707+08:00  INFO 19933 --- [dingring] [nio-8080-exec-1] c.d.adapter.websocket.WsSessionManager   : WS 连接注册: groupId=3, sessionId=92571077-66c8-6bc5-fa5e-80d140edf81f, 在线数=1
+2026-07-27T23:39:54.348+08:00  INFO 19933 --- [dingring] [nio-8080-exec-6] c.d.adapter.websocket.WsSessionManager   : WS 连接注销: groupId=3, sessionId=92571077-66c8-6bc5-fa5e-80d140edf81f
+2026-07-27T23:39:54.356+08:00  INFO 19933 --- [dingring] [nio-8080-exec-7] c.d.adapter.websocket.WsSessionManager   : WS 连接注册: groupId=4, sessionId=406eff54-dffb-932e-f115-33145b1ff6de, 在线数=1
+2026-07-27T23:39:57.926+08:00  INFO 19933 --- [dingring] [nio-8080-exec-4] c.d.adapter.websocket.WsSessionManager   : WS 连接注销: groupId=4, sessionId=406eff54-dffb-932e-f115-33145b1ff6de
+2026-07-27T23:40:02.256+08:00  INFO 19933 --- [dingring] [io-8080-exec-10] c.d.adapter.websocket.WsSessionManager   : WS 连接注册: groupId=4, sessionId=ea14078a-a421-6054-31c1-884dc4e272db, 在线数=1
+2026-07-27T23:40:08.135+08:00  INFO 19933 --- [dingring] [nio-8080-exec-1] c.d.adapter.websocket.WsSessionManager   : WS 连接注销: groupId=4, sessionId=ea14078a-a421-6054-31c1-884dc4e272db
+2026-07-27T23:41:18.564+08:00  INFO 19933 --- [dingring] [nio-8080-exec-8] c.d.adapter.websocket.WsSessionManager   : WS 连接注册: groupId=4, sessionId=4f9ed927-aae2-4c4e-3e54-ca6e7b9595ad, 在线数=1
+2026-07-27T23:41:21.497+08:00  INFO 19933 --- [dingring] [nio-8080-exec-7] c.d.adapter.websocket.WsSessionManager   : WS 连接注销: groupId=4, sessionId=4f9ed927-aae2-4c4e-3e54-ca6e7b9595ad
+2026-07-27T23:41:21.507+08:00  INFO 19933 --- [dingring] [nio-8080-exec-2] c.d.adapter.websocket.WsSessionManager   : WS 连接注册: groupId=3, sessionId=6f92ab8c-c14d-dad1-751c-d505eeec1b3a, 在线数=1
+2026-07-27T23:41:23.077+08:00  INFO 19933 --- [dingring] [nio-8080-exec-1] c.d.adapter.websocket.WsSessionManager   : WS 连接注销: groupId=3, sessionId=6f92ab8c-c14d-dad1-751c-d505eeec1b3a
+2026-07-27T23:41:23.081+08:00  INFO 19933 --- [dingring] [nio-8080-exec-5] c.d.adapter.websocket.WsSessionManager   : WS 连接注册: groupId=4, sessionId=50dae441-0992-fd81-745c-fbb88af7c834, 在线数=1
+2026-07-27T23:41:28.406+08:00  INFO 19933 --- [dingring] [nio-8080-exec-7] c.d.adapter.websocket.WsSessionManager   : WS 连接注销: groupId=4, sessionId=50dae441-0992-fd81-745c-fbb88af7c834
+2026-07-27T23:41:28.419+08:00  INFO 19933 --- [dingring] [io-8080-exec-10] c.d.adapter.websocket.WsSessionManager   : WS 连接注册: groupId=3, sessionId=ff63d226-a46c-cf61-b9b9-c80b9423b9ad, 在线数=1
+2026-07-27T23:41:52.263+08:00  INFO 19933 --- [dingring] [nio-8080-exec-5] c.d.adapter.websocket.WsSessionManager   : WS 连接注销: groupId=3, sessionId=ff63d226-a46c-cf61-b9b9-c80b9423b9ad
+2026-07-27T23:41:52.273+08:00  INFO 19933 --- [dingring] [nio-8080-exec-6] c.d.adapter.websocket.WsSessionManager   : WS 连接注册: groupId=4, sessionId=d482ff3e-ac3d-c7b3-8960-ed68385fef5a, 在线数=1
+2026-07-27T23:41:53.599+08:00  INFO 19933 --- [dingring] [io-8080-exec-10] c.d.adapter.websocket.WsSessionManager   : WS 连接注销: groupId=4, sessionId=d482ff3e-ac3d-c7b3-8960-ed68385fef5a
+2026-07-27T23:41:53.609+08:00  INFO 19933 --- [dingring] [nio-8080-exec-4] c.d.adapter.websocket.WsSessionManager   : WS 连接注册: groupId=3, sessionId=fa8f8eb8-67f8-5dbf-1202-5d34e2a50ba9, 在线数=1
+2026-07-27T23:41:57.433+08:00  INFO 19933 --- [dingring] [nio-8080-exec-5] c.d.adapter.websocket.WsSessionManager   : WS 连接注销: groupId=3, sessionId=fa8f8eb8-67f8-5dbf-1202-5d34e2a50ba9
+2026-07-27T23:41:57.444+08:00  INFO 19933 --- [dingring] [nio-8080-exec-6] c.d.adapter.websocket.WsSessionManager   : WS 连接注册: groupId=4, sessionId=2f8f5c2e-b962-f3dc-d310-dde9cc8e4cec, 在线数=1
+2026-07-27T23:42:01.216+08:00  INFO 19933 --- [dingring] [io-8080-exec-10] c.d.adapter.websocket.WsSessionManager   : WS 连接注销: groupId=4, sessionId=2f8f5c2e-b962-f3dc-d310-dde9cc8e4cec
+2026-07-27T23:42:01.235+08:00  INFO 19933 --- [dingring] [nio-8080-exec-2] c.d.adapter.websocket.WsSessionManager   : WS 连接注册: groupId=3, sessionId=c7db33b4-da57-8326-3bdf-0fcad7b00283, 在线数=1
+2026-07-27T23:43:00.069+08:00  INFO 19933 --- [dingring] [nio-8080-exec-2] c.d.adapter.websocket.WsSessionManager   : WS 连接注销: groupId=3, sessionId=c7db33b4-da57-8326-3bdf-0fcad7b00283
+2026-07-27T23:43:04.004+08:00  INFO 19933 --- [dingring] [nio-8080-exec-5] c.d.adapter.websocket.WsSessionManager   : WS 连接注册: groupId=4, sessionId=f5210e0d-4802-609a-9084-c0f89fefb5a5, 在线数=1
+2026-07-27T23:43:09.262+08:00  INFO 19933 --- [dingring] [nio-8080-exec-7] c.d.adapter.websocket.WsSessionManager   : WS 连接注销: groupId=4, sessionId=f5210e0d-4802-609a-9084-c0f89fefb5a5
+2026-07-27T23:43:09.268+08:00  INFO 19933 --- [dingring] [nio-8080-exec-4] c.d.adapter.websocket.WsSessionManager   : WS 连接注册: groupId=1, sessionId=4d28a634-fd40-01e7-12ac-0dfdc905aa9c, 在线数=1
+2026-07-27T23:43:12.975+08:00  INFO 19933 --- [dingring] [nio-8080-exec-3] c.d.adapter.websocket.WsSessionManager   : WS 连接注销: groupId=1, sessionId=4d28a634-fd40-01e7-12ac-0dfdc905aa9c
+2026-07-27T23:43:12.986+08:00  INFO 19933 --- [dingring] [nio-8080-exec-7] c.d.adapter.websocket.WsSessionManager   : WS 连接注册: groupId=3, sessionId=842d9e9a-e4ab-487b-60b2-4f7d9ee0704f, 在线数=1
+2026-07-27T23:43:16.935+08:00  INFO 19933 --- [dingring] [nio-8080-exec-2] c.d.adapter.websocket.WsSessionManager   : WS 连接注销: groupId=3, sessionId=842d9e9a-e4ab-487b-60b2-4f7d9ee0704f
+2026-07-27T23:43:16.942+08:00  INFO 19933 --- [dingring] [nio-8080-exec-9] c.d.adapter.websocket.WsSessionManager   : WS 连接注册: groupId=1, sessionId=7ade8786-89eb-9c88-19b5-78a7dda00ea7, 在线数=1
+2026-07-27T23:43:18.509+08:00  INFO 19933 --- [dingring] [nio-8080-exec-3] c.d.adapter.websocket.WsSessionManager   : WS 连接注销: groupId=1, sessionId=7ade8786-89eb-9c88-19b5-78a7dda00ea7
+2026-07-27T23:43:18.514+08:00  INFO 19933 --- [dingring] [nio-8080-exec-6] c.d.adapter.websocket.WsSessionManager   : WS 连接注册: groupId=3, sessionId=7a2867d5-1058-360b-c578-73b1cc541c1f, 在线数=1
+2026-07-27T23:44:49.024+08:00  INFO 19933 --- [dingring] [nio-8080-exec-1] c.d.adapter.websocket.WsSessionManager   : WS 连接注销: groupId=3, sessionId=7a2867d5-1058-360b-c578-73b1cc541c1f
+2026-07-27T23:44:49.036+08:00  INFO 19933 --- [dingring] [nio-8080-exec-5] c.d.adapter.websocket.WsSessionManager   : WS 连接注册: groupId=4, sessionId=c06b19db-6813-2284-f648-f01590bf9393, 在线数=1
+2026-07-27T23:45:05.175+08:00  INFO 19933 --- [dingring] [nio-8080-exec-6] c.d.adapter.websocket.WsSessionManager   : WS 连接注销: groupId=4, sessionId=c06b19db-6813-2284-f648-f01590bf9393
+2026-07-27T23:45:39.636+08:00  INFO 19933 --- [dingring] [io-8080-exec-10] c.d.adapter.websocket.WsSessionManager   : WS 连接注册: groupId=4, sessionId=3bd29eb0-c012-2027-aa36-5de7bec1bfd8, 在线数=1
+2026-07-27T23:45:40.941+08:00  INFO 19933 --- [dingring] [nio-8080-exec-4] c.d.adapter.websocket.WsSessionManager   : WS 连接注销: groupId=4, sessionId=3bd29eb0-c012-2027-aa36-5de7bec1bfd8
+2026-07-27T23:45:40.958+08:00  INFO 19933 --- [dingring] [nio-8080-exec-1] c.d.adapter.websocket.WsSessionManager   : WS 连接注册: groupId=3, sessionId=93cedba3-39cb-d3d7-f358-b9a6313772ce, 在线数=1
+2026-07-27T23:46:03.468+08:00  INFO 19933 --- [dingring] [nio-8080-exec-3] c.d.adapter.websocket.WsSessionManager   : WS 连接注销: groupId=3, sessionId=93cedba3-39cb-d3d7-f358-b9a6313772ce
+2026-07-27T23:46:03.475+08:00  INFO 19933 --- [dingring] [nio-8080-exec-8] c.d.adapter.websocket.WsSessionManager   : WS 连接注册: groupId=4, sessionId=6c074522-dc75-0665-d9f3-c8441d5e5950, 在线数=1
+2026-07-27T23:46:04.827+08:00  INFO 19933 --- [dingring] [nio-8080-exec-4] c.d.adapter.websocket.WsSessionManager   : WS 连接注销: groupId=4, sessionId=6c074522-dc75-0665-d9f3-c8441d5e5950
+2026-07-27T23:46:04.839+08:00  INFO 19933 --- [dingring] [nio-8080-exec-2] c.d.adapter.websocket.WsSessionManager   : WS 连接注册: groupId=3, sessionId=ec324826-cd1e-3529-7fa9-2a3c641b5ce0, 在线数=1
+2026-07-27T23:46:12.554+08:00  INFO 19933 --- [dingring] [nio-8080-exec-3] c.d.adapter.websocket.WsSessionManager   : WS 连接注销: groupId=3, sessionId=ec324826-cd1e-3529-7fa9-2a3c641b5ce0
+2026-07-27T23:46:12.571+08:00  INFO 19933 --- [dingring] [io-8080-exec-10] c.d.adapter.websocket.WsSessionManager   : WS 连接注册: groupId=4, sessionId=7ba6687b-c1f3-9334-8319-2c5828b085fe, 在线数=1
+2026-07-27T23:46:20.763+08:00  INFO 19933 --- [dingring] [nio-8080-exec-4] c.d.adapter.websocket.WsSessionManager   : WS 连接注销: groupId=4, sessionId=7ba6687b-c1f3-9334-8319-2c5828b085fe
+2026-07-27T23:46:20.770+08:00  INFO 19933 --- [dingring] [nio-8080-exec-9] c.d.adapter.websocket.WsSessionManager   : WS 连接注册: groupId=3, sessionId=c99e2eaf-ad85-53b9-ab92-3eb1a0b47e79, 在线数=1
+2026-07-27T23:46:21.486+08:00  INFO 19933 --- [dingring] [nio-8080-exec-3] c.d.adapter.websocket.WsSessionManager   : WS 连接注销: groupId=3, sessionId=c99e2eaf-ad85-53b9-ab92-3eb1a0b47e79
+2026-07-27T23:46:21.495+08:00  INFO 19933 --- [dingring] [io-8080-exec-10] c.d.adapter.websocket.WsSessionManager   : WS 连接注册: groupId=4, sessionId=14847419-bff1-8be6-bdba-d2822f6c1a54, 在线数=1
+2026-07-27T23:46:25.632+08:00  INFO 19933 --- [dingring] [nio-8080-exec-4] c.d.adapter.websocket.WsSessionManager   : WS 连接注销: groupId=4, sessionId=14847419-bff1-8be6-bdba-d2822f6c1a54
+2026-07-27T23:46:25.649+08:00  INFO 19933 --- [dingring] [nio-8080-exec-2] c.d.adapter.websocket.WsSessionManager   : WS 连接注册: groupId=3, sessionId=aaae8d6d-9125-fd2b-ad50-6cb9b2c65c35, 在线数=1
+2026-07-27T23:46:36.350+08:00  INFO 19933 --- [dingring] [nio-8080-exec-3] c.d.adapter.websocket.WsSessionManager   : WS 连接注销: groupId=3, sessionId=aaae8d6d-9125-fd2b-ad50-6cb9b2c65c35
+2026-07-27T23:46:36.356+08:00  INFO 19933 --- [dingring] [nio-8080-exec-8] c.d.adapter.websocket.WsSessionManager   : WS 连接注册: groupId=4, sessionId=ad6f76e3-9cb2-12f8-fd6c-2dd119a3ce59, 在线数=1
+2026-07-27T23:46:39.913+08:00  INFO 19933 --- [dingring] [nio-8080-exec-4] c.d.adapter.websocket.WsSessionManager   : WS 连接注销: groupId=4, sessionId=ad6f76e3-9cb2-12f8-fd6c-2dd119a3ce59
+2026-07-27T23:46:39.920+08:00  INFO 19933 --- [dingring] [nio-8080-exec-9] c.d.adapter.websocket.WsSessionManager   : WS 连接注册: groupId=1, sessionId=1662f564-eae4-8c05-60e4-2ad738273b1c, 在线数=1
+2026-07-27T23:46:41.424+08:00  INFO 19933 --- [dingring] [nio-8080-exec-3] c.d.adapter.websocket.WsSessionManager   : WS 连接注销: groupId=1, sessionId=1662f564-eae4-8c05-60e4-2ad738273b1c
+2026-07-27T23:46:41.436+08:00  INFO 19933 --- [dingring] [nio-8080-exec-6] c.d.adapter.websocket.WsSessionManager   : WS 连接注册: groupId=4, sessionId=fb4792b2-0f11-18d6-a1b0-d100df404af2, 在线数=1
+2026-07-27T23:46:44.415+08:00  INFO 19933 --- [dingring] [nio-8080-exec-4] c.d.adapter.websocket.WsSessionManager   : WS 连接注销: groupId=4, sessionId=fb4792b2-0f11-18d6-a1b0-d100df404af2
+2026-07-27T23:46:44.421+08:00  INFO 19933 --- [dingring] [nio-8080-exec-2] c.d.adapter.websocket.WsSessionManager   : WS 连接注册: groupId=3, sessionId=14f8c617-594d-36ce-c383-bf5e27a41904, 在线数=1
+2026-07-27T23:46:46.105+08:00  INFO 19933 --- [dingring] [nio-8080-exec-3] c.d.adapter.websocket.WsSessionManager   : WS 连接注销: groupId=3, sessionId=14f8c617-594d-36ce-c383-bf5e27a41904
+2026-07-27T23:46:46.111+08:00  INFO 19933 --- [dingring] [io-8080-exec-10] c.d.adapter.websocket.WsSessionManager   : WS 连接注册: groupId=4, sessionId=7b1f13b9-460a-6fcc-68e9-ee210edb36c6, 在线数=1
+2026-07-27T23:47:32.457+08:00  INFO 19933 --- [dingring] [nio-8080-exec-5] c.d.adapter.websocket.WsSessionManager   : WS 连接注销: groupId=4, sessionId=7b1f13b9-460a-6fcc-68e9-ee210edb36c6
+2026-07-27T23:47:32.464+08:00  INFO 19933 --- [dingring] [nio-8080-exec-8] c.d.adapter.websocket.WsSessionManager   : WS 连接注册: groupId=3, sessionId=b3dbe381-363e-fbfc-769a-39cd463a7278, 在线数=1
+2026-07-27T23:47:34.454+08:00  INFO 19933 --- [dingring] [nio-8080-exec-4] c.d.adapter.websocket.WsSessionManager   : WS 连接注销: groupId=3, sessionId=b3dbe381-363e-fbfc-769a-39cd463a7278
+2026-07-27T23:47:34.468+08:00  INFO 19933 --- [dingring] [nio-8080-exec-2] c.d.adapter.websocket.WsSessionManager   : WS 连接注册: groupId=4, sessionId=ea70cc37-6118-5cfb-f7e6-397849cf2b7b, 在线数=1
+2026-07-27T23:47:58.930+08:00  INFO 19933 --- [dingring] [io-8080-exec-10] c.d.adapter.websocket.WsSessionManager   : WS 连接注销: groupId=4, sessionId=ea70cc37-6118-5cfb-f7e6-397849cf2b7b
+2026-07-27T23:47:58.948+08:00  INFO 19933 --- [dingring] [nio-8080-exec-4] c.d.adapter.websocket.WsSessionManager   : WS 连接注册: groupId=3, sessionId=82a09dbc-0a6f-b527-405a-be15b09b38bd, 在线数=1
+2026-07-27T23:50:42.696+08:00  INFO 19933 --- [dingring] [nio-8080-exec-1] c.d.adapter.websocket.WsSessionManager   : WS 连接注销: groupId=3, sessionId=82a09dbc-0a6f-b527-405a-be15b09b38bd
+2026-07-27T23:52:07.144+08:00  INFO 19933 --- [dingring] [nio-8080-exec-6] c.d.adapter.websocket.WsSessionManager   : WS 连接注册: groupId=4, sessionId=cd63bd55-f45c-a4fd-55fd-90fdc5b18f57, 在线数=1
+2026-07-27T23:52:08.903+08:00  INFO 19933 --- [dingring] [nio-8080-exec-1] c.d.adapter.websocket.WsSessionManager   : WS 连接注销: groupId=4, sessionId=cd63bd55-f45c-a4fd-55fd-90fdc5b18f57
+2026-07-27T23:52:08.916+08:00  INFO 19933 --- [dingring] [nio-8080-exec-9] c.d.adapter.websocket.WsSessionManager   : WS 连接注册: groupId=3, sessionId=180ff92c-15c2-dd78-8bdb-85e95606d4d6, 在线数=1
+2026-07-27T23:52:45.312+08:00  INFO 19933 --- [dingring] [io-8080-exec-10] c.d.adapter.websocket.WsSessionManager   : WS 连接注销: groupId=3, sessionId=180ff92c-15c2-dd78-8bdb-85e95606d4d6
+2026-07-28T00:52:28.692+08:00  INFO 19933 --- [dingring] [nio-8080-exec-8] c.d.adapter.websocket.WsSessionManager   : WS 连接注册: groupId=4, sessionId=ea2028ba-899b-6760-6fad-da2ecc0bc9de, 在线数=1
+2026-07-28T00:52:40.913+08:00  INFO 19933 --- [dingring] [ionShutdownHook] o.s.b.w.e.tomcat.GracefulShutdown        : Commencing graceful shutdown. Waiting for active requests to complete
+2026-07-28T00:52:40.924+08:00  INFO 19933 --- [dingring] [tomcat-shutdown] o.s.b.w.e.tomcat.GracefulShutdown        : Graceful shutdown complete
+2026-07-28T00:52:40.927+08:00  INFO 19933 --- [dingring] [ionShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown initiated...
+2026-07-28T00:52:40.930+08:00  INFO 19933 --- [dingring] [ionShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown completed.
+2026-07-28T00:52:40.933+08:00  INFO 19933 --- [dingring] [ionShutdownHook] c.d.adapter.websocket.WsSessionManager   : WS 连接注销: groupId=4, sessionId=ea2028ba-899b-6760-6fad-da2ecc0bc9de
