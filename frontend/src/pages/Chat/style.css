@@ -290,3 +290,58 @@
   display: flex; align-items: center; justify-content: center;
   font-size: 24px; font-weight: 700;
 }
+
+/* ---- 群设置抽屉（右侧滑出） ---- */
+.drawer-mask {
+  position: fixed; inset: 0; z-index: 150;
+  background: var(--mask-bg);
+  animation: drawer-fade-in .2s ease-out;
+}
+.drawer {
+  position: fixed; top: 0; right: 0; bottom: 0; z-index: 151;
+  width: 380px; max-width: calc(100vw - 32px);
+  display: flex; flex-direction: column;
+  background: var(--bg-base-secondary);
+  border-left: 1px solid var(--border-neutral-l2);
+  box-shadow: -10px 0 30px rgba(0, 0, 0, .25);
+  animation: drawer-slide-in .25s ease-out;
+}
+.drawer__header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-neutral-l1);
+  flex-shrink: 0;
+}
+.drawer__title { font-size: 16px; font-weight: 600; color: var(--text-default-hover); }
+.drawer__close {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px; border: none; border-radius: 6px;
+  background: transparent; cursor: pointer; color: var(--text-secondary);
+  transition: background 0.12s, color 0.12s;
+}
+.drawer__close:hover { background: var(--bg-overlay-l2); color: var(--text-default); }
+
+.drawer__body { flex: 1; overflow-y: auto; padding: 4px 20px; }
+.drawer__section { padding: 16px 0; border-bottom: 1px solid var(--border-neutral-l1); }
+.drawer__section:last-child { border-bottom: none; }
+.drawer__label {
+  font-size: 12px; font-weight: 600; color: var(--text-tertiary);
+  text-transform: uppercase; letter-spacing: .04em; margin-bottom: 8px;
+}
+.drawer__sublabel { font-size: 12px; color: var(--text-secondary); margin-bottom: 8px; }
+.drawer__group-name { font-size: 15px; font-weight: 600; color: var(--text-default); }
+.drawer__group-meta { margin-top: 4px; font-size: 11px; color: var(--text-tertiary); }
+
+/* 专家项在成员列表中显示为禁用态（不可勾选，需先取消专家身份） */
+.member-pick.is-disabled { opacity: 0.55; cursor: not-allowed; }
+.member-pick.is-disabled:hover { background: transparent; }
+
+.drawer__footer {
+  display: flex; justify-content: flex-end; gap: 8px;
+  padding: 12px 20px;
+  border-top: 1px solid var(--border-neutral-l1);
+  flex-shrink: 0;
+}
+
+@keyframes drawer-slide-in { from { transform: translateX(100%); } to { transform: translateX(0); } }
+@keyframes drawer-fade-in { from { opacity: 0; } to { opacity: 1; } }

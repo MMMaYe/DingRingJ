@@ -1,6 +1,7 @@
 package com.dingring.app.service;
 
 import com.dingring.app.dto.request.CreateGroupRequest;
+import com.dingring.app.dto.request.UpdateMembersRequest;
 import com.dingring.app.dto.response.GroupDetail;
 import com.dingring.app.dto.response.GroupSummary;
 import com.dingring.app.dto.response.MemberInfo;
@@ -24,6 +25,7 @@ import com.dingring.domain.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -99,6 +101,42 @@ public class GroupAppService {
         groupRepository.findById(groupId)
                 .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "群不存在: " + groupId));
         groupRepository.deleteById(groupId);
+    }
+
+    /**
+     * 更新群成员配置（群设置-成员管理）。
+     * <p>整体覆盖语义：用请求中的 agentIds / expertAgentId 完整替换原有 Agent 成员，
+     * 群主 USER 成员自动保留。校验逻辑与 create 一致。
+     */
+    public GroupDetail updateMembers(Long groupId, UpdateMembersRequest request) {
+        if (request.getAgentIds().contains(request.getExpertAgentId())) {
+            throw new ParamException("专家 Agent 不能同时是普通成员");
+        }
+        Group group = groupRepository.findById(groupId)
+                .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "群不存在: " + groupId));
+
+        // 校验所有 Agent ID 有效
+        List<Long> allIds = new ArrayList<>(request.getAgentIds());
+        allIds.add(request.getExpertAgentId());
+        List<Agent> agents = agentRepository.findByIds(allIds);
+        if (agents.size() != allIds.size()) {
+            throw new ParamException("存在无效的 Agent ID");
+        }
+
+        // 保留群主 USER 成员，重建 Agent 成员列表
+        List<GroupMember> members = new ArrayList<>();
+        group.getGroupMember().stream()
+                .filter(m -> m.getType() == MemberType.USER)
+                .forEach(members::add);
+        for (Long agentId : request.getAgentIds()) {
+            members.add(new GroupMember(agentId, MemberType.AGENT, MemberRole.MEMBER));
+        }
+        members.add(new GroupMember(request.getExpertAgentId(), MemberType.AGENT, MemberRole.EXPERT));
+
+        group.setGroupMember(members);
+        group.setUpdateTime(LocalDateTime.now());
+        groupRepository.update(group);
+        return detail(groupId);
     }
 
     private GroupSummary toSummary(Group group) {

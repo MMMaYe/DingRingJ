@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import Sidebar, { IconPlus } from '../../components/Sidebar';
 import Avatar from '../../components/Avatar';
 import Modal from '../../components/Modal';
+import GroupSettings from '../../components/GroupSettings';
 import { toast } from '../../components/Toast';
 import useWebSocket from '../../hooks/useWebSocket';
 import { API } from '../../api';
@@ -39,6 +40,8 @@ export default function ChatPage() {
   const [showCreateTopic, setShowCreateTopic] = useState(false);
   const [showConclusion, setShowConclusion] = useState<ConclusionDTO | null>(null);
   const [conclusionCards, setConclusionCards] = useState<KnowledgeCardDTO[]>([]);
+  // 群设置抽屉
+  const [showGroupSettings, setShowGroupSettings] = useState(false);
 
   // create group form
   const [cgName, setCgName] = useState('');
@@ -301,6 +304,18 @@ export default function ChatPage() {
     } catch (e: any) { toast(e.message, 'error'); }
   }, []);
 
+  // ---- 群设置（成员管理）：打开前确保 agents 已加载 ----
+  const openGroupSettings = useCallback(async () => {
+    try {
+      if (!agents.length) {
+        const list = await API.get<AgentDTO[]>('/api/agents');
+        if (!list.length) { toast('请先到「Agent 管理」创建 Agent', 'error'); return; }
+        setAgents(list);
+      }
+      setShowGroupSettings(true);
+    } catch (e: any) { toast(e.message, 'error'); }
+  }, [agents.length]);
+
   const submitCreateGroup = useCallback(async () => {
     const agentIds = [...cgSelectedAgents];
     if (!cgName.trim()) { toast('请输入群名称', 'error'); return; }
@@ -408,6 +423,9 @@ export default function ChatPage() {
               <div className="chat-header__right">
                 <button className="chat-header__icon-btn" title="搜索消息 (Ctrl+F)" onClick={toggleSearch}>
                   <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="4.5" stroke="currentColor" strokeWidth="1.2"/><path d="M10.5 10.5L14 14" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>
+                </button>
+                <button className="chat-header__icon-btn" title="群设置" onClick={openGroupSettings}>
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 10a2 2 0 100-4 2 2 0 000 4z" stroke="currentColor" strokeWidth="1.2"/><path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.7 3.7l1.4 1.4M10.9 10.9l1.4 1.4M3.7 12.3l1.4-1.4M10.9 5.1l1.4-1.4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>
                 </button>
               </div>
             </header>
@@ -710,6 +728,17 @@ export default function ChatPage() {
           )}
         </div>
       </Modal>
+
+      {/* 抽屉：群设置（成员管理） */}
+      {group && (
+        <GroupSettings
+          open={showGroupSettings}
+          onClose={() => setShowGroupSettings(false)}
+          group={group}
+          agents={agents}
+          onUpdated={detail => { setGroup(detail); setActiveTopic(detail.activeTopic ?? null); }}
+        />
+      )}
     </div>
   );
 }

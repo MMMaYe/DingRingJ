@@ -1,6 +1,7 @@
 package com.dingring.adapter.rest;
 
 import com.dingring.app.dto.request.CreateGroupRequest;
+import com.dingring.app.dto.request.UpdateMembersRequest;
 import com.dingring.app.dto.response.GroupDetail;
 import com.dingring.app.dto.response.GroupSummary;
 import com.dingring.app.service.GroupAppService;
@@ -11,6 +12,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -50,5 +52,12 @@ public class GroupController {
     public ApiResponse<Void> delete(@PathVariable Long id) {
         groupAppService.delete(id);
         return ApiResponse.ok();
+    }
+
+    /** 更新群成员配置（群设置-成员管理） */
+    @PutMapping("/{id}/members")
+    public ApiResponse<GroupDetail> updateMembers(@PathVariable Long id,
+                                                  @Valid @RequestBody UpdateMembersRequest request) {
+        return ApiResponse.ok(groupAppService.updateMembers(id, request));
     }
 }

@@ -139,3 +139,9 @@ export interface CreateGroupRequest {
   agentIds: number[];
   expertAgentId: number;
 }
+
+/** PUT /api/groups/{id}/members 更新群成员请求 */
+export interface UpdateMembersRequest {
+  agentIds: number[];
+  expertAgentId: number;
+}
