@@ -108,15 +108,29 @@ export default function CardsPage() {
         </div>
       </Sidebar>
 
-      <section className="page">
-        <header className="page__header">
-          <div>
-            <div className="page__title">知识卡片</div>
-            <div className="page__subtitle">
-              {currentCat ? `分类「${currentCat}」` : '全部'}共 {filteredCards.length} 张卡片 · 点击卡片查看详情
-            </div>
+      <section className="page page--editorial">
+        <header className="page__head">
+          <div className="page__head-meta">
+            <span className="page__eyebrow">Knowledge Cards</span>
+            <span className="page__head-rule" aria-hidden />
+            <span className="page__head-id">No. {String(stats.total).padStart(3, '0')}</span>
           </div>
-          <div className="page__header-actions">
+          <div className="page__head-main">
+            <div className="page__head-title-row">
+              <h1 className="page__title-serif">知识卡片</h1>
+              <div className="page__head-cta-group">
+                <select className="input page__head-select" value={order} onChange={e => setOrder(e.target.value as any)}>
+                  <option value="sequential">顺序复习</option>
+                  <option value="random">随机复习</option>
+                </select>
+                <button className="btn btn--brand page__head-cta" onClick={startReview}>▶ 开始复习</button>
+              </div>
+            </div>
+            <p className="page__lead">
+              {currentCat ? `分类「${currentCat}」` : '全部'}共 {filteredCards.length} 张卡片 · 点击卡片查看详情
+            </p>
+          </div>
+          <div className="page__head-actions">
             <div className="page__search">
               <svg className="page__search-icon" width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="6" cy="6" r="4" stroke="currentColor" strokeWidth="1.2"/><path d="M9.5 9.5L12.5 12.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>
               <input
@@ -127,42 +141,48 @@ export default function CardsPage() {
                 onChange={e => setKeyword(e.target.value)}
               />
             </div>
-            <select className="input" style={{ width: 130 }} value={order} onChange={e => setOrder(e.target.value as any)}>
-              <option value="sequential">顺序复习</option>
-              <option value="random">随机复习</option>
-            </select>
-            <button className="btn btn--brand" onClick={startReview}>▶ 开始复习</button>
           </div>
         </header>
 
-        {/* 统计栏 */}
+        {/* 统计卡片 */}
         <div className="page__stats">
-          <div className="page__stat">
-            <span className="page__stat-num">{stats.total}</span>
-            <span className="page__stat-label">张卡片</span>
+          <div className="stat-card">
+            <span className="stat-card__num">{stats.total}</span>
+            <span className="stat-card__label">张卡片</span>
+            <span className="stat-card__bar" aria-hidden />
           </div>
-          <div className="page__stat">
-            <span className="page__stat-num">{stats.topics}</span>
-            <span className="page__stat-label">个主题</span>
+          <div className="stat-card">
+            <span className="stat-card__num">{stats.topics}</span>
+            <span className="stat-card__label">个主题</span>
+            <span className="stat-card__bar stat-card__bar--accent" aria-hidden />
           </div>
-          <div className="page__stat">
-            <span className="page__stat-num">{stats.categories}</span>
-            <span className="page__stat-label">个分类</span>
+          <div className="stat-card">
+            <span className="stat-card__num">{stats.categories}</span>
+            <span className="stat-card__label">个分类</span>
+            <span className="stat-card__bar stat-card__bar--violet" aria-hidden />
           </div>
         </div>
 
         <div className="page__body">
           <div className="card-grid">
             {!cards.length ? (
-              <div className="empty" style={{ gridColumn: '1/-1' }}>
-                <div className="empty__icon">🗂️</div>暂无知识卡片<br />在群里发起讨论并 @专家 结束后会自动生成
+              <div className="empty empty--editorial" style={{ gridColumn: '1/-1' }}>
+                <div className="empty__icon">🗂️</div>
+                <div className="empty__title">暂无知识卡片</div>
+                <div className="empty__hint">在群里发起讨论并 @专家 结束后会自动生成</div>
               </div>
             ) : !filteredCards.length ? (
-              <div className="empty" style={{ gridColumn: '1/-1' }}>
-                <div className="empty__icon">🔍</div>没有匹配「{keyword}」的卡片
+              <div className="empty empty--editorial" style={{ gridColumn: '1/-1' }}>
+                <div className="empty__icon">🔍</div>
+                <div className="empty__title">没有匹配「{keyword}」的卡片</div>
               </div>
-            ) : filteredCards.map(c => (
-              <div key={c.id} className="k-card" onClick={() => setDetailCard(c)}>
+            ) : filteredCards.map((c, idx) => (
+              <article
+                key={c.id}
+                className="k-card k-card--editorial"
+                style={{ animationDelay: `${idx * 30}ms` }}
+                onClick={() => setDetailCard(c)}
+              >
                 <div className="k-card__header">
                   <span className="k-card__q">Q: {c.question}</span>
                   {c.category && <span className="tag tag--brand">{c.category}</span>}
@@ -174,16 +194,22 @@ export default function CardsPage() {
                     <span>创建于 {new Date(c.createTime).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit' })}</span>
                   </span>
                 </div>
-              </div>
+              </article>
             ))}
           </div>
         </div>
       </section>
 
       {/* 卡片详情弹窗 */}
-      <Modal open={!!detailCard} onClose={() => setDetailCard(null)}
-        title={detailCard?.category ? `📄 #${detailCard.category}` : '📄 知识卡片'} width={560}
-        footer={<button className="btn btn--ghost" onClick={() => setDetailCard(null)}>关闭</button>}>
+      <Modal
+        open={!!detailCard}
+        onClose={() => setDetailCard(null)}
+        title={detailCard?.category ? `#${detailCard.category}` : '知识卡片'}
+        eyebrow="Card"
+        subtitle={detailCard ? `来自「${detailCard.topicTitle}」` : undefined}
+        width={560}
+        footer={<button className="btn btn--ghost" onClick={() => setDetailCard(null)}>关闭</button>}
+      >
         {detailCard && (
           <>
             <div className="card-detail__meta">
@@ -207,7 +233,11 @@ export default function CardsPage() {
         <div className="review-mask">
           <div className="review">
             <div className="review__top">
-              <span className="review__progress">第 {reviewIdx + 1} / {reviewCards.length} 张</span>
+              <span className="review__progress">
+                <span className="review__progress-num">{reviewIdx + 1}</span>
+                <span className="review__progress-sep">/</span>
+                <span className="review__progress-total">{reviewCards.length}</span>
+              </span>
               <button className="btn btn--ghost" onClick={() => setReviewActive(false)}>✕ 退出复习</button>
             </div>
             <div className="review__stage">

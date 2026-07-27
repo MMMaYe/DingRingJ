@@ -89,13 +89,21 @@ export default function AgentsPage() {
     <div className="app-shell">
       <Sidebar footer={<button className="sidebar__new-group" onClick={openCreate}><IconPlus /> 新建 Agent</button>} />
 
-      <section className="page">
-        <header className="page__header">
-          <div>
-            <div className="page__title">Agent 管理</div>
-            <div className="page__subtitle">配置 AI 同学的模型接入与人设，创建后即可拉入群聊参与讨论</div>
+      <section className="page page--editorial">
+        <header className="page__head">
+          <div className="page__head-meta">
+            <span className="page__eyebrow">Agents</span>
+            <span className="page__head-rule" aria-hidden />
+            <span className="page__head-id">No. {String(stats.total).padStart(2, '0')}</span>
           </div>
-          <div className="page__header-actions">
+          <div className="page__head-main">
+            <div className="page__head-title-row">
+              <h1 className="page__title-serif">Agent 管理</h1>
+              <button className="btn btn--brand page__head-cta" onClick={openCreate}><IconPlus /> 新建 Agent</button>
+            </div>
+            <p className="page__lead">配置 AI 同学的模型接入与人设，创建后即可拉入群聊参与讨论</p>
+          </div>
+          <div className="page__head-actions">
             <div className="page__search">
               <svg className="page__search-icon" width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="6" cy="6" r="4" stroke="currentColor" strokeWidth="1.2"/><path d="M9.5 9.5L12.5 12.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>
               <input
@@ -106,38 +114,50 @@ export default function AgentsPage() {
                 onChange={e => setKeyword(e.target.value)}
               />
             </div>
-            <button className="btn btn--brand" onClick={openCreate}>＋ 新建 Agent</button>
           </div>
         </header>
 
-        {/* 统计栏 */}
+        {/* 统计卡片：editorial 三联 */}
         <div className="page__stats">
-          <div className="page__stat">
-            <span className="page__stat-num">{stats.total}</span>
-            <span className="page__stat-label">个 Agent</span>
+          <div className="stat-card">
+            <span className="stat-card__num">{stats.total}</span>
+            <span className="stat-card__label">个 Agent</span>
+            <span className="stat-card__bar" aria-hidden />
           </div>
-          <div className="page__stat">
-            <span className="page__stat-num">{stats.providers}</span>
-            <span className="page__stat-label">个供应商</span>
+          <div className="stat-card">
+            <span className="stat-card__num">{stats.providers}</span>
+            <span className="stat-card__label">个供应商</span>
+            <span className="stat-card__bar stat-card__bar--accent" aria-hidden />
           </div>
-          <div className="page__stat">
-            <span className="page__stat-num">{stats.models}</span>
-            <span className="page__stat-label">种模型</span>
+          <div className="stat-card">
+            <span className="stat-card__num">{stats.models}</span>
+            <span className="stat-card__label">种模型</span>
+            <span className="stat-card__bar stat-card__bar--violet" aria-hidden />
           </div>
         </div>
 
         <div className="page__body">
           <div className="agent-list">
             {!agents.length ? (
-              <div className="empty">
-                <div className="empty__icon">🤖</div>还没有 Agent，点击上方「新建 Agent」创建第一位 AI 同学
+              <div className="empty empty--editorial">
+                <div className="empty__icon empty__icon--logo">
+                  <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+                    <circle cx="16" cy="16" r="13" stroke="currentColor" strokeWidth="1.4" opacity="0.35"/>
+                    <circle cx="16" cy="16" r="9" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeDasharray="42.4 56.5" strokeDashoffset={-14}/>
+                    <circle cx="16" cy="16" r="3" fill="currentColor"/>
+                  </svg>
+                </div>
+                <div className="empty__title">还没有 Agent</div>
+                <div className="empty__hint">点击右上方「新建 Agent」创建第一位 AI 同学</div>
               </div>
             ) : !filteredAgents.length ? (
-              <div className="empty">
-                <div className="empty__icon">🔍</div>没有匹配「{keyword}」的 Agent
+              <div className="empty empty--editorial">
+                <div className="empty__icon">🔍</div>
+                <div className="empty__title">没有匹配「{keyword}」的 Agent</div>
               </div>
-            ) : filteredAgents.map(a => (
-              <div key={a.id} className="agent-card">
+            ) : filteredAgents.map((a, idx) => (
+              <article key={a.id} className="agent-card agent-card--editorial" style={{ animationDelay: `${idx * 40}ms` }}>
+                <div className="agent-card__index" aria-hidden>{String(idx + 1).padStart(2, '0')}</div>
                 <div className="agent-card__avatar">
                   <Avatar name={a.name} size="lg" />
                 </div>
@@ -156,13 +176,19 @@ export default function AgentsPage() {
                   </div>
                   <button className="btn btn--ghost" onClick={() => openEdit(a)}>配置</button>
                 </div>
-              </div>
+              </article>
             ))}
           </div>
         </div>
       </section>
 
-      <Modal open={showModal} onClose={() => setShowModal(false)} title={editingId === null ? '新建 Agent' : `编辑 Agent · ${name}`} width={520}
+      <Modal
+        open={showModal}
+        onClose={() => setShowModal(false)}
+        title={editingId === null ? '新建 Agent' : '编辑 Agent'}
+        eyebrow={editingId === null ? 'Create' : 'Edit'}
+        subtitle={editingId === null ? '为群聊引入一位新的 AI 同学' : `正在配置 ${name}`}
+        width={520}
         footer={<>
           <button className="btn btn--ghost" onClick={() => setShowModal(false)}>取消</button>
           <button className="btn btn--brand" disabled={submitting} onClick={submit}>{submitting ? '保存中…' : '保存'}</button>

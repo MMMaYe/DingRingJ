@@ -1,10 +1,8 @@
 import { NavLink } from 'react-router-dom';
 import ThemeToggle from './ThemeToggle';
+import Logo from './Logo';
 
 /* ---- Inline SVG Icons (from design spec) ---- */
-const IconZap = () => (
-  <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M9.5 1.5L3.5 9h4l-1 5.5L12.5 7h-4l1-5.5z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/></svg>
-);
 const IconChat = () => (
   <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M13.5 10.5a1.5 1.5 0 01-1.5 1.5H5L2.5 14V4a1.5 1.5 0 011.5-1.5h7a1.5 1.5 0 011.5 1.5v6.5z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/></svg>
 );
@@ -39,8 +37,13 @@ export default function Sidebar({ children, footer, showGroupLabel, onSearch, se
   return (
     <aside className="sidebar">
       <div className="sidebar__header">
-        <div className="sidebar__logo"><IconZap /></div>
-        <span className="sidebar__title">Ding<span className="sidebar__title-accent">Ring</span></span>
+        <div className="sidebar__logo" aria-hidden="true">
+          <Logo size={28} animate />
+        </div>
+        <div className="sidebar__brand">
+          <span className="sidebar__title">Ding<span className="sidebar__title-accent">Ring</span></span>
+          <span className="sidebar__tagline">学习讨论 · 叮一声</span>
+        </div>
       </div>
 
       {onSearch && (

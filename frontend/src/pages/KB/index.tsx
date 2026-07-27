@@ -110,69 +110,98 @@ export default function KBPage() {
         </div>
       </Sidebar>
 
-      <section className="page">
-        {/* 顶部搜索栏 */}
-        <header className="kb-topbar">
-          <div className="kb-topbar__search">
-            <svg className="kb-topbar__search-icon" width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="6" cy="6" r="4" stroke="currentColor" strokeWidth="1.2"/><path d="M9.5 9.5L12.5 12.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>
-            <input
-              type="text"
-              className="kb-topbar__input"
-              placeholder="搜索知识库（名称 / 分类）..."
-              value={keyword}
-              onChange={e => setKeyword(e.target.value)}
-            />
+      <section className="page page--editorial">
+        {/* editorial 页首 */}
+        <header className="page__head">
+          <div className="page__head-meta">
+            <span className="page__eyebrow">Knowledge Base</span>
+            <span className="page__head-rule" aria-hidden />
+            <span className="page__head-id">No. {String(stats.total).padStart(2, '0')}</span>
+          </div>
+          <div className="page__head-main">
+            <div className="page__head-title-row">
+              <h1 className="page__title-serif">知识库管理</h1>
+            </div>
+            <p className="page__lead">按群组聚合知识卡片，沉淀每一次学习讨论的成果</p>
+          </div>
+          <div className="page__head-actions">
+            <div className="page__search">
+              <svg className="page__search-icon" width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="6" cy="6" r="4" stroke="currentColor" strokeWidth="1.2"/><path d="M9.5 9.5L12.5 12.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>
+              <input
+                type="text"
+                className="page__search-input"
+                placeholder="搜索知识库（名称 / 分类）..."
+                value={keyword}
+                onChange={e => setKeyword(e.target.value)}
+              />
+            </div>
           </div>
         </header>
 
-        {/* 筛选标签 */}
-        <nav className="kb-filter-bar">
+        {/* 筛选 tab：editorial 风格 */}
+        <nav className="kb-filter-bar kb-filter-bar--editorial">
           <button className={`kb-filter-tab${filter === 'all' ? ' is-active' : ''}`} onClick={() => setFilter('all')}>
-            全部 ({aggregates.length})
+            <span className="kb-filter-tab__label">全部</span>
+            <span className="kb-filter-tab__num">{aggregates.length}</span>
           </button>
           <button className={`kb-filter-tab${filter === 'filled' ? ' is-active' : ''}`} onClick={() => setFilter('filled')}>
-            有内容 ({stats.filled})
+            <span className="kb-filter-tab__label">有内容</span>
+            <span className="kb-filter-tab__num">{stats.filled}</span>
           </button>
           <button className={`kb-filter-tab${filter === 'empty' ? ' is-active' : ''}`} onClick={() => setFilter('empty')}>
-            空 ({aggregates.length - stats.filled})
+            <span className="kb-filter-tab__label">空</span>
+            <span className="kb-filter-tab__num">{aggregates.length - stats.filled}</span>
           </button>
         </nav>
 
         <div className="page__body">
-          {/* 统计栏 */}
-          <div className="kb-stats">
-            <div className="kb-stat">
-              <span className="kb-stat__num">{stats.total}</span>
-              <span className="kb-stat__label">个知识库</span>
+          {/* 统计卡片 */}
+          <div className="page__stats">
+            <div className="stat-card">
+              <span className="stat-card__num">{stats.total}</span>
+              <span className="stat-card__label">个知识库</span>
+              <span className="stat-card__bar" aria-hidden />
             </div>
-            <div className="kb-stat">
-              <span className="kb-stat__num">{stats.cards}</span>
-              <span className="kb-stat__label">条卡片记录</span>
+            <div className="stat-card">
+              <span className="stat-card__num">{stats.cards}</span>
+              <span className="stat-card__label">条卡片记录</span>
+              <span className="stat-card__bar stat-card__bar--accent" aria-hidden />
             </div>
-            <div className="kb-stat">
-              <span className="kb-stat__num">{stats.topics}</span>
-              <span className="kb-stat__label">个已总结主题</span>
+            <div className="stat-card">
+              <span className="stat-card__num">{stats.topics}</span>
+              <span className="stat-card__label">个已总结主题</span>
+              <span className="stat-card__bar stat-card__bar--violet" aria-hidden />
             </div>
-            <div className="kb-stat">
-              <span className="kb-stat__num">{stats.filled}</span>
-              <span className="kb-stat__label">有内容</span>
+            <div className="stat-card">
+              <span className="stat-card__num">{stats.filled}</span>
+              <span className="stat-card__label">有内容</span>
+              <span className="stat-card__bar stat-card__bar--amber" aria-hidden />
             </div>
           </div>
 
           {/* 知识库卡片列表 */}
           {loading ? (
-            <div className="empty"><div className="empty__icon">⏳</div>加载中…</div>
+            <div className="empty empty--editorial">
+              <div className="empty__icon">⏳</div>
+              <div className="empty__title">加载中…</div>
+            </div>
           ) : !filtered.length ? (
-            <div className="empty">
+            <div className="empty empty--editorial">
               <div className="empty__icon">📚</div>
-              {aggregates.length === 0
-                ? <>暂无知识库<br />请先创建群组并发起讨论</>
-                : <>没有匹配的知识库</>}
+              <div className="empty__title">
+                {aggregates.length === 0 ? '暂无知识库' : '没有匹配的知识库'}
+              </div>
+              {aggregates.length === 0 && <div className="empty__hint">请先创建群组并发起讨论</div>}
             </div>
           ) : (
             <div className="kb-list">
-              {filtered.map(kb => (
-                <article key={kb.groupId} className={`kb-card${kb.cardCount > 0 ? ' kb-card--filled' : ''}`}>
+              {filtered.map((kb, idx) => (
+                <article
+                  key={kb.groupId}
+                  className={`kb-card kb-card--editorial${kb.cardCount > 0 ? ' kb-card--filled' : ''}`}
+                  style={{ animationDelay: `${idx * 40}ms` }}
+                >
+                  <div className="kb-card__index" aria-hidden>{String(idx + 1).padStart(2, '0')}</div>
                   <div className="kb-card__avatar">
                     {kb.groupName.trim().charAt(0) || '?'}
                   </div>
@@ -200,7 +229,7 @@ export default function KBPage() {
                     </div>
                     <div className="kb-card__actions">
                       <button className="kb-card__link" disabled={kb.cardCount === 0} onClick={() => setDetailKb(kb)}>
-                        查看详情
+                        查看详情 →
                       </button>
                     </div>
                   </div>
@@ -212,9 +241,15 @@ export default function KBPage() {
       </section>
 
       {/* 详情弹窗 */}
-      <Modal open={!!detailKb} onClose={() => setDetailKb(null)}
-        title={`📚 ${detailKb?.groupName ?? ''} · 知识库`} width={620}
-        footer={<button className="btn btn--ghost" onClick={() => setDetailKb(null)}>关闭</button>}>
+      <Modal
+        open={!!detailKb}
+        onClose={() => setDetailKb(null)}
+        title={`${detailKb?.groupName ?? ''} · 知识库`}
+        eyebrow="Library"
+        subtitle={detailKb ? `${detailKb.cardCount} 张卡片 · ${detailKb.topicCount} 个主题` : undefined}
+        width={620}
+        footer={<button className="btn btn--ghost" onClick={() => setDetailKb(null)}>关闭</button>}
+      >
         {detailKb && (
           <>
             <div className="kb-detail-summary">
