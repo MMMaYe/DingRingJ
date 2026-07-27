@@ -22,6 +22,8 @@ export default function AgentsPage() {
   const [callType, setCallType] = useState<'API' | 'CLI'>('API');
   const [systemPrompt, setSystemPrompt] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  // 编辑时拉取详情的 loading 态（避免使用列表快照覆盖最新配置）
+  const [loadingDetail, setLoadingDetail] = useState(false);
 
   // 搜索过滤
   const filteredAgents = useMemo(() => {
@@ -54,14 +56,31 @@ export default function AgentsPage() {
     setShowModal(true);
   }, []);
 
-  const openEdit = useCallback((a: AgentDTO) => {
-    setEditingId(a.id);
-    setName(a.name); setModelName(a.modelName); setDescription(a.description || '');
-    setBaseUrl(a.baseUrl); setApiKey('');
-    // 回填 callType，兼容旧数据可能为 null
-    setCallType(a.callType === 'CLI' ? 'CLI' : 'API');
-    setSystemPrompt(a.systemPrompt || '');
+  /**
+   * 编辑：按 id 拉取最新配置后再回填表单。
+   * 不复用列表数据，避免列表快照覆盖他人最新修改。
+   */
+  const openEdit = useCallback(async (id: number) => {
+    setEditingId(id);
     setShowModal(true);
+    setLoadingDetail(true);
+    try {
+      const detail = await API.get<AgentDTO>(`/api/agents/${id}`);
+      setName(detail.name);
+      setModelName(detail.modelName);
+      setDescription(detail.description || '');
+      setBaseUrl(detail.baseUrl);
+      // 详情接口返回 apiKey，回填避免用户每次重新输入
+      setApiKey(detail.apiKey || '');
+      // 回填 callType，兼容旧数据可能为 null
+      setCallType(detail.callType === 'CLI' ? 'CLI' : 'API');
+      setSystemPrompt(detail.systemPrompt || '');
+    } catch (e: any) {
+      toast(e.message || '加载配置失败', 'error');
+      setShowModal(false);
+    } finally {
+      setLoadingDetail(false);
+    }
   }, []);
 
   const submit = useCallback(async () => {
@@ -189,7 +208,7 @@ export default function AgentsPage() {
                   <div className="agent-card__meta">
                     <span>最后活跃: {new Date(a.updateTime || a.createTime).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}</span>
                   </div>
-                  <button className="btn btn--ghost" onClick={() => openEdit(a)}>配置</button>
+                  <button className="btn btn--ghost" onClick={() => openEdit(a.id)}>配置</button>
                 </div>
               </article>
             ))}
@@ -202,59 +221,77 @@ export default function AgentsPage() {
         onClose={() => setShowModal(false)}
         title={editingId === null ? '新建 Agent' : '编辑 Agent'}
         eyebrow={editingId === null ? 'Create' : 'Edit'}
-        subtitle={editingId === null ? '为群聊引入一位新的 AI 同学' : `正在配置 ${name}`}
+        subtitle={editingId === null ? '为群聊引入一位新的 AI 同学' : (loadingDetail ? '正在加载最新配置…' : `正在配置 ${name}`)}
         width={520}
         footer={<>
-          <button className="btn btn--ghost" onClick={() => setShowModal(false)}>取消</button>
-          <button className="btn btn--brand" disabled={submitting} onClick={submit}>{submitting ? '保存中…' : '保存'}</button>
+          <button className="btn btn--ghost" onClick={() => setShowModal(false)} disabled={loadingDetail}>取消</button>
+          <button className="btn btn--brand" disabled={submitting || loadingDetail} onClick={submit}>
+            {submitting ? '保存中…' : loadingDetail ? '加载中…' : '保存'}
+          </button>
         </>}>
-        <div className="form-grid">
-          <div className="form-row">
-            <label>花名 *</label>
-            <input className="input" value={name} onChange={e => setName(e.target.value)} placeholder="如：老王" maxLength={32} />
+        {loadingDetail ? (
+          <div className="agent-form-skeleton">
+            <div className="skeleton-row skeleton-row--grid">
+              <div className="skeleton-field"><span className="skeleton-label" /><span className="skeleton-input" /></div>
+              <div className="skeleton-field"><span className="skeleton-label" /><span className="skeleton-input" /></div>
+            </div>
+            <div className="skeleton-row"><span className="skeleton-label" /><span className="skeleton-input skeleton-input--wide" /></div>
+            <div className="skeleton-row"><span className="skeleton-label" /><span className="skeleton-input skeleton-input--wide" /></div>
+            <div className="skeleton-row"><span className="skeleton-label" /><span className="skeleton-input skeleton-input--wide" /></div>
+            <div className="skeleton-row"><span className="skeleton-label" /><span className="skeleton-input skeleton-input--wide" /></div>
+            <div className="skeleton-row"><span className="skeleton-label" /><span className="skeleton-textarea" /></div>
           </div>
-          <div className="form-row">
-            <label>模型名 *</label>
-            <input className="input" value={modelName} onChange={e => setModelName(e.target.value)} placeholder="如：gpt-4o-mini / qwen-plus" />
-          </div>
-        </div>
-        <div className="form-row">
-          <label>调用方式 *</label>
-          <div className="call-type-picker">
-            <button
-              type="button"
-              className={`call-type-option${callType === 'API' ? ' is-active' : ''}`}
-              onClick={() => setCallType('API')}
-            >
-              <span className="call-type-option__title">API</span>
-              <span className="call-type-option__desc">直接调用 LLM API</span>
-            </button>
-            <button
-              type="button"
-              className={`call-type-option${callType === 'CLI' ? ' is-active' : ''}`}
-              onClick={() => setCallType('CLI')}
-            >
-              <span className="call-type-option__title">CLI</span>
-              <span className="call-type-option__desc">调用 CLI 工具（如 Claude Code）</span>
-            </button>
-          </div>
-        </div>
-        <div className="form-row">
-          <label>人设描述</label>
-          <input className="input" value={description} onChange={e => setDescription(e.target.value)} placeholder="一句话描述这个 Agent 的性格与擅长领域" maxLength={255} />
-        </div>
-        <div className="form-row">
-          <label>Base URL *</label>
-          <input className="input" value={baseUrl} onChange={e => setBaseUrl(e.target.value)} placeholder="如：https://api.openai.com" />
-        </div>
-        <div className="form-row">
-          <label>API Key *</label>
-          <input className="input" type="password" value={apiKey} onChange={e => setApiKey(e.target.value)} placeholder="sk-…（创建和修改都需输入）" autoComplete="new-password" />
-        </div>
-        <div className="form-row">
-          <label>系统提示词（人设 Prompt）</label>
-          <textarea className="input" rows={5} value={systemPrompt} onChange={e => setSystemPrompt(e.target.value)} placeholder="你是一位经验丰富的后端工程师，说话直接，喜欢结合生产实践举例…" />
-        </div>
+        ) : (
+          <>
+            <div className="form-grid">
+              <div className="form-row">
+                <label>花名 *</label>
+                <input className="input" value={name} onChange={e => setName(e.target.value)} placeholder="如：老王" maxLength={32} />
+              </div>
+              <div className="form-row">
+                <label>模型名 *</label>
+                <input className="input" value={modelName} onChange={e => setModelName(e.target.value)} placeholder="如：gpt-4o-mini / qwen-plus" />
+              </div>
+            </div>
+            <div className="form-row">
+              <label>调用方式 *</label>
+              <div className="call-type-picker">
+                <button
+                  type="button"
+                  className={`call-type-option${callType === 'API' ? ' is-active' : ''}`}
+                  onClick={() => setCallType('API')}
+                >
+                  <span className="call-type-option__title">API</span>
+                  <span className="call-type-option__desc">直接调用 LLM API</span>
+                </button>
+                <button
+                  type="button"
+                  className={`call-type-option${callType === 'CLI' ? ' is-active' : ''}`}
+                  onClick={() => setCallType('CLI')}
+                >
+                  <span className="call-type-option__title">CLI</span>
+                  <span className="call-type-option__desc">调用 CLI 工具（如 Claude Code）</span>
+                </button>
+              </div>
+            </div>
+            <div className="form-row">
+              <label>人设描述</label>
+              <input className="input" value={description} onChange={e => setDescription(e.target.value)} placeholder="一句话描述这个 Agent 的性格与擅长领域" maxLength={255} />
+            </div>
+            <div className="form-row">
+              <label>Base URL *</label>
+              <input className="input" value={baseUrl} onChange={e => setBaseUrl(e.target.value)} placeholder="如：https://api.openai.com" />
+            </div>
+            <div className="form-row">
+              <label>API Key *</label>
+              <input className="input" type="password" value={apiKey} onChange={e => setApiKey(e.target.value)} placeholder="sk-…（创建和修改都需输入）" autoComplete="new-password" />
+            </div>
+            <div className="form-row">
+              <label>系统提示词（人设 Prompt）</label>
+              <textarea className="input" rows={5} value={systemPrompt} onChange={e => setSystemPrompt(e.target.value)} placeholder="你是一位经验丰富的后端工程师，说话直接，喜欢结合生产实践举例…" />
+            </div>
+          </>
+        )}
       </Modal>
     </div>
   );

@@ -129,4 +129,42 @@ class AgentAppServiceTest {
         assertThat(result).hasSize(2);
         assertThat(result).extracting(AgentDTO::getName).containsExactly("老王", "小李");
     }
+
+    @Nested
+    @DisplayName("findById 按 id 查询详情")
+    class FindById {
+
+        @Test
+        @DisplayName("Agent 存在时返回 DTO（含 apiKey，编辑回填需要）")
+        void shouldReturnDtoWhenFound() {
+            Agent existing = new Agent();
+            existing.setId(1L);
+            existing.setName("老王");
+            existing.setBaseUrl("https://api.deepseek.com");
+            existing.setModelName("deepseek-chat");
+            existing.setCallType("API");
+            existing.setSystemPrompt("你是架构师");
+            existing.setApiKey("sk-secret");
+            when(agentRepository.findById(1L)).thenReturn(Optional.of(existing));
+
+            AgentDTO dto = service.findById(1L);
+
+            assertThat(dto.getId()).isEqualTo(1L);
+            assertThat(dto.getName()).isEqualTo("老王");
+            assertThat(dto.getCallType()).isEqualTo("API");
+            assertThat(dto.getSystemPrompt()).isEqualTo("你是架构师");
+            // 详情接口必须返回 apiKey，编辑回填需要
+            assertThat(dto.getApiKey()).isEqualTo("sk-secret");
+        }
+
+        @Test
+        @DisplayName("Agent 不存在时抛 BizException")
+        void shouldThrowWhenNotFound() {
+            when(agentRepository.findById(99L)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> service.findById(99L))
+                    .isInstanceOf(BizException.class)
+                    .hasMessageContaining("Agent 不存在");
+        }
+    }
 }

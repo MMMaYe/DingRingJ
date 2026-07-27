@@ -159,4 +159,40 @@ class AgentControllerTest {
                 .andExpect(jsonPath("$.data.length()").value(2))
                 .andExpect(jsonPath("$.data[0].name").value("老王"));
     }
+
+    @Nested
+    @DisplayName("GET /api/agents/{id} 查询 Agent 详情")
+    class GetById {
+
+        @Test
+        @DisplayName("Agent 存在时返回 200 + DTO（含 apiKey，编辑回填需要）")
+        void shouldReturnAgentById() throws Exception {
+            AgentDTO dto = AgentDTO.builder()
+                    .id(1L).name("老王").baseUrl("https://api.deepseek.com")
+                    .modelName("deepseek-chat").callType("API")
+                    .systemPrompt("你是架构师")
+                    .apiKey("sk-secret")
+                    .build();
+            when(agentAppService.findById(1L)).thenReturn(dto);
+
+            mockMvc.perform(get("/api/agents/1"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.data.id").value(1L))
+                    .andExpect(jsonPath("$.data.name").value("老王"))
+                    .andExpect(jsonPath("$.data.callType").value("API"))
+                    .andExpect(jsonPath("$.data.systemPrompt").value("你是架构师"))
+                    // 详情接口必须返回 apiKey，前端编辑回填需要
+                    .andExpect(jsonPath("$.data.apiKey").value("sk-secret"));
+        }
+
+        @Test
+        @DisplayName("Agent 不存在时返回 404")
+        void shouldReturn404WhenNotFound() throws Exception {
+            when(agentAppService.findById(99L))
+                    .thenThrow(new BizException(ErrorCode.NOT_FOUND, "Agent 不存在"));
+
+            mockMvc.perform(get("/api/agents/99"))
+                    .andExpect(status().isNotFound());
+        }
+    }
 }

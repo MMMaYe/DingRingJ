@@ -43,4 +43,10 @@ public class AgentController {
     public ApiResponse<List<AgentDTO>> list() {
         return ApiResponse.ok(agentAppService.list());
     }
+
+    /** 按 id 查询 Agent 详情（编辑场景使用） */
+    @GetMapping("/{id}")
+    public ApiResponse<AgentDTO> getById(@PathVariable Long id) {
+        return ApiResponse.ok(agentAppService.findById(id));
+    }
 }

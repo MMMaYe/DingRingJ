@@ -68,6 +68,11 @@ export interface AgentDTO {
   feature: Record<string, unknown> | null;
   createTime: string;
   updateTime: string;
+  /**
+   * API Key：仅详情接口（GET /api/agents/{id}）返回，列表接口为 null/不存在。
+   * 编辑场景需要回填，避免用户每次重新输入。
+   */
+  apiKey?: string;
 }
 
 /** Agent 创建/修改统一请求（与后端 SaveAgentRequest 对齐） */

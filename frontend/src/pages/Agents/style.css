@@ -97,3 +97,37 @@
   color: var(--text-tertiary);
   line-height: 16px;
 }
+
+/* ---- 编辑表单骨架屏（按 id 拉取详情时展示） ---- */
+.agent-form-skeleton {
+  display: flex; flex-direction: column; gap: 14px;
+  padding: 4px 0;
+}
+.skeleton-row { display: flex; flex-direction: column; gap: 6px; }
+.skeleton-row--grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+}
+.skeleton-field { display: flex; flex-direction: column; gap: 6px; }
+.skeleton-label {
+  width: 56px; height: 12px;
+  background: var(--bg-overlay-l3);
+  border-radius: 4px;
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+}
+.skeleton-input {
+  width: 100%; height: 32px;
+  background: var(--bg-overlay-l2);
+  border-radius: 6px;
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+}
+.skeleton-input--wide { height: 32px; }
+.skeleton-textarea {
+  width: 100%; height: 96px;
+  background: var(--bg-overlay-l2);
+  border-radius: 6px;
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+}
+@keyframes skeleton-shimmer {
+  0%, 100% { opacity: .55; }
+  50% { opacity: .9; }
+}
