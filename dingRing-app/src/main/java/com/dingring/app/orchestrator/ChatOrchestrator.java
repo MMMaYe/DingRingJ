@@ -90,6 +90,12 @@ public class ChatOrchestrator {
 
         List<Agent> groupAgents = agentRepository.findByIds(group.memberAgentIds());
         List<Long> mentionedIds = parseMentions(content, groupAgents);
+        log.info("收到用户消息, groupId={}, topicId={}, messageId={}, 群内Agent数={}, @提及={}, 内容={}",
+                groupId, topicId, message.getId(), groupAgents.size(),
+                mentionedIds.isEmpty() ? "无" : mentionedIds, content);
+        if (topicId == null) {
+            log.info("当前群无活跃主题，消息不归属 Topic，仍正常触发调度, groupId={}", groupId);
+        }
         eventPublisher.publish(new MessageSent(message.getId(), groupId, topicId, userId,
                 SenderType.USER.name(), content, replyToMessageId, mentionedIds));
 
@@ -99,6 +105,7 @@ public class ChatOrchestrator {
                     .filter(a -> a.getId().equals(mentionedIds.get(0)))
                     .findFirst().orElse(null);
             if (mentioned != null && concludeIntentDetector.isConcludeIntent(mentioned, content)) {
+                log.info("用户总结意图命中，转入收束流程, topicId={}, 总结Agent={}", topicId, mentioned.getName());
                 conclude(topicId, userId, "USER", mentioned.getId());
                 return dto;
             }
@@ -113,7 +120,7 @@ public class ChatOrchestrator {
                 .repliedToAgentId(resolveRepliedAgent(replyToMessageId))
                 .speakCounts(loadSpeakCounts(topicId, group))
                 .build();
-        executorOf(groupId).execute(() -> runScheduleLoop(group, ctx));
+        executorOf(groupId).execute(() -> safeRun("调度循环", groupId, () -> runScheduleLoop(group, ctx)));
         return dto;
     }
 
@@ -135,6 +142,7 @@ public class ChatOrchestrator {
      * @param concluderAgentId 总结 Agent ID（null = 调度评分最高者兜底）
      */
     public void conclude(Long topicId, Long operatorId, String triggeredBy, Long concluderAgentId) {
+        log.info("触发讨论收束, topicId={}, triggeredBy={}, 指定总结AgentId={}", topicId, triggeredBy, concluderAgentId);
         Topic topic = topicRepository.findById(topicId)
                 .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "主题不存在: " + topicId));
         topic.startConcluding();
@@ -143,7 +151,8 @@ public class ChatOrchestrator {
         }
         pushTopicStatus(topic, "IN_PROGRESS");
         eventPublisher.publish(new TopicConcluding(topic.getId(), topic.getChatGroupId(), topic.getTitle()));
-        executorOf(topic.getChatGroupId()).execute(() -> generateConclusion(topic, triggeredBy, concluderAgentId));
+        executorOf(topic.getChatGroupId()).execute(() -> safeRun("结论生成", topic.getChatGroupId(),
+                () -> generateConclusion(topic, triggeredBy, concluderAgentId)));
     }
 
     /** 总结 Agent 生成 STAR 结论；失败回退 IN_PROGRESS */
@@ -152,9 +161,11 @@ public class ChatOrchestrator {
         Group group = groupRepository.findById(groupId).orElse(null);
         Agent concluder = resolveConcluder(group, topic, designatedConcluderId);
         if (concluder == null) {
+            log.warn("无可用总结 Agent，回滚讨论状态, topicId={}, 指定AgentId={}", topic.getId(), designatedConcluderId);
             rollbackConclusion(topic, "群内没有可用的总结 Agent");
             return;
         }
+        log.info("开始生成结论, topicId={}, 总结Agent={}, triggeredBy={}", topic.getId(), concluder.getName(), triggeredBy);
         chatPusher.pushToGroup(groupId, WsConstants.AGENT_TYPING,
                 Map.of("groupId", groupId, "agentId", concluder.getId(), "agentName", concluder.getName(), "isTyping", true));
         try {
@@ -168,6 +179,8 @@ public class ChatOrchestrator {
             conclusion = ContextBuilder.stripConcludeMarker(conclusion);
             topic.close(conclusion, concluder.getId());
             topicRepository.update(topic);
+            log.info("结论生成成功，主题已关闭, topicId={}, 总结Agent={}, 结论长度={}",
+                    topic.getId(), concluder.getName(), conclusion.length());
 
             long messageCount = messageRepository.countByTopicId(topic.getId());
             saveSystemNotice(groupId, topic.getId(),
@@ -233,11 +246,15 @@ public class ChatOrchestrator {
     private void runScheduleLoop(Group group, MessageContext ctx) {
         boolean mentionRound = ctx.getMentionedAgentIds() != null && !ctx.getMentionedAgentIds().isEmpty();
         int maxReplies = mentionRound ? 1 : terminator.getAutoReplies();
+        log.info("调度循环开始, groupId={}, topicId={}, 模式={}, 计划回复数={}, 已发言计数={}",
+                ctx.getGroupId(), ctx.getTopicId(), mentionRound ? "@提及" : "自由调度", maxReplies, ctx.getSpeakCounts());
         for (int i = 0; i < maxReplies; i++) {
             // 主题被关闭/收束则停止调度
             if (ctx.getTopicId() != null) {
                 Optional<Topic> topic = topicRepository.findById(ctx.getTopicId());
                 if (topic.isEmpty() || !topic.get().isInProgress()) {
+                    log.info("调度停止：主题非进行中, topicId={}, 当前状态={}",
+                            ctx.getTopicId(), topic.map(t -> t.getStatus().name()).orElse("不存在"));
                     return;
                 }
                 // 终止判定：达到最大轮次自动收束
@@ -248,6 +265,8 @@ public class ChatOrchestrator {
             }
             GroupMessage reply = speakOnce(group, ctx);
             if (reply == null) {
+                log.info("调度循环结束：本轮无新发言（详见上方 speakOnce 日志）, groupId={}, 第{}轮",
+                        ctx.getGroupId(), i + 1);
                 return;
             }
             // 发言后重新评估：轮次+1，后续轮次为自由调度
@@ -295,12 +314,19 @@ public class ChatOrchestrator {
     private GroupMessage speakOnce(Group group, MessageContext ctx) {
         List<Agent> candidates = agentRepository.findByIds(group.memberAgentIds());
         if (candidates.isEmpty()) {
+            log.warn("调度中止：群内无成员 Agent，无人可应答, groupId={}, 成员IdList={}",
+                    ctx.getGroupId(), group.memberAgentIds());
             return null;
         }
         List<SpeakerScheduler.ScoredAgent> ranked = speakerScheduler.rank(candidates, ctx);
+        log.info("发言评分结果, groupId={}, topicId={}, 排序={}",
+                ctx.getGroupId(), ctx.getTopicId(),
+                ranked.stream().map(s -> s.agent().getName() + "(" + s.score() + "," + s.reason() + ")").toList());
         for (int i = 0; i < ranked.size(); i++) {
             SpeakerScheduler.ScoredAgent scored = ranked.get(i);
             Agent agent = scored.agent();
+            log.info("选中发言 Agent: {}, 分数={}, 理由={}, 降级链位置={}/{}",
+                    agent.getName(), scored.score(), scored.reason(), i + 1, ranked.size());
             eventPublisher.publish(new AgentSelected(ctx.getGroupId(), ctx.getTopicId(),
                     agent.getId(), agent.getName(), scored.reason(), scored.score()));
             pushTyping(ctx.getGroupId(), agent, true);
@@ -310,18 +336,22 @@ public class ChatOrchestrator {
                 String content = chatWithRetry(agent, llmCtx);
                 if (content == null || content.isBlank()) {
                     // 返回内容为空不算失败：Agent 选择不发言
-                    log.info("Agent 选择不发言, agent={}", agent.getName());
+                    log.warn("Agent 返回空内容，视为选择不发言（静默无回复的常见原因）, agent={}, topicId={}",
+                            agent.getName(), ctx.getTopicId());
                     return null;
                 }
                 // Agent 自主收束：回复带 [[CONCLUDE]] 标记 → 剥离后由它触发结束流程
                 boolean wantsConclude = ctx.getTopicId() != null
                         && content.contains(ContextBuilder.CONCLUDE_MARKER);
                 if (wantsConclude) {
+                    log.info("检测到 Agent 回复携带收束标记, agent={}, topicId={}", agent.getName(), ctx.getTopicId());
                     content = ContextBuilder.stripConcludeMarker(content);
                 }
                 GroupMessage reply = null;
                 if (!content.isBlank()) {
                     reply = saveAgentMessage(ctx, agent, content);
+                    log.info("Agent 发言已入库并广播, agent={}, messageId={}, 长度={}",
+                            agent.getName(), reply.getId(), content.length());
                     chatPusher.pushToGroup(ctx.getGroupId(), WsConstants.NEW_MESSAGE, messageAssembler.toDto(reply));
                     eventPublisher.publish(new MessageSent(reply.getId(), ctx.getGroupId(), ctx.getTopicId(),
                             agent.getId(), SenderType.AGENT.name(), content, null, List.of()));
@@ -346,6 +376,8 @@ public class ChatOrchestrator {
             }
         }
         // 所有 Agent 都失败
+        log.error("所有 Agent 均调用失败，本轮无人发言, groupId={}, topicId={}, 候选数={}",
+                ctx.getGroupId(), ctx.getTopicId(), ranked.size());
         chatPusher.pushToGroup(ctx.getGroupId(), WsConstants.ERROR, Map.of(
                 "success", false,
                 "errorCode", ErrorCode.ALL_AGENTS_FAILED.name(),
@@ -358,7 +390,7 @@ public class ChatOrchestrator {
         try {
             return llmService.chat(agent, ctx.systemPrompt(), ctx.turns());
         } catch (Exception first) {
-            log.info("LLM 首次调用失败，重试 1 次, agent={}", agent.getName());
+            log.warn("LLM 首次调用失败，重试 1 次, agent={}, 失败原因: {}", agent.getName(), first.getMessage());
             return llmService.chat(agent, ctx.systemPrompt(), ctx.turns());
         }
     }
@@ -446,5 +478,14 @@ public class ChatOrchestrator {
     private ExecutorService executorOf(Long groupId) {
         return groupExecutors.computeIfAbsent(groupId,
                 id -> Executors.newSingleThreadExecutor(Thread.ofVirtual().name("group-" + id + "-", 0).factory()));
+    }
+
+    /** 异步任务兜底：未捕获异常会让虚拟线程任务静默消失，统一捕获并记录 */
+    private void safeRun(String taskName, Long groupId, Runnable task) {
+        try {
+            task.run();
+        } catch (Exception e) {
+            log.error("异步任务异常退出（可能导致静默无回复）: 任务={}, groupId={}", taskName, groupId, e);
+        }
     }
 }

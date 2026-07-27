@@ -32,6 +32,7 @@ public class SpringAiLlmService implements LlmService {
 
     @Override
     public String chat(Agent agent, String systemPrompt, List<ChatTurn> messages) {
+        long startAt = System.currentTimeMillis();
         try {
             OpenAiChatModel chatModel = buildChatModel(agent);
             List<Message> aiMessages = new ArrayList<>();
@@ -45,13 +46,26 @@ public class SpringAiLlmService implements LlmService {
                     aiMessages.add(new UserMessage(turn.content()));
                 }
             }
+            log.info("LLM 请求开始, agent={}, model={}, baseUrl={}, systemPrompt长度={}, 上下文轮数={}",
+                    agent.getName(), agent.getModelName(), agent.getBaseUrl(),
+                    systemPrompt == null ? 0 : systemPrompt.length(), messages.size());
             ChatResponse response = chatModel.call(new Prompt(aiMessages));
             String text = response.getResult().getOutput().getText();
+            long cost = System.currentTimeMillis() - startAt;
+            if (text == null || text.isBlank()) {
+                log.warn("LLM 返回空内容, agent={}, model={}, 耗时={}ms, 原始响应={}",
+                        agent.getName(), agent.getModelName(), cost, response.getResult());
+            } else {
+                // 完整输出不截断，保证可观测性（静默无回复问题排查依据）
+                log.info("LLM 响应完成, agent={}, model={}, 耗时={}ms, 长度={}, 完整内容:\n{}",
+                        agent.getName(), agent.getModelName(), cost, text.length(), text);
+            }
             return text == null ? "" : text.trim();
         } catch (BizException e) {
             throw e;
         } catch (Exception e) {
-            log.warn("LLM 调用失败, agent={}, model={}", agent.getName(), agent.getModelName(), e);
+            log.warn("LLM 调用失败, agent={}, model={}, 耗时={}ms",
+                    agent.getName(), agent.getModelName(), System.currentTimeMillis() - startAt, e);
             throw new BizException(ErrorCode.LLM_API_ERROR,
                     "LLM 调用失败: " + agent.getName() + " - " + e.getMessage());
         }

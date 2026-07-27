@@ -37,6 +37,7 @@ public class WsMessageDispatcher {
             JsonNode root = objectMapper.readTree(payload);
             String type = root.path("type").asText("");
             JsonNode data = root.path("data");
+            log.info("WS 收到入站消息, groupId={}, type={}, payload={}", groupId, type, payload);
             switch (type) {
                 case WsConstants.SEND_MESSAGE -> chatOrchestrator.onUserMessage(
                         groupId, GroupAppService.DEFAULT_USER_ID,
@@ -49,9 +50,13 @@ public class WsMessageDispatcher {
                         groupId, data.path("title").asText());
                 case WsConstants.CONCLUDE_TOPIC -> topicAppService.conclude(
                         data.path("topicId").asLong());
-                default -> pushError(session, ErrorCode.PARAM_INVALID, "未知消息类型: " + type);
+                default -> {
+                    log.warn("WS 未知消息类型，已忽略, groupId={}, type={}", groupId, type);
+                    pushError(session, ErrorCode.PARAM_INVALID, "未知消息类型: " + type);
+                }
             }
         } catch (BizException e) {
+            log.warn("WS 消息处理业务异常, groupId={}, errorCode={}, message={}", groupId, e.getErrorCode(), e.getMessage());
             pushError(session, e.getErrorCode(), e.getMessage());
         } catch (Exception e) {
             log.error("WS 消息处理异常: groupId={}, payload={}", groupId, payload, e);

@@ -22,13 +22,17 @@ public class MockLlmService implements LlmService {
     public String chat(Agent agent, String systemPrompt, List<ChatTurn> messages) {
         simulateLatency();
         String lastUser = messages.isEmpty() ? "" : messages.get(messages.size() - 1).content();
+        String reply;
         if (systemPrompt != null && systemPrompt.contains("STAR")) {
-            return mockConclusion(lastUser);
+            reply = mockConclusion(lastUser);
+        } else if (systemPrompt != null && systemPrompt.contains("知识卡片")) {
+            reply = mockCards();
+        } else {
+            reply = mockReply(agent, lastUser);
         }
-        if (systemPrompt != null && systemPrompt.contains("知识卡片")) {
-            return mockCards();
-        }
-        return mockReply(agent, lastUser);
+        // 与真实 LLM 实现保持一致：完整输出不截断，便于链路观测
+        log.info("Mock LLM 响应, agent={}, 长度={}, 完整内容:\n{}", agent.getName(), reply.length(), reply);
+        return reply;
     }
 
     private String mockReply(Agent agent, String lastUser) {
