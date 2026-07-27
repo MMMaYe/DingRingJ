@@ -425,7 +425,7 @@ export default function ChatPage() {
                   <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="4.5" stroke="currentColor" strokeWidth="1.2"/><path d="M10.5 10.5L14 14" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>
                 </button>
                 <button className="chat-header__icon-btn" title="群设置" onClick={openGroupSettings}>
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 10a2 2 0 100-4 2 2 0 000 4z" stroke="currentColor" strokeWidth="1.2"/><path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.7 3.7l1.4 1.4M10.9 10.9l1.4 1.4M3.7 12.3l1.4-1.4M10.9 5.1l1.4-1.4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
                 </button>
               </div>
             </header>
@@ -667,35 +667,165 @@ export default function ChatPage() {
         </aside>
       )}
 
-      {/* 弹窗：新建群 */}
-      <Modal open={showCreateGroup} onClose={() => setShowCreateGroup(false)} title="新建群聊"
+      {/* 弹窗：新建群 — Editorial 风格 */}
+      <Modal
+        open={showCreateGroup}
+        onClose={() => setShowCreateGroup(false)}
+        title="新建群聊"
+        eyebrow="Compose"
+        subtitle="三步组建你的学习讨论群"
+        width={540}
         footer={<>
-          <button className="btn btn--ghost" onClick={() => setShowCreateGroup(false)}>取消</button>
-          <button className="btn btn--brand" onClick={submitCreateGroup}>创建</button>
-        </>}>
-        <div className="form-row">
-          <label>群名称</label>
-          <input className="input" value={cgName} onChange={e => setCgName(e.target.value)} placeholder="如：Java 并发学习群" maxLength={64} />
-        </div>
-        <div className="form-row">
-          <label>选择成员 Agent（普通讨论成员，可多选）</label>
-          {agents.map(a => (
-            <div key={a.id} className={`member-pick${cgSelectedAgents.has(a.id) ? ' is-checked' : ''}`}
-              onClick={() => setCgSelectedAgents(prev => { const next = new Set(prev); next.has(a.id) ? next.delete(a.id) : next.add(a.id); return next; })}>
-              <Avatar name={a.name} size="sm" />
-              <div className="member-pick__meta">
-                <div className="member-pick__name">{a.name}</div>
-                <div className="member-pick__desc">{a.description || a.modelName}</div>
-              </div>
+          <div className="modal__preview">
+            {/* 头像串联预览：成员 + 专家 */}
+            <div className="preview-stack" aria-hidden>
+              {[...cgSelectedAgents].slice(0, 4).map(id => {
+                const a = agents.find(x => x.id === id);
+                return a ? <div key={id} className="preview-stack__item"><Avatar name={a.name} size="sm" /></div> : null;
+              })}
+              {cgExpert && (() => {
+                const ex = agents.find(x => x.id === cgExpert);
+                return ex ? <div className="preview-stack__item preview-stack__item--expert"><Avatar name={ex.name} size="sm" /></div> : null;
+              })()}
+              {cgSelectedAgents.size === 0 && !cgExpert && (
+                <div className="preview-stack__empty">未选择</div>
+              )}
             </div>
-          ))}
-        </div>
-        <div className="form-row">
-          <label>指定专家 Agent（负责总结陈词，不参与普通讨论）</label>
-          <select className="input" value={cgExpert} onChange={e => setCgExpert(Number(e.target.value))}>
-            {agents.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
-          </select>
-        </div>
+            <div className="preview-pills">
+              <span className="preview-pill">
+                <span className="preview-pill__dot" />
+                {cgSelectedAgents.size} 位成员
+              </span>
+              <span className="preview-pill preview-pill--expert">
+                <span className="preview-pill__dot" />
+                {cgExpert ? '1 位专家' : '未指定'}
+              </span>
+            </div>
+          </div>
+          <div className="modal__footer-actions">
+            <button className="btn btn--ghost" onClick={() => setShowCreateGroup(false)}>取消</button>
+            <button
+              className={`btn btn--brand${cgName.trim() && cgSelectedAgents.size > 0 ? ' is-dirty' : ''}`}
+              onClick={submitCreateGroup}
+              disabled={!cgName.trim() || cgSelectedAgents.size === 0}
+            >
+              创建群聊
+            </button>
+          </div>
+        </>}
+      >
+        {/* 章节 01：命名 */}
+        <section className="chapter">
+          <header className="chapter__head">
+            <span className="chapter__num">01</span>
+            <div className="chapter__title-wrap">
+              <h3 className="chapter__title">群名称</h3>
+              <span className="chapter__hint">给学习群起个清晰的名字</span>
+            </div>
+            <span className="chapter__count">{cgName.length}<span className="chapter__count-sep">/</span>64</span>
+          </header>
+          <input
+            className="input chapter__input"
+            value={cgName}
+            onChange={e => setCgName(e.target.value)}
+            placeholder="如：Java 并发学习群"
+            maxLength={64}
+            autoFocus
+          />
+        </section>
+
+        {/* 章节 02：选成员 */}
+        <section className="chapter">
+          <header className="chapter__head">
+            <span className="chapter__num">02</span>
+            <div className="chapter__title-wrap">
+              <h3 className="chapter__title">讨论成员</h3>
+              <span className="chapter__hint">参与普通讨论的 Agent，可多选</span>
+            </div>
+            <span className="chapter__count">{cgSelectedAgents.size}<span className="chapter__count-sep">/</span>{agents.length}</span>
+          </header>
+          <div className="member-grid">
+            {agents.map((a, idx) => {
+              const checked = cgSelectedAgents.has(a.id);
+              const order = checked ? [...cgSelectedAgents].indexOf(a.id) + 1 : 0;
+              const isExpert = a.id === cgExpert;
+              return (
+                <div
+                  key={a.id}
+                  className={`member-card${checked ? ' is-checked' : ''}${isExpert ? ' is-locked' : ''}`}
+                  style={{ animationDelay: `${idx * 28}ms` }}
+                  onClick={() => {
+                    if (isExpert) return;
+                    setCgSelectedAgents(prev => {
+                      const next = new Set(prev);
+                      next.has(a.id) ? next.delete(a.id) : next.add(a.id);
+                      return next;
+                    });
+                  }}
+                  role="checkbox"
+                  aria-checked={checked}
+                  aria-disabled={isExpert}
+                  tabIndex={isExpert ? -1 : 0}
+                  onKeyDown={e => { if (!isExpert && (e.key === ' ' || e.key === 'Enter')) { e.preventDefault(); setCgSelectedAgents(prev => { const next = new Set(prev); next.has(a.id) ? next.delete(a.id) : next.add(a.id); return next; }); } }}
+                >
+                  {checked && <span className="member-card__order" aria-hidden>{order}</span>}
+                  {checked && (
+                    <span className="member-card__check" aria-hidden>
+                      <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2.5 6.5l2.5 2.5 4.5-5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    </span>
+                  )}
+                  <Avatar name={a.name} size="sm" />
+                  <div className="member-card__meta">
+                    <div className="member-card__name">{a.name}</div>
+                    <div className="member-card__desc">{a.description || a.modelName}</div>
+                  </div>
+                  {isExpert && <span className="tag tag--warning member-card__role-tag">已选为专家</span>}
+                </div>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* 章节 03：选专家 */}
+        <section className="chapter">
+          <header className="chapter__head">
+            <span className="chapter__num">03</span>
+            <div className="chapter__title-wrap">
+              <h3 className="chapter__title">专家 Agent</h3>
+              <span className="chapter__hint">负责讨论结束时的总结陈词，不参与普通讨论</span>
+            </div>
+          </header>
+          <div className="expert-grid">
+            {agents.map(a => {
+              const selected = a.id === cgExpert;
+              const inMembers = cgSelectedAgents.has(a.id);
+              return (
+                <div
+                  key={a.id}
+                  className={`expert-card${selected ? ' is-selected' : ''}${inMembers ? ' is-conflict' : ''}`}
+                  onClick={() => {
+                    if (inMembers) return;
+                    setCgExpert(a.id);
+                  }}
+                  title={inMembers ? '请先取消该 Agent 的普通成员勾选' : ''}
+                >
+                  <Avatar name={a.name} size="sm" />
+                  <div className="expert-card__meta">
+                    <div className="expert-card__name">{a.name}</div>
+                    <div className="expert-card__desc">{a.description || a.modelName}</div>
+                  </div>
+                  {selected ? (
+                    <span className="tag tag--warning">已选专家</span>
+                  ) : inMembers ? (
+                    <span className="tag tag--neutral">成员中</span>
+                  ) : (
+                    <span className="expert-card__pick">点击提名</span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </section>
       </Modal>
 
       {/* 弹窗：发起讨论 */}
