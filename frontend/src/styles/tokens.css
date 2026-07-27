@@ -430,4 +430,96 @@
   --color-radius-sm: var(--radius-6);
   --color-radius-md: var(--radius-8);
   --color-radius-lg: var(--radius-10);
+
+  /* 遮罩层背景（modal/review 等浮层） */
+  --mask-bg: rgba(0, 0, 0, 0.55);
+}
+
+/* ============================================
+ * Light Theme（白天模式）
+ * 通过 [data-theme="light"] 覆盖暗色变量
+ * 默认为 dark（:root），切换时在 <html> 上设置 data-theme="light"
+ * ============================================ */
+[data-theme="light"] {
+  /* bg - 背景由深黑切换为白/浅灰 */
+  --bg-base-default: #FFFFFF;
+  --bg-base-secondary: #F7F8FA;
+  --bg-base-tertiary: #EEF0F3;
+  --bg-overlay-l1: rgba(0, 0, 0, 0.04);
+  --bg-overlay-l2: rgba(0, 0, 0, 0.06);
+  --bg-overlay-l3: rgba(0, 0, 0, 0.08);
+  --bg-overlay-l4: rgba(0, 0, 0, 0.12);
+  --bg-menu: #FFFFFF;
+  --bg-tooltip: #1A1B1D;            /* tooltip 保持深色，保证可读性 */
+  --bg-invert: #1A1B1D;
+  --bg-invert-hover: #2A2D31;
+  --bg-invert-active: #4A4F5A;
+  --bg-invert-disabled: rgba(0, 0, 0, 0.12);
+
+  /* bg-brand - 亮底上用更深的绿，保证按钮与文本对比度 */
+  --bg-brand: #0AB861;
+  --bg-brand-hover: #05994F;
+  --bg-brand-disabled: rgba(10, 184, 97, 0.2);
+  --bg-brand-popup: rgba(10, 184, 97, 0.10);
+
+  /* text - 文本由浅色切换为深色 */
+  --text-default: #1A1B1D;
+  --text-default-hover: #000000;
+  --text-default-active: #000000;
+  --text-secondary: #4A4F5A;
+  --text-secondary-hover: #1A1B1D;
+  --text-secondary-active: #1A1B1D;
+  --text-tertiary: #8A8F99;
+  --text-disabled: #B0B5BA;
+  --text-onbrand: #FFFFFF;           /* 深绿按钮上用白字 */
+  --text-onaccent: #FFFFFF;
+
+  /* text-brand - 亮底上用深绿保证可读性 */
+  --text-brand: #05994F;
+  --text-brand-hover: #02743B;
+
+  /* icon */
+  --icon-default: #1A1B1D;
+  --icon-default-hover: #000000;
+  --icon-default-active: #000000;
+  --icon-secondary: #4A4F5A;
+  --icon-secondary-hover: #1A1B1D;
+  --icon-secondary-active: #1A1B1D;
+  --icon-tertiary: #8A8F99;
+  --icon-disabled: #B0B5BA;
+  --icon-onbrand: #FFFFFF;
+  --icon-onaccent: #FFFFFF;
+
+  /* icon-brand */
+  --icon-brand: #05994F;
+  --icon-brand-hover: #02743B;
+
+  /* border - 边框由白色透明切换为黑色透明 */
+  --border-neutral-l1: rgba(0, 0, 0, 0.08);
+  --border-neutral-l2: rgba(0, 0, 0, 0.12);
+  --border-neutral-l3: rgba(0, 0, 0, 0.16);
+  --border-contrast: #000000;
+  --border-brand: #0AB861;
+
+  /* code */
+  --code-text: #1A1B1D;
+  --code-doc: #8A8F99;
+
+  /* viz */
+  --viz-ui-bg-chart: #FFFFFF;
+  --viz-ui-bg-tooltip: #1A1B1D;
+  --viz-ui-chart-title: #1A1B1D;
+  --viz-ui-chart-subtitle: #4A4F5A;
+  --viz-ui-chart-axis: rgba(0, 0, 0, 0.12);
+  --viz-ui-chart-tick: #4A4F5A;
+  --viz-ui-legend-label: #4A4F5A;
+  --viz-ui-legend-value: #1A1B1D;
+
+  /* layout aliases */
+  --site-canvas: #FFFFFF;
+  --bg-layout-1: var(--bg-base-secondary);
+  --bg-layout-2: var(--bg-overlay-l1);
+
+  /* 遮罩层 - 亮色模式略调淡 */
+  --mask-bg: rgba(0, 0, 0, 0.45);
 }

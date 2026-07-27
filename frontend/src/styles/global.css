@@ -78,6 +78,22 @@ input, textarea, select { font-family: inherit; color: var(--text-default); }
 }
 .sidebar__footer { margin-top: auto; padding: 12px; }
 
+/* ---- Theme Toggle ---- */
+.theme-toggle {
+  display: flex; align-items: center; gap: 8px;
+  width: 100%; height: 32px; padding: 0 10px;
+  border: 1px solid var(--border-neutral-l2); border-radius: 6px;
+  background: transparent; color: var(--text-secondary);
+  font-size: 12px; font-weight: 500; cursor: pointer;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+.theme-toggle:hover {
+  background: var(--bg-overlay-l1); color: var(--text-default);
+  border-color: var(--border-neutral-l3);
+}
+.theme-toggle__icon { display: flex; align-items: center; color: var(--text-tertiary); }
+.theme-toggle:hover .theme-toggle__icon { color: var(--text-brand); }
+
 /* ---- Avatar ---- */
 .ds-avatar {
   width: 36px; height: 36px; border-radius: 50%;
@@ -132,7 +148,7 @@ textarea.input { resize: none; }
 /* ---- Modal ---- */
 .modal-mask {
   position: fixed; inset: 0; z-index: 100;
-  background: rgba(0, 0, 0, .55);
+  background: var(--mask-bg);
   display: flex; align-items: center; justify-content: center;
 }
 .modal {

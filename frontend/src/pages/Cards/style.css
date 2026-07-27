@@ -80,7 +80,7 @@
 /* 复习模式浮层 */
 .review-mask {
   position: fixed; inset: 0; z-index: 200;
-  background: rgba(10, 11, 12, .92);
+  background: var(--mask-bg);
   display: flex; align-items: center; justify-content: center;
 }
 .review { width: 640px; max-width: calc(100vw - 40px); display: flex; flex-direction: column; gap: 18px; }

@@ -1,4 +1,5 @@
 import { NavLink } from 'react-router-dom';
+import ThemeToggle from './ThemeToggle';
 
 /* ---- Inline SVG Icons (from design spec) ---- */
 const IconZap = () => (
@@ -78,11 +79,10 @@ export default function Sidebar({ children, footer, showGroupLabel, onSearch, se
 
       {showGroupLabel && <div className="sidebar__label">我的群组</div>}
       {children}
-      {footer && (
-        <div className="sidebar__footer">
-          {footer}
-        </div>
-      )}
+      <div className="sidebar__footer">
+        <ThemeToggle />
+        {footer}
+      </div>
     </aside>
   );
 }
