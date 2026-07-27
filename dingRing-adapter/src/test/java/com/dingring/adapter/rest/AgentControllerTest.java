@@ -1,7 +1,6 @@
 package com.dingring.adapter.rest;
 
-import com.dingring.app.dto.request.CreateAgentRequest;
-import com.dingring.app.dto.request.UpdateAgentRequest;
+import com.dingring.app.dto.request.SaveAgentRequest;
 import com.dingring.app.dto.response.AgentDTO;
 import com.dingring.app.service.AgentAppService;
 import com.dingring.common.exception.BizException;
@@ -60,7 +59,7 @@ class AgentControllerTest {
         @Test
         @DisplayName("合法请求返回 200 + AgentDTO（不含 apiKey）")
         void shouldCreateAgent() throws Exception {
-            CreateAgentRequest req = new CreateAgentRequest();
+            SaveAgentRequest req = new SaveAgentRequest();
             req.setName("老王");
             req.setBaseUrl("https://api.deepseek.com");
             req.setApiKey("sk-secret");
@@ -114,9 +113,10 @@ class AgentControllerTest {
         @Test
         @DisplayName("成功修改返回 200 + 更新后的 DTO")
         void shouldUpdateAgent() throws Exception {
-            UpdateAgentRequest req = new UpdateAgentRequest();
+            SaveAgentRequest req = new SaveAgentRequest();
             req.setName("新名字");
             req.setBaseUrl("https://api.x.com");
+            req.setApiKey("sk-new");
             req.setModelName("m");
 
             AgentDTO dto = AgentDTO.builder().id(1L).name("新名字").build();
@@ -135,8 +135,9 @@ class AgentControllerTest {
             when(agentAppService.update(eq(99L), any()))
                     .thenThrow(new BizException(ErrorCode.NOT_FOUND, "Agent 不存在"));
 
+            // apiKey 现在修改时也必填，body 必须包含
             String body = """
-                    {"name":"x","baseUrl":"https://x","modelName":"m"}
+                    {"name":"x","baseUrl":"https://x","apiKey":"sk","modelName":"m"}
                     """;
             mockMvc.perform(put("/api/agents/99")
                             .contentType(MediaType.APPLICATION_JSON)

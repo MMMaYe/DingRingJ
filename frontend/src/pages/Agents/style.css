@@ -57,3 +57,43 @@
 .agent-card__meta { font-size: 11px; color: var(--text-tertiary); }
 
 .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; }
+
+/* ---- 调用方式选择器（API / CLI 二选一卡片） ---- */
+.call-type-picker {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.call-type-option {
+  display: flex; flex-direction: column; gap: 4px;
+  padding: 10px 12px;
+  background: var(--bg-base-tertiary);
+  border: 1px solid var(--border-neutral-l2);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: border-color .15s, background .15s;
+  text-align: left;
+  font-family: inherit;
+}
+.call-type-option:hover {
+  border-color: var(--border-brand);
+  background: var(--bg-overlay-l1);
+}
+.call-type-option.is-active {
+  border-color: var(--border-brand);
+  background: var(--bg-brand-popup);
+}
+.call-type-option__title {
+  font-size: 13px; font-weight: 600;
+  color: var(--text-default-hover);
+  font-family: "JetBrains Mono", monospace;
+  letter-spacing: .02em;
+}
+.call-type-option.is-active .call-type-option__title {
+  color: var(--text-brand);
+}
+.call-type-option__desc {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  line-height: 16px;
+}

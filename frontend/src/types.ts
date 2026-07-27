@@ -62,28 +62,25 @@ export interface AgentDTO {
   description: string | null;
   baseUrl: string;
   modelName: string;
+  /** 调用方式：API / CLI */
+  callType: string;
   systemPrompt: string | null;
   feature: Record<string, unknown> | null;
   createTime: string;
   updateTime: string;
 }
 
-export interface CreateAgentRequest {
+/** Agent 创建/修改统一请求（与后端 SaveAgentRequest 对齐） */
+export interface SaveAgentRequest {
   name: string;
   description?: string;
+  profilePicture?: string;
   baseUrl: string;
   apiKey: string;
   modelName: string;
+  callType?: string;
   systemPrompt?: string;
-}
-
-export interface UpdateAgentRequest {
-  name: string;
-  description?: string;
-  baseUrl: string;
-  apiKey?: string;        // 留空 = 不修改
-  modelName: string;
-  systemPrompt?: string;
+  feature?: Record<string, unknown>;
 }
 
 // ---- 知识卡片 ----

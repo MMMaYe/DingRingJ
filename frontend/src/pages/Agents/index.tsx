@@ -19,6 +19,7 @@ export default function AgentsPage() {
   const [description, setDescription] = useState('');
   const [baseUrl, setBaseUrl] = useState('');
   const [apiKey, setApiKey] = useState('');
+  const [callType, setCallType] = useState<'API' | 'CLI'>('API');
   const [systemPrompt, setSystemPrompt] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -48,14 +49,18 @@ export default function AgentsPage() {
 
   const openCreate = useCallback(() => {
     setEditingId(null);
-    setName(''); setModelName(''); setDescription(''); setBaseUrl(''); setApiKey(''); setSystemPrompt('');
+    setName(''); setModelName(''); setDescription(''); setBaseUrl(''); setApiKey('');
+    setCallType('API'); setSystemPrompt('');
     setShowModal(true);
   }, []);
 
   const openEdit = useCallback((a: AgentDTO) => {
     setEditingId(a.id);
     setName(a.name); setModelName(a.modelName); setDescription(a.description || '');
-    setBaseUrl(a.baseUrl); setApiKey(''); setSystemPrompt(a.systemPrompt || '');
+    setBaseUrl(a.baseUrl); setApiKey('');
+    // 回填 callType，兼容旧数据可能为 null
+    setCallType(a.callType === 'CLI' ? 'CLI' : 'API');
+    setSystemPrompt(a.systemPrompt || '');
     setShowModal(true);
   }, []);
 
@@ -63,23 +68,33 @@ export default function AgentsPage() {
     if (!name.trim()) { toast('请输入花名', 'error'); return; }
     if (!baseUrl.trim()) { toast('请输入 Base URL', 'error'); return; }
     if (!modelName.trim()) { toast('请输入模型名', 'error'); return; }
-    if (editingId === null && !apiKey.trim()) { toast('请输入 API Key', 'error'); return; }
+    // apiKey 创建和更新都必填
+    if (!apiKey.trim()) { toast('请输入 API Key', 'error'); return; }
 
-    const body = { name: name.trim(), description: description.trim(), baseUrl: baseUrl.trim(), modelName: modelName.trim(), systemPrompt: systemPrompt.trim() };
+    // 统一请求体（与后端 SaveAgentRequest 对齐）
+    const body = {
+      name: name.trim(),
+      description: description.trim(),
+      baseUrl: baseUrl.trim(),
+      apiKey: apiKey.trim(),
+      modelName: modelName.trim(),
+      callType,
+      systemPrompt: systemPrompt.trim(),
+    };
     setSubmitting(true);
     try {
       if (editingId === null) {
-        await API.post('/api/agents', { ...body, apiKey: apiKey.trim() });
+        await API.post('/api/agents', body);
         toast('Agent 创建成功', 'success');
       } else {
-        await API.put(`/api/agents/${editingId}`, apiKey.trim() ? { ...body, apiKey: apiKey.trim() } : body);
+        await API.put(`/api/agents/${editingId}`, body);
         toast('Agent 已更新', 'success');
       }
       setShowModal(false);
       await loadAgents();
     } catch (e: any) { toast(e.message, 'error'); }
     finally { setSubmitting(false); }
-  }, [name, modelName, description, baseUrl, apiKey, systemPrompt, editingId, loadAgents]);
+  }, [name, modelName, description, baseUrl, apiKey, callType, systemPrompt, editingId, loadAgents]);
 
   function shortUrl(url: string) {
     try { return new URL(url).host; } catch { return url; }
@@ -204,6 +219,27 @@ export default function AgentsPage() {
           </div>
         </div>
         <div className="form-row">
+          <label>调用方式 *</label>
+          <div className="call-type-picker">
+            <button
+              type="button"
+              className={`call-type-option${callType === 'API' ? ' is-active' : ''}`}
+              onClick={() => setCallType('API')}
+            >
+              <span className="call-type-option__title">API</span>
+              <span className="call-type-option__desc">直接调用 LLM API</span>
+            </button>
+            <button
+              type="button"
+              className={`call-type-option${callType === 'CLI' ? ' is-active' : ''}`}
+              onClick={() => setCallType('CLI')}
+            >
+              <span className="call-type-option__title">CLI</span>
+              <span className="call-type-option__desc">调用 CLI 工具（如 Claude Code）</span>
+            </button>
+          </div>
+        </div>
+        <div className="form-row">
           <label>人设描述</label>
           <input className="input" value={description} onChange={e => setDescription(e.target.value)} placeholder="一句话描述这个 Agent 的性格与擅长领域" maxLength={255} />
         </div>
@@ -212,8 +248,8 @@ export default function AgentsPage() {
           <input className="input" value={baseUrl} onChange={e => setBaseUrl(e.target.value)} placeholder="如：https://api.openai.com" />
         </div>
         <div className="form-row">
-          <label>API Key {editingId === null ? '*' : '（留空表示不修改）'}</label>
-          <input className="input" type="password" value={apiKey} onChange={e => setApiKey(e.target.value)} placeholder={editingId === null ? 'sk-…' : '留空则保持原 Key 不变'} autoComplete="new-password" />
+          <label>API Key *</label>
+          <input className="input" type="password" value={apiKey} onChange={e => setApiKey(e.target.value)} placeholder="sk-…（创建和修改都需输入）" autoComplete="new-password" />
         </div>
         <div className="form-row">
           <label>系统提示词（人设 Prompt）</label>

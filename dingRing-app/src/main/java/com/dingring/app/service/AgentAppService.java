@@ -1,7 +1,6 @@
 package com.dingring.app.service;
 
-import com.dingring.app.dto.request.CreateAgentRequest;
-import com.dingring.app.dto.request.UpdateAgentRequest;
+import com.dingring.app.dto.request.SaveAgentRequest;
 import com.dingring.app.dto.response.AgentDTO;
 import com.dingring.common.exception.BizException;
 import com.dingring.common.exception.ErrorCode;
@@ -21,7 +20,7 @@ public class AgentAppService {
 
     private final AgentRepository agentRepository;
 
-    public AgentDTO create(CreateAgentRequest request) {
+    public AgentDTO create(SaveAgentRequest request) {
         Agent agent = new Agent();
         agent.setName(request.getName());
         agent.setProfilePicture(request.getProfilePicture());
@@ -38,17 +37,15 @@ public class AgentAppService {
         return toDto(agent);
     }
 
-    public AgentDTO update(Long id, UpdateAgentRequest request) {
+    public AgentDTO update(Long id, SaveAgentRequest request) {
         Agent agent = agentRepository.findById(id)
                 .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "Agent 不存在: " + id));
         agent.setName(request.getName());
         agent.setProfilePicture(request.getProfilePicture());
         agent.setDescription(request.getDescription());
         agent.setBaseUrl(request.getBaseUrl());
-        // apiKey 为空表示不修改原 Key
-        if (request.getApiKey() != null && !request.getApiKey().isBlank()) {
-            agent.setApiKey(request.getApiKey());
-        }
+        // apiKey 现在创建/修改都必填，直接覆盖
+        agent.setApiKey(request.getApiKey());
         agent.setModelName(request.getModelName());
         agent.setCallType(request.getCallType());
         agent.setSystemPrompt(request.getSystemPrompt());

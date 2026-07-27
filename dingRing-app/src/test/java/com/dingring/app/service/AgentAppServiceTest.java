@@ -1,7 +1,6 @@
 package com.dingring.app.service;
 
-import com.dingring.app.dto.request.CreateAgentRequest;
-import com.dingring.app.dto.request.UpdateAgentRequest;
+import com.dingring.app.dto.request.SaveAgentRequest;
 import com.dingring.app.dto.response.AgentDTO;
 import com.dingring.common.exception.BizException;
 import com.dingring.domain.agent.Agent;
@@ -44,7 +43,7 @@ class AgentAppServiceTest {
         @Test
         @DisplayName("成功创建并回填字段，apiKey 不回传")
         void shouldCreateAndReturnDtoWithoutApiKey() {
-            CreateAgentRequest req = new CreateAgentRequest();
+            SaveAgentRequest req = new SaveAgentRequest();
             req.setName("老王");
             req.setBaseUrl("https://api.deepseek.com");
             req.setApiKey("sk-secret");
@@ -79,9 +78,10 @@ class AgentAppServiceTest {
         @DisplayName("Agent 不存在时抛 BizException")
         void shouldThrowWhenAgentNotFound() {
             when(agentRepository.findById(99L)).thenReturn(Optional.empty());
-            UpdateAgentRequest req = new UpdateAgentRequest();
+            SaveAgentRequest req = new SaveAgentRequest();
             req.setName("x");
             req.setBaseUrl("https://x");
+            req.setApiKey("sk");
             req.setModelName("m");
 
             assertThatThrownBy(() -> service.update(99L, req))
@@ -90,34 +90,14 @@ class AgentAppServiceTest {
         }
 
         @Test
-        @DisplayName("apiKey 为空时保留原 Key")
-        void emptyApiKeyShouldKeepOriginal() {
-            Agent existing = new Agent();
-            existing.setId(1L);
-            existing.setApiKey("sk-original");
-            when(agentRepository.findById(1L)).thenReturn(Optional.of(existing));
-
-            UpdateAgentRequest req = new UpdateAgentRequest();
-            req.setName("老王");
-            req.setBaseUrl("https://api.x.com");
-            req.setApiKey("");   // 空字符串表示不修改
-            req.setModelName("m");
-
-            service.update(1L, req);
-
-            assertThat(existing.getApiKey()).isEqualTo("sk-original");
-            verify(agentRepository).update(existing);
-        }
-
-        @Test
-        @DisplayName("apiKey 非空时更新为新 Key")
-        void newApiKeyShouldReplace() {
+        @DisplayName("apiKey 必填，直接覆盖为新 Key")
+        void apiKeyShouldAlwaysReplace() {
             Agent existing = new Agent();
             existing.setId(1L);
             existing.setApiKey("sk-old");
             when(agentRepository.findById(1L)).thenReturn(Optional.of(existing));
 
-            UpdateAgentRequest req = new UpdateAgentRequest();
+            SaveAgentRequest req = new SaveAgentRequest();
             req.setName("老王");
             req.setBaseUrl("https://api.x.com");
             req.setApiKey("sk-new");
@@ -125,7 +105,9 @@ class AgentAppServiceTest {
 
             service.update(1L, req);
 
+            // apiKey 现在必填，直接覆盖原值
             assertThat(existing.getApiKey()).isEqualTo("sk-new");
+            verify(agentRepository).update(existing);
         }
     }
 

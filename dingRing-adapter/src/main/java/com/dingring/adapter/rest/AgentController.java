@@ -1,12 +1,11 @@
 package com.dingring.adapter.rest;
 
-import com.dingring.app.dto.request.CreateAgentRequest;
-import com.dingring.app.dto.request.UpdateAgentRequest;
+import com.dingring.app.dto.request.SaveAgentRequest;
 import com.dingring.app.dto.response.AgentDTO;
 import com.dingring.app.service.AgentAppService;
 import com.dingring.common.response.ApiResponse;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -29,13 +28,13 @@ public class AgentController {
 
     /** 创建 Agent */
     @PostMapping
-    public ApiResponse<AgentDTO> create(@Valid @RequestBody CreateAgentRequest request) {
+    public ApiResponse<AgentDTO> create(@Validated(SaveAgentRequest.Create.class) @RequestBody SaveAgentRequest request) {
         return ApiResponse.ok(agentAppService.create(request));
     }
 
     /** 修改 Agent 配置 */
     @PutMapping("/{id}")
-    public ApiResponse<AgentDTO> update(@PathVariable Long id, @Valid @RequestBody UpdateAgentRequest request) {
+    public ApiResponse<AgentDTO> update(@PathVariable Long id, @Validated(SaveAgentRequest.Update.class) @RequestBody SaveAgentRequest request) {
         return ApiResponse.ok(agentAppService.update(id, request));
     }
 
