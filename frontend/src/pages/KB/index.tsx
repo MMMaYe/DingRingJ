@@ -1,112 +1,42 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState } from 'react';
 import Sidebar from '../../components/Sidebar';
-import Modal from '../../components/Modal';
 import { toast } from '../../components/Toast';
-import { API } from '../../api';
-import type { GroupSummary, TopicSummary, KnowledgeCardDTO } from '../../types';
 import './style.css';
 
-/** 知识库聚合视图：每个群组对应一个知识库，汇总其已关闭主题下的卡片 */
-interface KbAggregate {
-  groupId: number;
-  groupName: string;
-  cardCount: number;
-  topicCount: number;
-  categories: string[];
-  lastTime: string | null;
-  cards: KnowledgeCardDTO[];
-}
-
-type FilterTab = 'all' | 'filled' | 'empty';
-
+/**
+ * RAG 文档库骨架页（v1 占位）
+ *
+ * 设计语义：知识库 = 后续上传文件用于 RAG 检索的文档库
+ * 当前阶段：仅 UI 骨架，文件上传/切片/向量化等后端能力暂未实现
+ * 后端 stub：dingRing-domain/.../knowledgebase/{KnowledgeBase,File}.java（P2 阶段实现）
+ *
+ * 与「知识卡片管理」的区别：
+ * - 知识卡片：讨论结束后自动生成的 Q/A 卡片，用于复习
+ * - 知识库（本页）：用户主动上传的文档，用于 RAG 检索增强生成
+ */
 export default function KBPage() {
-  const [aggregates, setAggregates] = useState<KbAggregate[]>([]);
-  const [loading, setLoading] = useState(true);
   const [keyword, setKeyword] = useState('');
-  const [filter, setFilter] = useState<FilterTab>('all');
-  const [detailKb, setDetailKb] = useState<KbAggregate | null>(null);
 
-  // 加载所有数据：群组 → 各群主题 → 全部卡片，聚合为知识库视图
-  const loadAll = useCallback(async () => {
-    setLoading(true);
-    try {
-      const groupList = await API.get<GroupSummary[]>('/api/groups');
+  // 文档状态：UPLOADED → CHUNKED → EMBEDDED → READY
+  // 当前没有真实数据，用空数组占位
+  const documents: KbDocument[] = [];
 
-      // 并发拉取每个群的主题列表
-      const topicsByGroup = await Promise.all(
-        groupList.map(g => API.get<TopicSummary[]>(`/api/groups/${g.id}/topics`).catch(() => []))
-      );
+  const filtered = documents.filter(d =>
+    !keyword.trim() ||
+    d.name.toLowerCase().includes(keyword.trim().toLowerCase())
+  );
 
-      // 拉取全部卡片（按主题归类）
-      const allCards = await API.get<KnowledgeCardDTO[]>('/api/cards').catch(() => [] as KnowledgeCardDTO[]);
-      const cardsByTopic = new Map<number, KnowledgeCardDTO[]>();
-      for (const c of allCards) {
-        const arr = cardsByTopic.get(c.topicId) || [];
-        arr.push(c);
-        cardsByTopic.set(c.topicId, arr);
-      }
-
-      // 聚合：群 → 已关闭主题 → 卡片
-      const agg: KbAggregate[] = groupList.map((g, i) => {
-        const topics = topicsByGroup[i] || [];
-        const closedTopics = topics.filter(t => t.status === 'CLOSED');
-        const groupCards: KnowledgeCardDTO[] = [];
-        for (const t of closedTopics) {
-          const tc = cardsByTopic.get(t.id);
-          if (tc) groupCards.push(...tc);
-        }
-        const cats = [...new Set(groupCards.map(c => c.category).filter(Boolean))];
-        const times = [g.lastMessageTime, ...closedTopics.map(t => t.createTime)].filter(Boolean) as string[];
-        return {
-          groupId: g.id,
-          groupName: g.name,
-          cardCount: groupCards.length,
-          topicCount: closedTopics.length,
-          categories: cats,
-          lastTime: times.length ? times.sort().reverse()[0] : null,
-          cards: groupCards,
-        };
-      });
-      setAggregates(agg);
-    } catch (e: any) {
-      toast(e.message || '加载失败', 'error');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => { loadAll(); }, [loadAll]);
-
-  // 搜索 + 筛选
-  const filtered = useMemo(() => {
-    let list = aggregates;
-    if (filter === 'filled') list = list.filter(a => a.cardCount > 0);
-    else if (filter === 'empty') list = list.filter(a => a.cardCount === 0);
-    const kw = keyword.trim().toLowerCase();
-    if (kw) list = list.filter(a => a.groupName.toLowerCase().includes(kw) || a.categories.some(c => c.toLowerCase().includes(kw)));
-    return list;
-  }, [aggregates, filter, keyword]);
-
-  const stats = useMemo(() => ({
-    total: aggregates.length,
-    filled: aggregates.filter(a => a.cardCount > 0).length,
-    cards: aggregates.reduce((s, a) => s + a.cardCount, 0),
-    topics: aggregates.reduce((s, a) => s + a.topicCount, 0),
-  }), [aggregates]);
-
-  function formatTime(iso: string | null) {
-    if (!iso) return '—';
-    const d = new Date(iso);
-    if (isNaN(d.getTime())) return '—';
-    return d.toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
-  }
+  // 上传按钮：暂未实现，点击提示
+  const handleUpload = () => {
+    toast('文件上传功能即将上线，敬请期待', 'info');
+  };
 
   return (
     <div className="app-shell">
       <Sidebar>
         <div className="sidebar__label">知识库</div>
         <div className="kb-side-hint">
-          知识库按群组自动聚合<br />讨论结束并生成卡片后自动收录
+          上传文档构建专属知识库<br />后续将用于群聊 RAG 检索增强
         </div>
       </Sidebar>
 
@@ -114,15 +44,27 @@ export default function KBPage() {
         {/* editorial 页首 */}
         <header className="page__head">
           <div className="page__head-meta">
-            <span className="page__eyebrow">Knowledge Base</span>
+            <span className="page__eyebrow">Knowledge Base · RAG</span>
             <span className="page__head-rule" aria-hidden />
-            <span className="page__head-id">No. {String(stats.total).padStart(2, '0')}</span>
+            <span className="page__head-id">No. 00</span>
           </div>
           <div className="page__head-main">
             <div className="page__head-title-row">
               <h1 className="page__title-serif">知识库管理</h1>
+              <div className="page__head-cta-group">
+                <button
+                  className="btn btn--brand page__head-cta"
+                  onClick={handleUpload}
+                  title="文件上传功能即将上线"
+                >
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 9.5V2.5M7 2.5L4 5.5M7 2.5l3 3M2.5 9.5v2A1.5 1.5 0 004 13h6a1.5 1.5 0 001.5-1.5v-2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  上传文档
+                </button>
+              </div>
             </div>
-            <p className="page__lead">按群组聚合知识卡片，沉淀每一次学习讨论的成果</p>
+            <p className="page__lead">
+              上传 PDF / Markdown / TXT 等文档构建专属知识库，系统将自动切片并向量化，后续在群聊讨论中作为 RAG 检索源
+            </p>
           </div>
           <div className="page__head-actions">
             <div className="page__search">
@@ -130,7 +72,7 @@ export default function KBPage() {
               <input
                 type="text"
                 className="page__search-input"
-                placeholder="搜索知识库（名称 / 分类）..."
+                placeholder="搜索文档（名称 / 类型）..."
                 value={keyword}
                 onChange={e => setKeyword(e.target.value)}
               />
@@ -138,100 +80,114 @@ export default function KBPage() {
           </div>
         </header>
 
-        {/* 筛选 tab：editorial 风格 */}
-        <nav className="kb-filter-bar kb-filter-bar--editorial">
-          <button className={`kb-filter-tab${filter === 'all' ? ' is-active' : ''}`} onClick={() => setFilter('all')}>
-            <span className="kb-filter-tab__label">全部</span>
-            <span className="kb-filter-tab__num">{aggregates.length}</span>
-          </button>
-          <button className={`kb-filter-tab${filter === 'filled' ? ' is-active' : ''}`} onClick={() => setFilter('filled')}>
-            <span className="kb-filter-tab__label">有内容</span>
-            <span className="kb-filter-tab__num">{stats.filled}</span>
-          </button>
-          <button className={`kb-filter-tab${filter === 'empty' ? ' is-active' : ''}`} onClick={() => setFilter('empty')}>
-            <span className="kb-filter-tab__label">空</span>
-            <span className="kb-filter-tab__num">{aggregates.length - stats.filled}</span>
-          </button>
-        </nav>
-
-        <div className="page__body">
-          {/* 统计卡片 */}
-          <div className="page__stats">
-            <div className="stat-card">
-              <span className="stat-card__num">{stats.total}</span>
-              <span className="stat-card__label">个知识库</span>
-              <span className="stat-card__bar" aria-hidden />
-            </div>
-            <div className="stat-card">
-              <span className="stat-card__num">{stats.cards}</span>
-              <span className="stat-card__label">条卡片记录</span>
-              <span className="stat-card__bar stat-card__bar--accent" aria-hidden />
-            </div>
-            <div className="stat-card">
-              <span className="stat-card__num">{stats.topics}</span>
-              <span className="stat-card__label">个已总结主题</span>
-              <span className="stat-card__bar stat-card__bar--violet" aria-hidden />
-            </div>
-            <div className="stat-card">
-              <span className="stat-card__num">{stats.filled}</span>
-              <span className="stat-card__label">有内容</span>
-              <span className="stat-card__bar stat-card__bar--amber" aria-hidden />
-            </div>
+        {/* 统计卡片：全部为 0（占位） */}
+        <div className="page__stats">
+          <div className="stat-card">
+            <span className="stat-card__num">0</span>
+            <span className="stat-card__label">个知识库</span>
+            <span className="stat-card__bar" aria-hidden />
           </div>
+          <div className="stat-card">
+            <span className="stat-card__num">0</span>
+            <span className="stat-card__label">份文档</span>
+            <span className="stat-card__bar stat-card__bar--accent" aria-hidden />
+          </div>
+          <div className="stat-card">
+            <span className="stat-card__num">0</span>
+            <span className="stat-card__label">个切片</span>
+            <span className="stat-card__bar stat-card__bar--violet" aria-hidden />
+          </div>
+          <div className="stat-card">
+            <span className="stat-card__num">0</span>
+            <span className="stat-card__label">已向量化</span>
+            <span className="stat-card__bar stat-card__bar--amber" aria-hidden />
+          </div>
+        </div>
 
-          {/* 知识库卡片列表 */}
-          {loading ? (
-            <div className="empty empty--editorial">
-              <div className="empty__icon">⏳</div>
-              <div className="empty__title">加载中…</div>
-            </div>
-          ) : !filtered.length ? (
-            <div className="empty empty--editorial">
-              <div className="empty__icon">📚</div>
-              <div className="empty__title">
-                {aggregates.length === 0 ? '暂无知识库' : '没有匹配的知识库'}
+        {/* 主体：文档列表 / 空状态 / 功能预告 */}
+        <div className="page__body">
+          {!filtered.length ? (
+            <div className="kb-empty-stack">
+              {/* 空状态 */}
+              <div className="empty empty--editorial">
+                <div className="empty__icon empty__icon--logo">
+                  <svg width="40" height="40" viewBox="0 0 32 32" fill="none">
+                    <path d="M9 3.5h11L25 8.5v17a3 3 0 01-3 3H9a3 3 0 01-3-3V6.5a3 3 0 013-3z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round"/>
+                    <path d="M20 3.5V8.5h5" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round"/>
+                    <path d="M10 16h12M10 20h8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+                  </svg>
+                </div>
+                <div className="empty__title">知识库暂无文档</div>
+                <div className="empty__hint">
+                  上传 PDF / Markdown / TXT 文档，系统将自动切片与向量化<br />
+                  后续在群聊讨论中作为 RAG 检索源
+                </div>
+                <button
+                  className="btn btn--brand kb-empty-stack__cta"
+                  onClick={handleUpload}
+                >
+                  上传第一份文档
+                </button>
               </div>
-              {aggregates.length === 0 && <div className="empty__hint">请先创建群组并发起讨论</div>}
+
+              {/* 功能预告卡片 */}
+              <div className="kb-roadmap">
+                <div className="kb-roadmap__head">
+                  <span className="kb-roadmap__eyebrow">Roadmap</span>
+                  <span className="kb-roadmap__title">知识库能力规划</span>
+                </div>
+                <div className="kb-roadmap__grid">
+                  <article className="kb-roadmap__item">
+                    <div className="kb-roadmap__num">01</div>
+                    <div className="kb-roadmap__body">
+                      <div className="kb-roadmap__name">文档上传</div>
+                      <div className="kb-roadmap__desc">支持 PDF / Markdown / TXT / DOCX，单文件最大 20MB</div>
+                      <span className="tag tag--amber">即将上线</span>
+                    </div>
+                  </article>
+                  <article className="kb-roadmap__item">
+                    <div className="kb-roadmap__num">02</div>
+                    <div className="kb-roadmap__body">
+                      <div className="kb-roadmap__name">自动切片</div>
+                      <div className="kb-roadmap__desc">按语义段落 + 滑动窗口切片，保留上下文重叠</div>
+                      <span className="tag tag--neutral">规划中</span>
+                    </div>
+                  </article>
+                  <article className="kb-roadmap__item">
+                    <div className="kb-roadmap__num">03</div>
+                    <div className="kb-roadmap__body">
+                      <div className="kb-roadmap__name">向量化入库</div>
+                      <div className="kb-roadmap__desc">基于 Embedding 模型生成向量，存入 VectorStore（pgvector）</div>
+                      <span className="tag tag--neutral">规划中</span>
+                    </div>
+                  </article>
+                  <article className="kb-roadmap__item">
+                    <div className="kb-roadmap__num">04</div>
+                    <div className="kb-roadmap__body">
+                      <div className="kb-roadmap__name">RAG 检索增强</div>
+                      <div className="kb-roadmap__desc">群聊讨论时自动检索相关知识，注入 Agent 上下文</div>
+                      <span className="tag tag--neutral">规划中</span>
+                    </div>
+                  </article>
+                </div>
+              </div>
             </div>
           ) : (
             <div className="kb-list">
-              {filtered.map((kb, idx) => (
+              {filtered.map((doc, idx) => (
                 <article
-                  key={kb.groupId}
-                  className={`kb-card kb-card--editorial${kb.cardCount > 0 ? ' kb-card--filled' : ''}`}
+                  key={doc.id}
+                  className="kb-card kb-card--editorial kb-card--filled"
                   style={{ animationDelay: `${idx * 40}ms` }}
                 >
                   <div className="kb-card__index" aria-hidden>{String(idx + 1).padStart(2, '0')}</div>
-                  <div className="kb-card__avatar">
-                    {kb.groupName.trim().charAt(0) || '?'}
-                  </div>
+                  <div className="kb-card__avatar">{doc.name.charAt(0)}</div>
                   <div className="kb-card__info">
-                    <div className="kb-card__name">{kb.groupName}</div>
-                    <div className="kb-card__desc">
-                      {kb.cardCount > 0
-                        ? `收录 ${kb.topicCount} 个主题讨论，共 ${kb.cardCount} 张知识卡片`
-                        : '暂未生成知识卡片，发起讨论并 @专家 结束后会自动收录'}
-                    </div>
-                    {kb.categories.length > 0 && (
-                      <div className="kb-card__tags">
-                        {kb.categories.slice(0, 4).map(c => <span key={c} className="tag tag--brand">{c}</span>)}
-                      </div>
-                    )}
+                    <div className="kb-card__name">{doc.name}</div>
+                    <div className="kb-card__desc">{doc.size} · {doc.type}</div>
                   </div>
                   <div className="kb-card__right">
-                    <div className={`kb-card__status${kb.cardCount > 0 ? ' kb-card__status--on' : ' kb-card__status--off'}`}>
-                      {kb.cardCount > 0 ? '● 有内容' : '○ 空'}
-                    </div>
-                    <div className="kb-card__meta">
-                      <span>卡片 {kb.cardCount}</span>
-                      <span>主题 {kb.topicCount}</span>
-                      <span>更新 {formatTime(kb.lastTime)}</span>
-                    </div>
-                    <div className="kb-card__actions">
-                      <button className="kb-card__link" disabled={kb.cardCount === 0} onClick={() => setDetailKb(kb)}>
-                        查看详情 →
-                      </button>
-                    </div>
+                    <span className={`tag kb-status--${doc.status.toLowerCase()}`}>{statusLabel(doc.status)}</span>
                   </div>
                 </article>
               ))}
@@ -239,36 +195,28 @@ export default function KBPage() {
           )}
         </div>
       </section>
-
-      {/* 详情弹窗 */}
-      <Modal
-        open={!!detailKb}
-        onClose={() => setDetailKb(null)}
-        title={`${detailKb?.groupName ?? ''} · 知识库`}
-        eyebrow="Library"
-        subtitle={detailKb ? `${detailKb.cardCount} 张卡片 · ${detailKb.topicCount} 个主题` : undefined}
-        width={620}
-        footer={<button className="btn btn--ghost" onClick={() => setDetailKb(null)}>关闭</button>}
-      >
-        {detailKb && (
-          <>
-            <div className="kb-detail-summary">
-              <span className="tag tag--brand">{detailKb.cardCount} 张卡片</span>
-              <span className="tag">{detailKb.topicCount} 个主题</span>
-              {detailKb.categories.map(c => <span key={c} className="tag tag--neutral">{c}</span>)}
-            </div>
-            <div className="kb-detail-cards">
-              {detailKb.cards.map(c => (
-                <div key={c.id} className="kb-detail-card">
-                  <div className="kb-detail-card__q">Q: {c.question}</div>
-                  <div className="kb-detail-card__a">A: {c.answer}</div>
-                  <div className="kb-detail-card__meta">来自「{c.topicTitle}」· {formatTime(c.createTime)}</div>
-                </div>
-              ))}
-            </div>
-          </>
-        )}
-      </Modal>
     </div>
   );
+}
+
+/** 文档状态：与后端 File.java 对齐（P2 实现后启用） */
+type KbDocumentStatus = 'UPLOADED' | 'CHUNKED' | 'EMBEDDED' | 'READY' | 'FAILED';
+
+interface KbDocument {
+  id: number;
+  name: string;
+  type: string;
+  size: string;
+  status: KbDocumentStatus;
+  uploadTime: string;
+}
+
+function statusLabel(s: KbDocumentStatus): string {
+  switch (s) {
+    case 'UPLOADED': return '已上传';
+    case 'CHUNKED': return '已切片';
+    case 'EMBEDDED': return '已向量化';
+    case 'READY': return '已就绪';
+    case 'FAILED': return '处理失败';
+  }
 }
