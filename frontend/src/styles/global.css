@@ -29,13 +29,7 @@ input, textarea, select { font-family: inherit; color: var(--text-default); }
   background: var(--bg-base-secondary);
   border-right: 1px solid var(--border-neutral-l1);
 }
-.sidebar__header { display: flex; align-items: center; gap: 8px; padding: 16px; }
-.sidebar__logo {
-  width: 28px; height: 28px; border-radius: 8px;
-  background: var(--bg-brand); color: var(--text-onbrand);
-  display: flex; align-items: center; justify-content: center;
-  font-weight: 700; font-size: 14px;
-}
+.sidebar__header { display: flex; align-items: center; gap: 10px; padding: 16px; }
 .sidebar__title { font-size: 16px; font-weight: 600; color: var(--text-default); letter-spacing: -0.01em; }
 .sidebar__title-accent { color: var(--bg-brand); }
 .sidebar__search { padding: 8px 16px; }
@@ -78,21 +72,70 @@ input, textarea, select { font-family: inherit; color: var(--text-default); }
 }
 .sidebar__footer { margin-top: auto; padding: 12px; }
 
-/* ---- Theme Toggle ---- */
-.theme-toggle {
-  display: flex; align-items: center; gap: 8px;
-  width: 100%; height: 32px; padding: 0 10px;
-  border: 1px solid var(--border-neutral-l2); border-radius: 6px;
-  background: transparent; color: var(--text-secondary);
-  font-size: 12px; font-weight: 500; cursor: pointer;
-  transition: background 0.12s, color 0.12s, border-color 0.12s;
+/* ---- Logo 按钮（兼主题切换） ---- */
+/* 概念：Logo 本身是品牌符号 + 主题切换按钮
+   - 中心点根据主题切换为太阳/月亮
+   - hover 时外环顺时针、内弧逆时针，形成「叮一声」的视觉张力
+   - 点击切换时整个 SVG 旋转 360°，强化「转换」感知 */
+.logo-btn {
+  width: 32px; height: 32px;
+  padding: 0; border: none; background: transparent;
+  color: var(--text-default);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 8px;
+  transition: background .15s, color .15s;
+  flex-shrink: 0;
 }
-.theme-toggle:hover {
-  background: var(--bg-overlay-l1); color: var(--text-default);
-  border-color: var(--border-neutral-l3);
+.logo-btn:hover {
+  background: var(--bg-overlay-l1);
+  color: var(--text-brand);
 }
-.theme-toggle__icon { display: flex; align-items: center; color: var(--text-tertiary); }
-.theme-toggle:hover .theme-toggle__icon { color: var(--text-brand); }
+.logo-btn:focus-visible {
+  outline: 2px solid var(--text-brand);
+  outline-offset: 2px;
+}
+.logo-btn__svg {
+  transition: transform .55s cubic-bezier(.16, 1, .3, 1);
+  transform-origin: center;
+}
+.logo-btn:hover .logo-btn__svg {
+  transform: scale(1.06);
+}
+/* 点击时旋转 360°，强化主题转换感知 */
+.logo-btn:active .logo-btn__svg {
+  transform: rotate(360deg) scale(0.92);
+  transition: transform .45s cubic-bezier(.16, 1, .3, 1);
+}
+
+/* 外环：hover 时缓慢顺时针旋转 */
+.logo-btn__ring {
+  transform-origin: center;
+  transform-box: fill-box;
+  transition: transform .6s cubic-bezier(.16, 1, .3, 1);
+}
+.logo-btn:hover .logo-btn__ring {
+  transform: rotate(45deg);
+}
+/* 内弧：hover 时反向旋转，与外环形成张力 */
+.logo-btn__arc {
+  transform-origin: center;
+  transform-box: fill-box;
+  transition: transform .6s cubic-bezier(.16, 1, .3, 1);
+}
+.logo-btn:hover .logo-btn__arc {
+  transform: rotate(-60deg);
+}
+/* 太阳 / 月亮：平滑淡入 */
+.logo-btn__sun, .logo-btn__moon {
+  transform-origin: center;
+  transform-box: fill-box;
+  animation: logo-center-in .35s cubic-bezier(.16, 1, .3, 1);
+}
+@keyframes logo-center-in {
+  from { opacity: 0; transform: scale(0.5) rotate(-30deg); }
+  to { opacity: 1; transform: scale(1) rotate(0); }
+}
 
 /* ---- Avatar ---- */
 .ds-avatar {

@@ -1,5 +1,4 @@
 import { NavLink } from 'react-router-dom';
-import ThemeToggle from './ThemeToggle';
 import Logo from './Logo';
 
 /* ---- Inline SVG Icons (from design spec) ---- */
@@ -37,9 +36,7 @@ export default function Sidebar({ children, footer, showGroupLabel, onSearch, se
   return (
     <aside className="sidebar">
       <div className="sidebar__header">
-        <div className="sidebar__logo" aria-hidden="true">
-          <Logo size={28} animate />
-        </div>
+        <Logo size={28} animate />
         <div className="sidebar__brand">
           <span className="sidebar__title">Ding<span className="sidebar__title-accent">Ring</span></span>
           <span className="sidebar__tagline">学习讨论 · 叮一声</span>
@@ -82,10 +79,7 @@ export default function Sidebar({ children, footer, showGroupLabel, onSearch, se
 
       {showGroupLabel && <div className="sidebar__label">我的群组</div>}
       {children}
-      <div className="sidebar__footer">
-        <ThemeToggle />
-        {footer}
-      </div>
+      {footer && <div className="sidebar__footer">{footer}</div>}
     </aside>
   );
 }
