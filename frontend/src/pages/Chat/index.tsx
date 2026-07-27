@@ -2,6 +2,8 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import Sidebar, { IconPlus } from '../../components/Sidebar';
 import Avatar from '../../components/Avatar';
+import MessageItem from './MessageItem';
+import { formatTime } from './utils';
 import Modal from '../../components/Modal';
 import GroupSettings from '../../components/GroupSettings';
 import { toast } from '../../components/Toast';
@@ -25,7 +27,12 @@ export default function ChatPage() {
   const [typing, setTyping] = useState<Map<number, string>>(new Map());
   const [inputText, setInputText] = useState('');
   const [mentionState, setMentionState] = useState<{ open: boolean; keyword: string; candidates: MemberInfo[] }>({ open: false, keyword: '', candidates: [] });
+  const [mentionIdx, setMentionIdx] = useState(0);
   const [searchParams, setSearchParams] = useSearchParams();
+  // 消息加载态（切群时展示骨架屏，避免旧消息闪现）
+  const [msgLoading, setMsgLoading] = useState(false);
+  // 用户上翻历史时收到的新消息数（悬浮按钮提示）
+  const [unseenCount, setUnseenCount] = useState(0);
 
   // 聊天内搜索
   const [searchOpen, setSearchOpen] = useState(false);
@@ -52,9 +59,21 @@ export default function ChatPage() {
 
   const chatBodyRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  // 是否贴底：仅贴底时新消息才自动滚动，避免翻历史被拽回
+  const stickToBottomRef = useRef(true);
 
   const groupId = group?.id ?? null;
-  const { send, onMessage } = useWebSocket(groupId);
+  const { send, onMessage, connected } = useWebSocket(groupId);
+
+  // ---- 稳定派生数据（供 memo 化的 MessageItem 使用） ----
+  const agentNames = useMemo(
+    () => group ? group.members.filter(m => m.type === 'AGENT').map(m => m.name) : [],
+    [group],
+  );
+  const expertIds = useMemo(
+    () => new Set(group?.members.filter(m => m.type === 'AGENT' && m.role === 'EXPERT').map(m => m.id) ?? []),
+    [group],
+  );
 
   // 群列表过滤
   const filteredGroups = useMemo(() => {
@@ -72,6 +91,9 @@ export default function ChatPage() {
       .filter(m => m.content.toLowerCase().includes(kw) || m.senderName.toLowerCase().includes(kw))
       .map(m => m.id);
   }, [messages, searchKw]);
+  // Set 查找 O(1)，避免每条消息渲染时 includes O(n)
+  const matchSet = useMemo(() => new Set(searchMatches), [searchMatches]);
+  const currentMatchId = searchMatches.length ? searchMatches[Math.min(searchIdx, searchMatches.length - 1)] : null;
 
   // 滚动到当前匹配项
   useEffect(() => {
@@ -126,49 +148,87 @@ export default function ChatPage() {
   }, [groups]);
 
   // ---- 选群 ----
-  const selectGroup = useCallback(async (groupId: number) => {
+  const selectGroup = useCallback(async (targetId: number) => {
     try {
-      const detail = await API.get<GroupDetail>(`/api/groups/${groupId}`);
+      const detail = await API.get<GroupDetail>(`/api/groups/${targetId}`);
       setGroup(detail);
       setActiveTopic(detail.activeTopic ?? null);
       setReplyTo(null);
       setTyping(new Map());
-      setSearchParams({ groupId: String(groupId) }, { replace: true });
+      stickToBottomRef.current = true;
+      setUnseenCount(0);
+      setSearchParams({ groupId: String(targetId) }, { replace: true });
     } catch (e: any) { toast(e.message, 'error'); }
   }, [setSearchParams]);
 
-  // ---- 加载消息 ----
+  // ---- 加载消息（仅依赖 groupId，群设置更新不触发重拉；带取消保护防快速切群串数据） ----
   useEffect(() => {
-    if (!group) return;
+    if (!groupId) return;
+    let cancelled = false;
+    setMsgLoading(true);
+    setMessages([]);
     (async () => {
       try {
-        const page = await API.get<PageResult<MessageDTO>>(`/api/groups/${group.id}/messages?page=1&pageSize=200`);
-        setMessages(page.items);
-      } catch (e: any) { toast(e.message, 'error'); }
+        const page = await API.get<PageResult<MessageDTO>>(`/api/groups/${groupId}/messages?page=1&pageSize=200`);
+        if (!cancelled) setMessages(page.items);
+      } catch (e: any) {
+        if (!cancelled) toast(e.message, 'error');
+      } finally {
+        if (!cancelled) setMsgLoading(false);
+      }
     })();
-  }, [group]);
+    return () => { cancelled = true; };
+  }, [groupId]);
 
   // ---- 加载主题 ----
   useEffect(() => {
-    if (!group) return;
+    if (!groupId) return;
+    let cancelled = false;
     (async () => {
-      try { setTopics(await API.get<TopicSummary[]>(`/api/groups/${group.id}/topics`)); } catch { /* ignore */ }
+      try {
+        const list = await API.get<TopicSummary[]>(`/api/groups/${groupId}/topics`);
+        if (!cancelled) setTopics(list);
+      } catch { /* ignore */ }
     })();
-  }, [group]);
+    return () => { cancelled = true; };
+  }, [groupId]);
 
-  // ---- 滚动到底 ----
+  // ---- 滚动：仅贴底时跟随新消息 ----
   useEffect(() => {
     const el = chatBodyRef.current;
-    if (el) el.scrollTop = el.scrollHeight;
+    if (el && stickToBottomRef.current) el.scrollTop = el.scrollHeight;
   }, [messages]);
 
+  const handleBodyScroll = useCallback(() => {
+    const el = chatBodyRef.current;
+    if (!el) return;
+    const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 60;
+    stickToBottomRef.current = nearBottom;
+    if (nearBottom) setUnseenCount(0);
+  }, []);
+
+  const scrollToBottom = useCallback((smooth = true) => {
+    const el = chatBodyRef.current;
+    if (!el) return;
+    el.scrollTo({ top: el.scrollHeight, behavior: smooth ? 'smooth' : 'auto' });
+    stickToBottomRef.current = true;
+    setUnseenCount(0);
+  }, []);
+
   // ---- WebSocket 消息处理 ----
+  const loadTopics = useCallback(async () => {
+    if (!groupId) return;
+    try { setTopics(await API.get<TopicSummary[]>(`/api/groups/${groupId}/topics`)); } catch { /* ignore */ }
+  }, [groupId]);
+
   useEffect(() => {
     onMessage((msg) => {
       const d = msg.data;
       switch (msg.type) {
         case 'NEW_MESSAGE':
           setMessages(prev => [...prev, d as unknown as MessageDTO]);
+          // 用户正在翻历史：不打断，计入新消息提示
+          if (!stickToBottomRef.current) setUnseenCount(c => c + 1);
           // 更新群列表预览
           setGroups(prev => prev.map(g =>
             g.id === groupId
@@ -209,25 +269,28 @@ export default function ChatPage() {
           break;
       }
     });
-  }, [onMessage, groupId, activeTopic, loadGroups]);
-
-  const loadTopics = useCallback(async () => {
-    if (!group) return;
-    try { setTopics(await API.get<TopicSummary[]>(`/api/groups/${group.id}/topics`)); } catch { /* ignore */ }
-  }, [group]);
+  }, [onMessage, groupId, activeTopic, loadGroups, loadTopics]);
 
   // ---- 发消息 ----
+  const hideMention = useCallback(() => setMentionState(s => ({ ...s, open: false })), []);
+
   const sendMessage = useCallback(() => {
     const content = inputText.trim();
     if (!content || !group) return;
     const payload = replyTo
       ? { type: 'REPLY_MESSAGE', data: { groupId: group.id, content, replyToMessageId: replyTo.id } }
       : { type: 'SEND_MESSAGE', data: { groupId: group.id, content } };
-    send(payload);
+    if (!send(payload)) {
+      toast('连接已断开，正在重连，请稍后重试', 'error');
+      return;
+    }
     setInputText('');
     setReplyTo(null);
     hideMention();
-  }, [inputText, group, replyTo, send]);
+    // 发送后复位输入框高度并回到底部
+    if (inputRef.current) inputRef.current.style.height = 'auto';
+    requestAnimationFrame(() => scrollToBottom(false));
+  }, [inputText, group, replyTo, send, scrollToBottom, hideMention]);
 
   // ---- @mention ----
   const maybeShowMention = useCallback((text: string, cursorPos: number) => {
@@ -239,9 +302,8 @@ export default function ChatPage() {
     const candidates = group.members.filter(m => m.type === 'AGENT' && m.name.toLowerCase().includes(keyword));
     if (!candidates.length) { hideMention(); return; }
     setMentionState({ open: true, keyword, candidates });
-  }, [group]);
-
-  const hideMention = useCallback(() => setMentionState(s => ({ ...s, open: false })), []);
+    setMentionIdx(0);
+  }, [group, hideMention]);
 
   const pickMention = useCallback((name: string) => {
     const el = inputRef.current;
@@ -254,13 +316,24 @@ export default function ChatPage() {
     setTimeout(() => el.focus(), 0);
   }, [inputText, hideMention]);
 
-  // ---- 键盘 ----
+  // ---- 键盘：@提及浮层支持 ↑↓ 选择、Enter/Tab 确认、Esc 关闭 ----
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey && !mentionState.open) {
+    if (mentionState.open) {
+      const len = mentionState.candidates.length;
+      if (e.key === 'ArrowDown') { e.preventDefault(); setMentionIdx(i => (i + 1) % len); return; }
+      if (e.key === 'ArrowUp') { e.preventDefault(); setMentionIdx(i => (i - 1 + len) % len); return; }
+      if (e.key === 'Enter' || e.key === 'Tab') {
+        e.preventDefault();
+        pickMention(mentionState.candidates[Math.min(mentionIdx, len - 1)].name);
+        return;
+      }
+      if (e.key === 'Escape') { hideMention(); return; }
+    }
+    if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       sendMessage();
     }
-  }, [sendMessage, mentionState.open]);
+  }, [sendMessage, mentionState, mentionIdx, pickMention, hideMention]);
 
   // ---- 查看结论 ----
   const viewConclusion = useCallback(async (topicId: number) => {
@@ -340,36 +413,10 @@ export default function ChatPage() {
   }, [group, ctTitle]);
 
   // ---- 辅助 ----
-  function isExpert(senderId: number, senderType: string) {
-    if (senderType !== 'AGENT' || !group) return false;
-    return group.members.some(m => m.type === 'AGENT' && m.role === 'EXPERT' && m.id === senderId);
-  }
-
-  function highlightMentions(content: string) {
-    let html = escapeHtml(content);
-    if (group) {
-      group.members.filter(m => m.type === 'AGENT').forEach(m => {
-        html = html.replaceAll('@' + escapeHtml(m.name), `<span class="mention">@${escapeHtml(m.name)}</span>`);
-      });
-    }
-    return html;
-  }
-
-  function escapeHtml(t: string) {
-    return String(t ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')
-      .replaceAll('"', '&quot;').replaceAll("'", '&#39;');
-  }
-
-  function formatTime(iso: string | null) {
-    if (!iso) return '';
-    const d = new Date(iso);
-    if (isNaN(d.getTime())) return '';
-    const now = new Date();
-    const pad = (n: number) => String(n).padStart(2, '0');
-    const hm = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
-    if (d.toDateString() === now.toDateString()) return hm;
-    return `${d.getMonth() + 1}/${d.getDate()} ${hm}`;
-  }
+  const handleReply = useCallback((m: MessageDTO) => {
+    setReplyTo({ id: m.id, senderName: m.senderName, content: m.content.slice(0, 40) });
+    inputRef.current?.focus();
+  }, []);
 
   // ---- Render ----
   return (
@@ -382,7 +429,7 @@ export default function ChatPage() {
           ) : !filteredGroups.length ? (
             <div className="empty"><div className="empty__icon">🔍</div>没有匹配「{groupKw}」的群组</div>
           ) : filteredGroups.map(g => (
-            <div key={g.id} className={`group-item${group?.id === g.id ? ' group-item--active' : ''}`} onClick={() => selectGroup(g.id)}>
+            <div key={g.id} className={`group-item${group?.id === g.id ? ' group-item--active' : ''}`} onClick={() => { if (group?.id !== g.id) selectGroup(g.id); }}>
               <Avatar name={g.name} size="sm" />
               <div className="group-item__content">
                 <div className="group-item__top">
@@ -413,6 +460,7 @@ export default function ChatPage() {
                 <div className="chat-header__name-row">
                   <span className="chat-header__title">{group.name}</span>
                   <span className="chat-header__members">({group.members.length})</span>
+                  {!connected && <span className="chat-conn"><span className="chat-conn__dot" />连接中…</span>}
                 </div>
                 <span className="chat-header__topic">
                   {activeTopic
@@ -464,43 +512,36 @@ export default function ChatPage() {
               </div>
             )}
 
-            <div className="chat-body" ref={chatBodyRef}>
-              {messages.map(m => {
-                if (m.senderType === 'SYSTEM') {
-                  return (
-                    <div key={m.id} className={`msg-system${m.content.includes('【讨论结论】') ? ' msg-system--conclusion' : ''}`}>
-                      {m.content}
-                    </div>
-                  );
-                }
-                const self = m.senderType === 'USER';
-                const expert = isExpert(m.senderId, m.senderType);
-                const isMatch = searchMatches.includes(m.id);
-                const isCurrent = searchMatches.length > 0 && searchMatches[Math.min(searchIdx, searchMatches.length - 1)] === m.id;
-                return (
-                  <div key={m.id} data-msg-id={m.id} className={`msg${self ? ' msg--self' : ''}${isCurrent ? ' msg--search-current' : isMatch ? ' msg--search-match' : ''}`}>
-                    <Avatar name={m.senderName} />
-                    <div className="msg__main">
-                      <div className="msg__meta">
-                        <span className="msg__sender">
-                          {m.senderName}
-                          {expert && <span className="tag tag--warning">专家</span>}
-                        </span>
-                        <span className="msg__time">{formatTime(m.createTime)}</span>
+            <div className="chat-body-wrap">
+              <div className="chat-body" ref={chatBodyRef} onScroll={handleBodyScroll}>
+                {msgLoading ? (
+                  /* 骨架屏：切群时占位，避免旧消息闪现与空白跳动 */
+                  <>
+                    {[0, 1, 2].map(i => (
+                      <div key={i} className={`msg-skeleton${i === 1 ? ' msg-skeleton--self' : ''}`}>
+                        <span className="msg-skeleton__avatar" />
+                        <span className="msg-skeleton__bubble" style={{ width: `${46 - i * 8}%` }} />
                       </div>
-                      {m.replyToMessageId && (
-                        <div className="msg__reply">↩ {m.replyToSenderName}: {m.replyToContent}</div>
-                      )}
-                      <div className="msg__bubble" dangerouslySetInnerHTML={{ __html: highlightMentions(m.content) }} />
-                      {!self && (
-                        <div className="msg__actions">
-                          <button className="msg__action-btn" onClick={() => setReplyTo({ id: m.id, senderName: m.senderName, content: m.content.slice(0, 40) })}>引用回复</button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
+                    ))}
+                  </>
+                ) : messages.map(m => (
+                  <MessageItem
+                    key={m.id}
+                    m={m}
+                    expert={m.senderType === 'AGENT' && expertIds.has(m.senderId)}
+                    isMatch={matchSet.has(m.id)}
+                    isCurrent={currentMatchId === m.id}
+                    agentNames={agentNames}
+                    onReply={handleReply}
+                  />
+                ))}
+              </div>
+              {unseenCount > 0 && (
+                <button className="chat-jump" onClick={() => scrollToBottom(true)}>
+                  <svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M7 3v8M3 7l4 4 4-4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  {unseenCount} 条新消息
+                </button>
+              )}
             </div>
 
             <div className="typing-bar">
@@ -517,9 +558,16 @@ export default function ChatPage() {
               <div className="chat-input__row">
                 <div className="chat-input__box">
                   {mentionState.open && (
-                    <div className="mention-pop is-open">
-                      {mentionState.candidates.map(m => (
-                        <div key={m.id} className="mention-pop__item" onMouseDown={e => { e.preventDefault(); pickMention(m.name); }}>
+                    <div className="mention-pop is-open" role="listbox">
+                      {mentionState.candidates.map((m, idx) => (
+                        <div
+                          key={m.id}
+                          className={`mention-pop__item${idx === mentionIdx ? ' is-active' : ''}`}
+                          role="option"
+                          aria-selected={idx === mentionIdx}
+                          onMouseEnter={() => setMentionIdx(idx)}
+                          onMouseDown={e => { e.preventDefault(); pickMention(m.name); }}
+                        >
                           <Avatar name={m.name} size="sm" />
                           <span>{m.name}</span>
                           <span className="mention-pop__role">
@@ -545,7 +593,7 @@ export default function ChatPage() {
                     onClick={e => { if (!e.currentTarget.value.includes('@')) hideMention(); }}
                   />
                 </div>
-                <button className="btn btn--brand" onClick={sendMessage}>发送</button>
+                <button className="btn btn--brand" onClick={sendMessage} disabled={!inputText.trim() || !connected}>发送</button>
               </div>
               <div className="chat-input__hint">Enter 发送 · Shift+Enter 换行 · @专家花名 触发总结陈词</div>
             </div>

@@ -4,6 +4,8 @@ interface ToastItem {
   id: number;
   message: string;
   type: 'info' | 'success' | 'error';
+  /** 标记退出中，触发滑出动画后再移除 */
+  leaving?: boolean;
 }
 
 let nextId = 0;
@@ -21,7 +23,9 @@ export function ToastContainer() {
 
   const add = useCallback((t: ToastItem) => {
     setItems(prev => [...prev, t]);
-    setTimeout(() => setItems(prev => prev.filter(x => x.id !== t.id)), 2600);
+    // 先打退出标记播动画，再移除，避免生硬消失
+    setTimeout(() => setItems(prev => prev.map(x => x.id === t.id ? { ...x, leaving: true } : x)), 2400);
+    setTimeout(() => setItems(prev => prev.filter(x => x.id !== t.id)), 2650);
   }, []);
 
   useEffect(() => {
@@ -33,7 +37,7 @@ export function ToastContainer() {
   return (
     <div className="toast-wrap">
       {items.map(t => (
-        <div key={t.id} className={`toast${t.type === 'error' ? ' toast--error' : t.type === 'success' ? ' toast--success' : ''}`}>
+        <div key={t.id} className={`toast${t.type === 'error' ? ' toast--error' : t.type === 'success' ? ' toast--success' : ''}${t.leaving ? ' toast--leaving' : ''}`}>
           {t.message}
         </div>
       ))}

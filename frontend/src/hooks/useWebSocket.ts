@@ -15,12 +15,14 @@ export default function useWebSocket(groupId: number | null) {
     handlerRef.current = handler;
   }, []);
 
-  /** 发送消息 */
+  /** 发送消息；返回是否发送成功（连接未就绪时返回 false，便于调用方反馈） */
   const send = useCallback((payload: WsPayload) => {
     const ws = wsRef.current;
     if (ws && ws.readyState === WebSocket.OPEN) {
       ws.send(JSON.stringify(payload));
+      return true;
     }
+    return false;
   }, []);
 
   useEffect(() => {

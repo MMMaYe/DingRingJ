@@ -1,9 +1,12 @@
+import { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { ToastContainer } from './components/Toast';
 import ChatPage from './pages/Chat';
-import AgentsPage from './pages/Agents';
-import CardsPage from './pages/Cards';
-import KBPage from './pages/KB';
+
+// 非首屏页面懒加载：减小首屏包体，首次进入群聊更快
+const AgentsPage = lazy(() => import('./pages/Agents'));
+const CardsPage = lazy(() => import('./pages/Cards'));
+const KBPage = lazy(() => import('./pages/KB'));
 
 /**
  * 页面切换过渡容器
@@ -20,13 +23,15 @@ function PageTransition() {
   const location = useLocation();
   return (
     <div className="page-transition" key={location.pathname}>
-      <Routes location={location}>
-        <Route path="/" element={<ChatPage />} />
-        <Route path="/agents" element={<AgentsPage />} />
-        <Route path="/cards" element={<CardsPage />} />
-        <Route path="/kb" element={<KBPage />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+      <Suspense fallback={<div className="route-loading"><span className="route-loading__spinner" /></div>}>
+        <Routes location={location}>
+          <Route path="/" element={<ChatPage />} />
+          <Route path="/agents" element={<AgentsPage />} />
+          <Route path="/cards" element={<CardsPage />} />
+          <Route path="/kb" element={<KBPage />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Suspense>
     </div>
   );
 }

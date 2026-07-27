@@ -151,10 +151,11 @@ input, textarea, select { font-family: inherit; color: var(--text-default); }
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 6px;
   padding: 7px 14px; border-radius: 8px; border: 1px solid transparent;
-  font-size: 13px; font-weight: 500; transition: background .15s;
+  font-size: 13px; font-weight: 500; transition: background .15s, transform .1s;
   background: var(--bg-overlay-l3); color: var(--text-default);
 }
 .btn:hover { background: var(--bg-overlay-l4); }
+.btn:active:not(:disabled) { transform: scale(.97); }
 .btn--brand { background: var(--bg-brand); color: var(--text-onbrand); }
 .btn--brand:hover { background: var(--bg-brand-hover); }
 .btn--ghost { background: transparent; border-color: var(--border-neutral-l2); }
@@ -291,7 +292,23 @@ textarea.input { resize: none; }
 }
 .toast--error { border-color: var(--status-error-default); color: var(--status-error-hover); }
 .toast--success { border-color: var(--status-success-default); color: var(--status-success-hover); }
+.toast--leaving { animation: toast-out .25s ease-in forwards; }
 @keyframes toast-in { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes toast-out { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(-8px); } }
+
+/* ---- 路由懒加载占位 ---- */
+.route-loading {
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  min-height: 100vh;
+}
+.route-loading__spinner {
+  width: 22px; height: 22px;
+  border: 2px solid var(--border-neutral-l2);
+  border-top-color: var(--bg-brand);
+  border-radius: 50%;
+  animation: route-spin .7s linear infinite;
+}
+@keyframes route-spin { to { transform: rotate(360deg); } }
 
 /* ---- Empty State ---- */
 .empty {
@@ -934,7 +951,10 @@ textarea.input { resize: none; }
   .page-transition .page--editorial .page__head,
   .page-transition .page--editorial .page__stats,
   .page-transition .page--editorial .page__body,
-  .page-transition .page--editorial .kb-empty-stack {
+  .page-transition .page--editorial .kb-empty-stack,
+  .toast,
+  .toast--leaving,
+  .chat-jump {
     animation: none;
   }
 }
