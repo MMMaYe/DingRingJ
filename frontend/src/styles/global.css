@@ -675,6 +675,88 @@ textarea.input { resize: none; }
 }
 
 /* ============================================================
+ * Knowledge Card 骨架屏（首次加载占位）
+ * 设计语义：与 editorial 风格对齐，shimmer 流光暗示数据流动
+ * - 高度还原真实卡片结构（标题/正文/页脚）
+ * - shimmer 用 gradient + translate，GPU 友好
+ * - 级联入场最多 5 张，避免大量占位时的卡顿
+ * ============================================================ */
+.k-card-skeleton {
+  position: relative;
+  padding: 18px 20px;
+  background: var(--bg-base-secondary);
+  border: 1px solid var(--border-neutral-l1);
+  border-radius: 12px;
+  overflow: hidden;
+  animation: card-slide-in .3s cubic-bezier(.16, 1, .3, 1) backwards;
+}
+.k-card-skeleton__line {
+  height: 10px;
+  border-radius: 4px;
+  background: var(--bg-overlay-l2);
+  margin-bottom: 8px;
+  position: relative;
+  overflow: hidden;
+}
+.k-card-skeleton__line--title {
+  height: 14px;
+  width: 75%;
+  margin-bottom: 14px;
+  background: var(--bg-overlay-l3);
+}
+.k-card-skeleton__line--short {
+  width: 45%;
+  margin-bottom: 14px;
+}
+.k-card-skeleton__footer {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--border-neutral-l1);
+}
+.k-card-skeleton__chip {
+  height: 10px;
+  width: 80px;
+  border-radius: 4px;
+  background: var(--bg-overlay-l2);
+  position: relative;
+  overflow: hidden;
+}
+.k-card-skeleton__chip--sm {
+  width: 48px;
+  margin-left: auto;
+}
+/* shimmer 流光：从左到右扫过，暗示数据正在加载 */
+.k-card-skeleton__line::after,
+.k-card-skeleton__chip::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, .04) 50%,
+    transparent 100%
+  );
+  transform: translateX(-100%);
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+}
+[data-theme="light"] .k-card-skeleton__line::after,
+[data-theme="light"] .k-card-skeleton__chip::after {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(0, 0, 0, .04) 50%,
+    transparent 100%
+  );
+}
+@keyframes skeleton-shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+/* ============================================================
  * KB 列表卡片 + 筛选 tab：editorial 风格
  * ============================================================ */
 .kb-filter-bar--editorial {
@@ -793,55 +875,56 @@ textarea.input { resize: none; }
 }
 
 /* ===================================================================
-   页面切换过渡：Editorial Reveal
-   概念：杂志翻页般的优雅揭示，配合 staggered 级联入场
-   - 容器：淡入 + 轻微上移
-   - 子元素：page__head / page__stats / page__body 级联揭示
-   - 缓动 cubic-bezier(.16, 1, .3, 1) 与 editorial 设计语言对齐
+   页面切换过渡：Editorial Reveal（轻量版）
+   概念：杂志翻页般的优雅揭示，但更轻、更快、更流畅
+   - 容器：纯 opacity + translateY，0.28s 利落完成
+   - 子元素：极短 delay 级联，避免肉眼可见空白
+   - 无 blur 滤镜（性能开销大、深色下掉帧）
+   - 无常驻 will-change（动画结束后自然释放合成层）
+   - 用 translateZ(0) 强制 GPU 合成，仅动画期间生效
    =================================================================== */
 .page-transition {
-  animation: page-reveal .42s cubic-bezier(.16, 1, .3, 1);
+  animation: page-reveal .28s cubic-bezier(.16, 1, .3, 1);
   transform-origin: center top;
-  will-change: opacity, transform;
+  /* 强制 GPU 合成层，仅动画期间需要 */
+  transform: translateZ(0);
 }
 
 @keyframes page-reveal {
   from {
     opacity: 0;
-    transform: translateY(10px);
-    filter: blur(2px);
+    transform: translate3d(0, 6px, 0);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
-    filter: blur(0);
+    transform: translate3d(0, 0, 0);
   }
 }
 
 /* 子元素级联：editorial 三段式（页首 → 统计 → 正文）
-   仅对 .page--editorial 生效，Chat 页面不受影响 */
+   delay 极短，避免肉眼可见空白；时长与容器一致，整体感更利落 */
 .page-transition .page--editorial .page__head {
-  animation: page-section-in .5s cubic-bezier(.16, 1, .3, 1) .04s backwards;
+  animation: page-section-in .3s cubic-bezier(.16, 1, .3, 1) .02s backwards;
 }
 .page-transition .page--editorial .page__stats {
-  animation: page-section-in .5s cubic-bezier(.16, 1, .3, 1) .1s backwards;
+  animation: page-section-in .3s cubic-bezier(.16, 1, .3, 1) .06s backwards;
 }
 .page-transition .page--editorial .page__body {
-  animation: page-section-in .55s cubic-bezier(.16, 1, .3, 1) .16s backwards;
+  animation: page-section-in .32s cubic-bezier(.16, 1, .3, 1) .1s backwards;
 }
 /* KB 页面专属：Roadmap 区独立级联 */
 .page-transition .page--editorial .kb-empty-stack {
-  animation: page-section-in .55s cubic-bezier(.16, 1, .3, 1) .2s backwards;
+  animation: page-section-in .32s cubic-bezier(.16, 1, .3, 1) .12s backwards;
 }
 
 @keyframes page-section-in {
   from {
     opacity: 0;
-    transform: translateY(8px);
+    transform: translate3d(0, 4px, 0);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translate3d(0, 0, 0);
   }
 }
 
@@ -854,13 +937,4 @@ textarea.input { resize: none; }
   .page-transition .page--editorial .kb-empty-stack {
     animation: none;
   }
-}
-
-/* 浅色主题适配：减弱 blur 效果（浅色下 blur 不显眼且耗性能） */
-[data-theme="light"] .page-transition {
-  animation-name: page-reveal-light;
-}
-@keyframes page-reveal-light {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
 }

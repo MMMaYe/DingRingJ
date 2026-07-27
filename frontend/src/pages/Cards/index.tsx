@@ -13,6 +13,8 @@ export default function CardsPage() {
   const [order, setOrder] = useState<'sequential' | 'random'>('sequential');
   const [keyword, setKeyword] = useState('');
   const [detailCard, setDetailCard] = useState<KnowledgeCardDTO | null>(null);
+  // 首次加载状态：避免动画跑完数据未到导致的视觉空白
+  const [loading, setLoading] = useState(true);
 
   // 复习模式
   const [reviewCards, setReviewCards] = useState<KnowledgeCardDTO[]>([]);
@@ -47,6 +49,7 @@ export default function CardsPage() {
       const query = currentCat ? `?category=${encodeURIComponent(currentCat)}` : '';
       setCards(await API.get<KnowledgeCardDTO[]>(`/api/cards${query}`));
     } catch (e: any) { toast(e.message, 'error'); }
+    finally { setLoading(false); }
   }, [currentCat]);
 
   useEffect(() => { loadCategories(); }, [loadCategories]);
@@ -165,7 +168,24 @@ export default function CardsPage() {
 
         <div className="page__body">
           <div className="card-grid">
-            {!cards.length ? (
+            {loading ? (
+              /* 首次加载骨架屏：避免动画跑完数据未到的视觉空白 */
+              Array.from({ length: 6 }).map((_, i) => (
+                <div
+                  key={`sk-${i}`}
+                  className="k-card-skeleton"
+                  style={{ animationDelay: `${Math.min(i, 4) * 40}ms` }}
+                >
+                  <div className="k-card-skeleton__line k-card-skeleton__line--title" />
+                  <div className="k-card-skeleton__line" />
+                  <div className="k-card-skeleton__line k-card-skeleton__line--short" />
+                  <div className="k-card-skeleton__footer">
+                    <div className="k-card-skeleton__chip" />
+                    <div className="k-card-skeleton__chip k-card-skeleton__chip--sm" />
+                  </div>
+                </div>
+              ))
+            ) : !cards.length ? (
               <div className="empty empty--editorial" style={{ gridColumn: '1/-1' }}>
                 <div className="empty__icon">🗂️</div>
                 <div className="empty__title">暂无知识卡片</div>
@@ -180,7 +200,9 @@ export default function CardsPage() {
               <article
                 key={c.id}
                 className="k-card k-card--editorial"
-                style={{ animationDelay: `${idx * 30}ms` }}
+                /* 级联延迟上限 200ms（idx * 25ms，最多 8 张有级联）
+                   避免卡片多时最后一张要等 600ms+ 才入场导致卡顿感 */
+                style={{ animationDelay: `${Math.min(idx, 8) * 25}ms` }}
                 onClick={() => setDetailCard(c)}
               >
                 <div className="k-card__header">
