@@ -17,6 +17,12 @@ public final class WsConstants {
     /* ==================== Server -> Client ==================== */
     public static final String NEW_MESSAGE = "NEW_MESSAGE";
     public static final String AGENT_TYPING = "AGENT_TYPING";
+    /** 流式发言逐块推送 {streamId, agentId, agentName, delta} */
+    public static final String MESSAGE_DELTA = "MESSAGE_DELTA";
+    /** 流式发言完成 {streamId, message}，message 为落库后的正式消息体 */
+    public static final String MESSAGE_COMPLETE = "MESSAGE_COMPLETE";
+    /** 流式发言中途废弃 {streamId}，前端丢弃半成品气泡 */
+    public static final String MESSAGE_ABORT = "MESSAGE_ABORT";
     public static final String TOPIC_STATUS_CHANGED = "TOPIC_STATUS_CHANGED";
     public static final String TOPIC_CREATED = "TOPIC_CREATED";
     public static final String TOPIC_CLOSED = "TOPIC_CLOSED";

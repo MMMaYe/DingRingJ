@@ -34,6 +34,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -488,6 +489,96 @@ class DiscussionEngineTest {
 
             verify(llmService, timeout(WAIT)).chat(any(Agent.class), any(), anyList());
             verify(moderatorService, never()).decide(any(), anyList(), any());
+        }
+    }
+
+    /* ==================== 流式输出（Phase 3） ==================== */
+
+    @Nested
+    @DisplayName("流式输出")
+    class Streaming {
+
+        /** stub chatStream：逐块回调 deltas 后返回完整内容；同时 stub toDto（COMPLETE 载荷 Map.of 不接受 null） */
+        private void stubChatStream(String full, String... deltas) {
+            when(messageAssembler.toDto(any(GroupMessage.class)))
+                    .thenReturn(mock(com.dingring.app.dto.response.MessageDTO.class));
+            when(llmService.chatStream(any(), any(), anyList(), any())).thenAnswer(inv -> {
+                Consumer<String> onDelta = inv.getArgument(3);
+                for (String d : deltas) {
+                    onDelta.accept(d);
+                }
+                return full;
+            });
+        }
+
+        @Test
+        @DisplayName("开启流式：逐块推 DELTA，完成推 COMPLETE 替代 NEW_MESSAGE")
+        void streamingShouldPushDeltaAndCompleteInsteadOfNewMessage() throws Exception {
+            setField("streamingEnabled", true);
+            stubGroupWithTwoAgents();
+            when(topicRepository.findActiveByGroupId(1L)).thenReturn(Optional.empty());
+            stubRoute(MessageRouter.Intent.CHAT, "", MessageRouter.Confidence.LOW);
+            when(terminator.getAutoReplies()).thenReturn(1);
+            stubChatStream("你好呀", "你好", "呀");
+
+            engine.onUserSignal(1L, signal("哈喽"));
+
+            verify(chatPusher, timeout(WAIT).times(2)).pushToGroup(eq(1L), eq(WsConstants.MESSAGE_DELTA), any());
+            verify(chatPusher, timeout(WAIT)).pushToGroup(eq(1L), eq(WsConstants.MESSAGE_COMPLETE), any());
+            ArgumentCaptor<GroupMessage> captor = ArgumentCaptor.forClass(GroupMessage.class);
+            verify(messageRepository, timeout(WAIT)).save(captor.capture());
+            assertThat(captor.getValue().getContent()).isEqualTo("你好呀");
+            verify(chatPusher, never()).pushToGroup(eq(1L), eq(WsConstants.NEW_MESSAGE), any());
+        }
+
+        @Test
+        @DisplayName("流式中途 PASS：已发 delta 时推 ABORT 且不入库")
+        void streamingPassShouldAbortAfterDeltas() throws Exception {
+            setField("streamingEnabled", true);
+            stubGroupWithTwoAgents();
+            Topic topic = activeTopic(100L, 1L);
+            when(topicRepository.findActiveByGroupId(1L)).thenReturn(Optional.of(topic));
+            when(terminator.reachedMaxRounds(100L)).thenReturn(false);
+            when(messageRepository.countByTopicIdAndSender(anyLong(), anyLong(), any())).thenReturn(0L);
+            stubChatStream("想了想" + ContextBuilder.PASS_MARKER, "想了想", ContextBuilder.PASS_MARKER);
+
+            engine.wake(1L);
+
+            verify(chatPusher, timeout(WAIT).atLeastOnce()).pushToGroup(eq(1L), eq(WsConstants.MESSAGE_ABORT), any());
+            verify(messageRepository, never()).save(any(GroupMessage.class));
+            verify(chatPusher, never()).pushToGroup(eq(1L), eq(WsConstants.MESSAGE_COMPLETE), any());
+        }
+
+        @Test
+        @DisplayName("流式实现回退整段返回（无 delta）：仍推 NEW_MESSAGE")
+        void streamingWithoutDeltasShouldFallbackToNewMessage() throws Exception {
+            setField("streamingEnabled", true);
+            stubGroupWithTwoAgents();
+            when(topicRepository.findActiveByGroupId(1L)).thenReturn(Optional.empty());
+            stubRoute(MessageRouter.Intent.CHAT, "", MessageRouter.Confidence.LOW);
+            when(terminator.getAutoReplies()).thenReturn(1);
+            stubChatStream("整段直接返回");
+
+            engine.onUserSignal(1L, signal("哈喽"));
+
+            verify(chatPusher, timeout(WAIT)).pushToGroup(eq(1L), eq(WsConstants.NEW_MESSAGE), any());
+            verify(chatPusher, never()).pushToGroup(eq(1L), eq(WsConstants.MESSAGE_COMPLETE), any());
+            verify(chatPusher, never()).pushToGroup(eq(1L), eq(WsConstants.MESSAGE_DELTA), any());
+        }
+
+        @Test
+        @DisplayName("关闭流式（默认）：走非流式 chat，行为不变")
+        void streamingDisabledShouldUseBlockingChat() {
+            stubGroupWithTwoAgents();
+            when(topicRepository.findActiveByGroupId(1L)).thenReturn(Optional.empty());
+            stubRoute(MessageRouter.Intent.CHAT, "", MessageRouter.Confidence.LOW);
+            when(terminator.getAutoReplies()).thenReturn(1);
+            when(llmService.chat(any(), any(), anyList())).thenReturn("非流式回复");
+
+            engine.onUserSignal(1L, signal("哈喽"));
+
+            verify(chatPusher, timeout(WAIT)).pushToGroup(eq(1L), eq(WsConstants.NEW_MESSAGE), any());
+            verify(llmService, never()).chatStream(any(), any(), anyList(), any());
         }
     }
 

@@ -279,6 +279,15 @@
 .typing-bar .dotting::after { content: '…'; animation: dot 1.2s infinite steps(4); }
 @keyframes dot { 0% { content: ''; } 25% { content: '.'; } 50% { content: '..'; } 75% { content: '...'; } }
 
+/* 流式发言半成品气泡：尾部闪烁光标，隐藏引用回复操作 */
+.msg-streaming .msg__bubble::after {
+  content: '▍'; margin-left: 2px;
+  color: var(--text-brand);
+  animation: stream-blink 1s steps(2) infinite;
+}
+@keyframes stream-blink { 50% { opacity: 0; } }
+.msg-streaming .msg__actions { display: none !important; }
+
 /* 输入区 */
 .chat-input { border-top: 1px solid var(--border-neutral-l1); background: var(--bg-base-secondary); padding: 12px 20px 14px; }
 .chat-input__replying {

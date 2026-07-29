@@ -38,6 +38,9 @@ dingring:
     model: ""
     # 主持人判定输入的讨论消息窗口（条）
     context-window: 30
+  streaming:
+    # 流式输出（Phase 3）：true 时 Agent 发言逐块推送 MESSAGE_DELTA，完成推 MESSAGE_COMPLETE；落库语义不变
+    enabled: false
   orchestrator:
     # 上下文滑动窗口（条）
     context-window: 200

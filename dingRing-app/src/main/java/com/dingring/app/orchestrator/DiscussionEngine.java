@@ -119,6 +119,10 @@ public class DiscussionEngine {
     @Value("${dingring.orchestrator.profile-extract-threshold:15}")
     private int profileExtractThreshold;
 
+    /** 流式输出开关：开启后 Agent 发言逐块推送 MESSAGE_DELTA，完成推 MESSAGE_COMPLETE 替代 NEW_MESSAGE */
+    @Value("${dingring.streaming.enabled:false}")
+    private boolean streamingEnabled;
+
     /** 追溯建题最多回填闲聊条数 */
     @Value("${dingring.orchestrator.backfill-limit:15}")
     private int backfillLimit;
@@ -576,15 +580,30 @@ public class DiscussionEngine {
                             llmCtx.systemPrompt() + "\n\n主持人提示：" + moderatorGuidance,
                             llmCtx.turns());
                 }
-                String content = chatWithRetry(agent, llmCtx);
+                StreamEmitter emitter = streamingEnabled ? new StreamEmitter(ctx.getGroupId(), agent) : null;
+                String content;
+                try {
+                    content = chatWithRetry(agent, llmCtx, emitter);
+                } catch (Exception e) {
+                    if (emitter != null) {
+                        emitter.abort();
+                    }
+                    throw e;
+                }
                 boolean blank = content == null || content.isBlank();
                 if (topicMode && (blank || content.contains(ContextBuilder.PASS_MARKER))) {
                     // 空内容等同 PASS：Agent 本轮无新观点（不入库不广播）
+                    if (emitter != null) {
+                        emitter.abort();
+                    }
                     log.info("Agent PASS 本轮, agent={}, topicId={}, 空内容={}",
                             agent.getName(), ctx.getTopicId(), blank);
                     return new SpeakResult(SpeakOutcome.PASSED, agent);
                 }
                 if (blank) {
+                    if (emitter != null) {
+                        emitter.abort();
+                    }
                     log.info("Agent 返回空内容，视为选择不发言, agent={}, groupId={}",
                             agent.getName(), ctx.getGroupId());
                     return new SpeakResult(SpeakOutcome.SILENT, agent);
@@ -593,11 +612,21 @@ public class DiscussionEngine {
                 content = ContextBuilder.stripMarkers(content);
                 if (!content.isBlank()) {
                     GroupMessage reply = saveAgentMessage(ctx, agent, content);
-                    log.info("Agent 发言已入库并广播, agent={}, messageId={}, 长度={}",
-                            agent.getName(), reply.getId(), content.length());
-                    chatPusher.pushToGroup(ctx.getGroupId(), WsConstants.NEW_MESSAGE, messageAssembler.toDto(reply));
+                    log.info("Agent 发言已入库并广播, agent={}, messageId={}, 长度={}, 流式={}",
+                            agent.getName(), reply.getId(), content.length(),
+                            emitter != null && emitter.emitted);
+                    if (emitter != null && emitter.emitted) {
+                        // 流式路径：COMPLETE 携带正式消息体替换前端半成品气泡（不再推 NEW_MESSAGE，避免重复）
+                        chatPusher.pushToGroup(ctx.getGroupId(), WsConstants.MESSAGE_COMPLETE, Map.of(
+                                "streamId", emitter.streamId,
+                                "message", messageAssembler.toDto(reply)));
+                    } else {
+                        chatPusher.pushToGroup(ctx.getGroupId(), WsConstants.NEW_MESSAGE, messageAssembler.toDto(reply));
+                    }
                     eventPublisher.publish(new MessageSent(reply.getId(), ctx.getGroupId(), ctx.getTopicId(),
                             agent.getId(), SenderType.AGENT.name(), content, null, List.of()));
+                } else if (emitter != null) {
+                    emitter.abort();
                 }
                 if (wantsConclude) {
                     log.info("检测到 Agent 回复携带收束标记, agent={}, topicId={}",
@@ -629,13 +658,64 @@ public class DiscussionEngine {
         return new SpeakResult(SpeakOutcome.FAILED, null);
     }
 
-    /** LLM 调用（失败重试 1 次） */
-    private String chatWithRetry(Agent agent, ContextBuilder.LlmContext ctx) {
+    /** LLM 调用（失败重试 1 次）；流式模式下重试前废弃旧流、换新 streamId 重开 */
+    private String chatWithRetry(Agent agent, ContextBuilder.LlmContext ctx, StreamEmitter emitter) {
         try {
-            return llmService.chat(agent, ctx.systemPrompt(), ctx.turns());
+            return emitter != null
+                    ? llmService.chatStream(agent, ctx.systemPrompt(), ctx.turns(), emitter::onDelta)
+                    : llmService.chat(agent, ctx.systemPrompt(), ctx.turns());
         } catch (Exception first) {
             log.warn("LLM 首次调用失败，重试 1 次, agent={}, 失败原因: {}", agent.getName(), first.getMessage());
+            if (emitter != null) {
+                emitter.reset();
+                return llmService.chatStream(agent, ctx.systemPrompt(), ctx.turns(), emitter::onDelta);
+            }
             return llmService.chat(agent, ctx.systemPrompt(), ctx.turns());
+        }
+    }
+
+    /**
+     * 单次流式发言会话：delta 经 {@link StreamMarkerGuard} 过滤后逐块广播；
+     * emitted 标志决定失败/PASS 时是否需推 ABORT 让前端丢弃半成品气泡。
+     */
+    private class StreamEmitter {
+        private final Long groupId;
+        private final Agent agent;
+        private String streamId = java.util.UUID.randomUUID().toString();
+        private StreamMarkerGuard guard = new StreamMarkerGuard();
+        private volatile boolean emitted;
+
+        StreamEmitter(Long groupId, Agent agent) {
+            this.groupId = groupId;
+            this.agent = agent;
+        }
+
+        void onDelta(String chunk) {
+            String safe = guard.onChunk(chunk);
+            if (safe.isEmpty()) {
+                return;
+            }
+            emitted = true;
+            chatPusher.pushToGroup(groupId, WsConstants.MESSAGE_DELTA, Map.of(
+                    "streamId", streamId,
+                    "agentId", agent.getId(),
+                    "agentName", agent.getName(),
+                    "delta", safe));
+        }
+
+        /** 废弃当前流（前端丢弃半成品气泡）；未发过 delta 则无需通知 */
+        void abort() {
+            if (emitted) {
+                chatPusher.pushToGroup(groupId, WsConstants.MESSAGE_ABORT, Map.of("streamId", streamId));
+            }
+        }
+
+        /** 重试前重置：废弃旧流，换新 streamId 重新开始 */
+        void reset() {
+            abort();
+            streamId = java.util.UUID.randomUUID().toString();
+            guard = new StreamMarkerGuard();
+            emitted = false;
         }
     }
 

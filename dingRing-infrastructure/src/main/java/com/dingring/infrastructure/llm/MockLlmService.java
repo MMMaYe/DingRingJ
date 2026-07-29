@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.function.Consumer;
 
 /**
  * Mock LLM 实现（dingring.llm.mock=true 启用），无需真实 API Key 即可演示核心闭环。
@@ -32,6 +33,25 @@ public class MockLlmService implements LlmService {
         }
         // 与真实 LLM 实现保持一致：完整输出不截断，便于链路观测
         log.info("Mock LLM 响应, agent={}, 长度={}, 完整内容:\n{}", agent.getName(), reply.length(), reply);
+        return reply;
+    }
+
+    /** 模拟流式：按句切块 + 小延时逐块回调，mock 模式下可测流式链路 */
+    @Override
+    public String chatStream(Agent agent, String systemPrompt, List<ChatTurn> messages, Consumer<String> onDelta) {
+        String reply = chat(agent, systemPrompt, messages);
+        for (String chunk : reply.split("(?<=[。！？；\n])")) {
+            if (chunk.isEmpty()) {
+                continue;
+            }
+            onDelta.accept(chunk);
+            try {
+                Thread.sleep(ThreadLocalRandom.current().nextLong(30, 120));
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                break;
+            }
+        }
         return reply;
     }
 

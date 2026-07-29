@@ -17,13 +17,17 @@ import org.springframework.ai.openai.api.OpenAiApi;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
+import org.springframework.http.client.reactive.JdkClientHttpConnector;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.reactive.function.client.WebClient;
 
 import java.net.URI;
+import java.net.http.HttpClient;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
 
 /**
  * 基于 Spring AI OpenAI 兼容接口的 LLM 适配（DeepSeek / Kimi / GLM 等均走此实现）。
@@ -48,17 +52,7 @@ public class SpringAiLlmService implements LlmService {
         long startAt = System.currentTimeMillis();
         try {
             OpenAiChatModel chatModel = buildChatModel(agent);
-            List<Message> aiMessages = new ArrayList<>();
-            if (systemPrompt != null && !systemPrompt.isBlank()) {
-                aiMessages.add(new SystemMessage(systemPrompt));
-            }
-            for (ChatTurn turn : messages) {
-                if ("ASSISTANT".equalsIgnoreCase(turn.role())) {
-                    aiMessages.add(new AssistantMessage(turn.content()));
-                } else {
-                    aiMessages.add(new UserMessage(turn.content()));
-                }
-            }
+            List<Message> aiMessages = toAiMessages(systemPrompt, messages);
             log.info("LLM 请求开始, agent={}, model={}, baseUrl={}, systemPrompt长度={}, 上下文轮数={}",
                     agent.getName(), agent.getModelName(), agent.getBaseUrl(),
                     systemPrompt == null ? 0 : systemPrompt.length(), messages.size());
@@ -84,16 +78,78 @@ public class SpringAiLlmService implements LlmService {
         }
     }
 
+    @Override
+    public String chatStream(Agent agent, String systemPrompt, List<ChatTurn> messages, Consumer<String> onDelta) {
+        long startAt = System.currentTimeMillis();
+        try {
+            OpenAiChatModel chatModel = buildChatModel(agent);
+            List<Message> aiMessages = toAiMessages(systemPrompt, messages);
+            log.info("LLM 流式请求开始, agent={}, model={}, baseUrl={}, systemPrompt长度={}, 上下文轮数={}",
+                    agent.getName(), agent.getModelName(), agent.getBaseUrl(),
+                    systemPrompt == null ? 0 : systemPrompt.length(), messages.size());
+            StringBuilder full = new StringBuilder();
+            // 块间超时复用读超时配置：网关挂起时 Flux 报错退出，不永久卡死引擎线程
+            chatModel.stream(new Prompt(aiMessages))
+                    .timeout(Duration.ofSeconds(readTimeoutSeconds))
+                    .toIterable()
+                    .forEach(response -> {
+                        String delta = response.getResult() == null || response.getResult().getOutput() == null
+                                ? null : response.getResult().getOutput().getText();
+                        if (delta != null && !delta.isEmpty()) {
+                            full.append(delta);
+                            onDelta.accept(delta);
+                        }
+                    });
+            String text = full.toString();
+            long cost = System.currentTimeMillis() - startAt;
+            if (text.isBlank()) {
+                log.warn("LLM 流式返回空内容, agent={}, model={}, 耗时={}ms",
+                        agent.getName(), agent.getModelName(), cost);
+            } else {
+                log.info("LLM 流式响应完成, agent={}, model={}, 耗时={}ms, 长度={}, 完整内容:\n{}",
+                        agent.getName(), agent.getModelName(), cost, text.length(), text);
+            }
+            return text.trim();
+        } catch (BizException e) {
+            throw e;
+        } catch (Exception e) {
+            log.warn("LLM 流式调用失败, agent={}, model={}, 耗时={}ms",
+                    agent.getName(), agent.getModelName(), System.currentTimeMillis() - startAt, e);
+            throw new BizException(ErrorCode.LLM_API_ERROR,
+                    "LLM 流式调用失败: " + agent.getName() + " - " + e.getMessage());
+        }
+    }
+
+    private List<Message> toAiMessages(String systemPrompt, List<ChatTurn> messages) {
+        List<Message> aiMessages = new ArrayList<>();
+        if (systemPrompt != null && !systemPrompt.isBlank()) {
+            aiMessages.add(new SystemMessage(systemPrompt));
+        }
+        for (ChatTurn turn : messages) {
+            if ("ASSISTANT".equalsIgnoreCase(turn.role())) {
+                aiMessages.add(new AssistantMessage(turn.content()));
+            } else {
+                aiMessages.add(new UserMessage(turn.content()));
+            }
+        }
+        return aiMessages;
+    }
+
     private OpenAiChatModel buildChatModel(Agent agent) {
         UrlParts parts = resolveUrl(agent.getBaseUrl());
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
         requestFactory.setConnectTimeout(Duration.ofSeconds(connectTimeoutSeconds));
         requestFactory.setReadTimeout(Duration.ofSeconds(readTimeoutSeconds));
+        // 流式走 WebClient（无 reactor-netty，用 JDK HttpClient 连接器）；读超时由 Flux.timeout 块间控制
+        HttpClient jdkHttpClient = HttpClient.newBuilder()
+                .connectTimeout(Duration.ofSeconds(connectTimeoutSeconds))
+                .build();
         OpenAiApi openAiApi = OpenAiApi.builder()
                 .baseUrl(parts.baseUrl())
                 .completionsPath(parts.completionsPath())
                 .apiKey(agent.getApiKey())
                 .restClientBuilder(RestClient.builder().requestFactory(requestFactory))
+                .webClientBuilder(WebClient.builder().clientConnector(new JdkClientHttpConnector(jdkHttpClient)))
                 .build();
         OpenAiChatOptions options = OpenAiChatOptions.builder()
                 .model(agent.getModelName())

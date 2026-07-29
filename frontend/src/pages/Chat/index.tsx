@@ -25,6 +25,8 @@ export default function ChatPage() {
   const [topics, setTopics] = useState<TopicSummary[]>([]);
   const [replyTo, setReplyTo] = useState<{ id: number; senderName: string; content: string } | null>(null);
   const [typing, setTyping] = useState<Map<number, string>>(new Map());
+  // 流式发言半成品气泡：streamId -> 累积内容（COMPLETE 替换正式消息 / ABORT 丢弃）
+  const [streams, setStreams] = useState<Map<string, { agentId: number; agentName: string; content: string }>>(new Map());
   const [inputText, setInputText] = useState('');
   const [mentionState, setMentionState] = useState<{ open: boolean; keyword: string; candidates: MemberInfo[] }>({ open: false, keyword: '', candidates: [] });
   const [mentionIdx, setMentionIdx] = useState(0);
@@ -150,6 +152,7 @@ export default function ChatPage() {
       setActiveTopic(detail.activeTopic ?? null);
       setReplyTo(null);
       setTyping(new Map());
+      setStreams(new Map());
       stickToBottomRef.current = true;
       setUnseenCount(0);
       setSearchParams({ groupId: String(targetId) }, { replace: true });
@@ -188,11 +191,11 @@ export default function ChatPage() {
     return () => { cancelled = true; };
   }, [groupId]);
 
-  // ---- 滚动：仅贴底时跟随新消息 ----
+  // ---- 滚动：仅贴底时跟随新消息（流式 delta 同样触发跟随） ----
   useEffect(() => {
     const el = chatBodyRef.current;
     if (el && stickToBottomRef.current) el.scrollTop = el.scrollHeight;
-  }, [messages]);
+  }, [messages, streams]);
 
   const handleBodyScroll = useCallback(() => {
     const el = chatBodyRef.current;
@@ -236,6 +239,42 @@ export default function ChatPage() {
             const next = new Map(prev);
             if ((d as any).isTyping) next.set((d as any).agentId, (d as any).agentName);
             else next.delete((d as any).agentId);
+            return next;
+          });
+          break;
+        case 'MESSAGE_DELTA':
+          setStreams(prev => {
+            const next = new Map(prev);
+            const cur = next.get((d as any).streamId);
+            next.set((d as any).streamId, {
+              agentId: (d as any).agentId,
+              agentName: (d as any).agentName,
+              content: (cur?.content ?? '') + String((d as any).delta ?? ''),
+            });
+            return next;
+          });
+          break;
+        case 'MESSAGE_COMPLETE': {
+          // 半成品气泡替换为落库后的正式消息
+          const full = (d as any).message as MessageDTO;
+          setStreams(prev => {
+            const next = new Map(prev);
+            next.delete((d as any).streamId);
+            return next;
+          });
+          setMessages(prev => [...prev, full]);
+          if (!stickToBottomRef.current) setUnseenCount(c => c + 1);
+          setGroups(prev => prev.map(g =>
+            g.id === groupId
+              ? { ...g, lastMessagePreview: `${full.senderName || ''}: ${String(full.content).slice(0, 30)}`, lastMessageTime: full.createTime }
+              : g
+          ));
+          break;
+        }
+        case 'MESSAGE_ABORT':
+          setStreams(prev => {
+            const next = new Map(prev);
+            next.delete((d as any).streamId);
             return next;
           });
           break;
@@ -411,6 +450,9 @@ export default function ChatPage() {
     inputRef.current?.focus();
   }, []);
 
+  // 流式半成品气泡不支持引用回复（尚未落库无消息 id）
+  const noopReply = useCallback(() => {}, []);
+
   // ---- Render ----
   return (
     <div className="app-shell">
@@ -526,6 +568,23 @@ export default function ChatPage() {
                     agentNames={agentNames}
                     onReply={handleReply}
                   />
+                ))}
+                {/* 流式发言半成品气泡：复用 MessageItem，COMPLETE 后由正式消息替换 */}
+                {!msgLoading && [...streams.entries()].map(([sid, s]) => (
+                  <div key={sid} className="msg-streaming">
+                    <MessageItem
+                      m={{
+                        id: -1, groupId: group.id, topicId: null, senderId: s.agentId,
+                        senderName: s.agentName, senderType: 'AGENT', senderAvatar: null,
+                        messageType: 'TEXT', content: s.content, replyToMessageId: null,
+                        replyToSenderName: null, replyToContent: null, createTime: '',
+                      }}
+                      isMatch={false}
+                      isCurrent={false}
+                      agentNames={agentNames}
+                      onReply={noopReply}
+                    />
+                  </div>
                 ))}
               </div>
               {unseenCount > 0 && (
