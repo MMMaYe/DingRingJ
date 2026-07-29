@@ -78,4 +78,17 @@ public class MessageRepositoryImpl implements MessageRepository {
     public Optional<GroupMessage> findLastByGroupId(Long groupId) {
         return Optional.ofNullable(messageMapper.findLastByGroupId(groupId));
     }
+
+    @Override
+    public List<GroupMessage> findRecentChatByGroupId(Long groupId, int limit) {
+        return messageMapper.findRecentChatByGroupId(groupId, limit);
+    }
+
+    @Override
+    public int updateTopicId(List<Long> messageIds, Long topicId) {
+        if (messageIds == null || messageIds.isEmpty()) {
+            return 0;
+        }
+        return messageMapper.updateTopicId(messageIds, topicId);
+    }
 }

@@ -8,8 +8,6 @@ import com.dingring.common.exception.BizException;
 import com.dingring.common.exception.ErrorCode;
 import com.dingring.domain.agent.Agent;
 import com.dingring.domain.agent.AgentRepository;
-import com.dingring.domain.event.AgentFailed;
-import com.dingring.domain.event.AgentSelected;
 import com.dingring.domain.event.MessageSent;
 import com.dingring.domain.event.TopicClosed;
 import com.dingring.domain.event.TopicConcluding;
@@ -32,13 +30,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 /**
- * 编排引擎：驱动"接收→决策→生成→收束"主循环（见技术方案 4.1）。
- * <p>每个群一个单线程虚拟线程执行器，保证 Agent 串行发言；用户消息不阻塞（同步入库立即广播）。
+ * 编排器（收束域）：用户消息入库广播后投递给 {@link DiscussionEngine} 异步驱动；
+ * 本类保留收束域（状态流转 + 结论生成），结论任务排在引擎的群串行执行器上保证串行。
  */
 @Slf4j
 @Component
@@ -51,20 +46,16 @@ public class ChatOrchestrator {
     private final AgentRepository agentRepository;
     private final SpeakerScheduler speakerScheduler;
     private final ContextBuilder contextBuilder;
-    private final Terminator terminator;
     private final MessageAssembler messageAssembler;
     private final LlmService llmService;
     private final DomainEventPublisher eventPublisher;
     private final ChatPusher chatPusher;
-    private final ConcludeIntentDetector concludeIntentDetector;
-
-    /** 每群一个串行执行器（虚拟线程） */
-    private final Map<Long, ExecutorService> groupExecutors = new ConcurrentHashMap<>();
+    private final DiscussionEngine discussionEngine;
 
     /* ==================== 接收域 ==================== */
 
     /**
-     * 用户发送消息：入库→广播→触发调度。@Agent 且带总结意图时，由该 Agent 触发结束流程。
+     * 用户发送消息：入库→广播→投递信号给对话引擎（意图路由与应答由引擎异步驱动）。
      *
      * @return 入库后的消息 DTO
      */
@@ -99,28 +90,9 @@ public class ChatOrchestrator {
         eventPublisher.publish(new MessageSent(message.getId(), groupId, topicId, userId,
                 SenderType.USER.name(), content, replyToMessageId, mentionedIds));
 
-        // 用户总结意图：@Agent 且 LLM 判定用户在请它总结 → 由被 @ 的 Agent 生成结论
-        if (topicId != null && !mentionedIds.isEmpty()) {
-            Agent mentioned = groupAgents.stream()
-                    .filter(a -> a.getId().equals(mentionedIds.get(0)))
-                    .findFirst().orElse(null);
-            if (mentioned != null && concludeIntentDetector.isConcludeIntent(mentioned, content)) {
-                log.info("用户总结意图命中，转入收束流程, topicId={}, 总结Agent={}", topicId, mentioned.getName());
-                conclude(topicId, userId, "USER", mentioned.getId());
-                return dto;
-            }
-        }
-
-        // 调度域：异步串行触发 Agent 发言
-        MessageContext ctx = MessageContext.builder()
-                .groupId(groupId)
-                .topicId(topicId)
-                .content(content)
-                .mentionedAgentIds(mentionedIds)
-                .repliedToAgentId(resolveRepliedAgent(replyToMessageId))
-                .speakCounts(loadSpeakCounts(topicId, group))
-                .build();
-        executorOf(groupId).execute(() -> safeRun("调度循环", groupId, () -> runScheduleLoop(group, ctx)));
+        // 投递信号：意图路由与应答由对话引擎异步驱动
+        discussionEngine.onUserSignal(groupId, new DiscussionEngine.UserSignal(
+                userId, content, mentionedIds, resolveRepliedAgent(replyToMessageId)));
         return dto;
     }
 
@@ -151,8 +123,8 @@ public class ChatOrchestrator {
         }
         pushTopicStatus(topic, "IN_PROGRESS");
         eventPublisher.publish(new TopicConcluding(topic.getId(), topic.getChatGroupId(), topic.getTitle()));
-        executorOf(topic.getChatGroupId()).execute(() -> safeRun("结论生成", topic.getChatGroupId(),
-                () -> generateConclusion(topic, triggeredBy, concluderAgentId)));
+        discussionEngine.execute(topic.getChatGroupId(), "结论生成",
+                () -> generateConclusion(topic, triggeredBy, concluderAgentId));
     }
 
     /** 总结 Agent 生成 STAR 结论；失败回退 IN_PROGRESS */
@@ -175,8 +147,8 @@ public class ChatOrchestrator {
             if (conclusion == null || conclusion.isBlank()) {
                 throw new BizException(ErrorCode.TOPIC_CONCLUSION_FAILED, "总结 Agent 返回空结论");
             }
-            // 结论中不应残留收束标记
-            conclusion = ContextBuilder.stripConcludeMarker(conclusion);
+            // 结论中不应残留协作标记
+            conclusion = ContextBuilder.stripMarkers(conclusion);
             topic.close(conclusion, concluder.getId());
             topicRepository.update(topic);
             log.info("结论生成成功，主题已关闭, topicId={}, 总结Agent={}, 结论长度={}",
@@ -240,150 +212,7 @@ public class ChatOrchestrator {
                 "message", "结论生成失败，讨论已恢复：" + reason));
     }
 
-    /* ==================== 调度域 + 生成域 ==================== */
-
-    /** 调度循环：连续触发至多 autoReplies 条 Agent 发言；@提及只回一条 */
-    private void runScheduleLoop(Group group, MessageContext ctx) {
-        boolean mentionRound = ctx.getMentionedAgentIds() != null && !ctx.getMentionedAgentIds().isEmpty();
-        int maxReplies = mentionRound ? 1 : terminator.getAutoReplies();
-        log.info("调度循环开始, groupId={}, topicId={}, 模式={}, 计划回复数={}, 已发言计数={}",
-                ctx.getGroupId(), ctx.getTopicId(), mentionRound ? "@提及" : "自由调度", maxReplies, ctx.getSpeakCounts());
-        for (int i = 0; i < maxReplies; i++) {
-            // 主题被关闭/收束则停止调度
-            if (ctx.getTopicId() != null) {
-                Optional<Topic> topic = topicRepository.findById(ctx.getTopicId());
-                if (topic.isEmpty() || !topic.get().isInProgress()) {
-                    log.info("调度停止：主题非进行中, topicId={}, 当前状态={}",
-                            ctx.getTopicId(), topic.map(t -> t.getStatus().name()).orElse("不存在"));
-                    return;
-                }
-                // 终止判定：达到最大轮次自动收束
-                if (terminator.reachedMaxRounds(ctx.getTopicId())) {
-                    autoConclude(ctx.getTopicId());
-                    return;
-                }
-            }
-            GroupMessage reply = speakOnce(group, ctx);
-            if (reply == null) {
-                log.info("调度循环结束：本轮无新发言（详见上方 speakOnce 日志）, groupId={}, 第{}轮",
-                        ctx.getGroupId(), i + 1);
-                return;
-            }
-            // 发言后重新评估：轮次+1，后续轮次为自由调度
-            Map<Long, Long> counts = new HashMap<>(ctx.getSpeakCounts());
-            counts.merge(reply.getSenderId(), 1L, Long::sum);
-            ctx = MessageContext.builder()
-                    .groupId(ctx.getGroupId())
-                    .topicId(ctx.getTopicId())
-                    .content(reply.getContent())
-                    .mentionedAgentIds(List.of())
-                    .repliedToAgentId(null)
-                    .speakCounts(counts)
-                    .build();
-        }
-        // 循环结束后再次终止判定
-        if (ctx.getTopicId() != null && terminator.reachedMaxRounds(ctx.getTopicId())) {
-            autoConclude(ctx.getTopicId());
-        }
-    }
-
-    private void autoConclude(Long topicId) {
-        try {
-            log.info("达到最大轮次，自动触发收束, topicId={}", topicId);
-            conclude(topicId, null, "MAX_ROUNDS");
-        } catch (BizException e) {
-            log.warn("自动收束跳过: {}", e.getMessage());
-        }
-    }
-
-    /** Agent 主动触发收束（回复带收束标记），由它本人生成结论 */
-    private void triggerAgentConclude(Long topicId, Agent agent) {
-        try {
-            log.info("Agent 主动触发收束, topicId={}, agent={}", topicId, agent.getName());
-            conclude(topicId, null, "AGENT", agent.getId());
-        } catch (BizException e) {
-            log.warn("Agent 收束跳过: {}", e.getMessage());
-        }
-    }
-
-    /**
-     * 一次发言：按评分降序为降级链依次尝试（重试 1 次后接力下一个 Agent）。
-     *
-     * @return 成功入库的 Agent 消息；空内容(选择不发言)或全部失败返回 null
-     */
-    private GroupMessage speakOnce(Group group, MessageContext ctx) {
-        List<Agent> candidates = agentRepository.findByIds(group.memberAgentIds());
-        if (candidates.isEmpty()) {
-            log.warn("调度中止：群内无成员 Agent，无人可应答, groupId={}, 成员IdList={}",
-                    ctx.getGroupId(), group.memberAgentIds());
-            return null;
-        }
-        List<SpeakerScheduler.ScoredAgent> ranked = speakerScheduler.rank(candidates, ctx);
-        log.info("发言评分结果, groupId={}, topicId={}, 排序={}",
-                ctx.getGroupId(), ctx.getTopicId(),
-                ranked.stream().map(s -> s.agent().getName() + "(" + s.score() + "," + s.reason() + ")").toList());
-        for (int i = 0; i < ranked.size(); i++) {
-            SpeakerScheduler.ScoredAgent scored = ranked.get(i);
-            Agent agent = scored.agent();
-            log.info("选中发言 Agent: {}, 分数={}, 理由={}, 降级链位置={}/{}",
-                    agent.getName(), scored.score(), scored.reason(), i + 1, ranked.size());
-            eventPublisher.publish(new AgentSelected(ctx.getGroupId(), ctx.getTopicId(),
-                    agent.getId(), agent.getName(), scored.reason(), scored.score()));
-            pushTyping(ctx.getGroupId(), agent, true);
-            try {
-                ContextBuilder.LlmContext llmCtx = contextBuilder.build(
-                        agent, ctx.getGroupId(), ctx.getTopicId(), messageAssembler::resolveSenderName);
-                String content = chatWithRetry(agent, llmCtx);
-                if (content == null || content.isBlank()) {
-                    // 返回内容为空不算失败：Agent 选择不发言
-                    log.warn("Agent 返回空内容，视为选择不发言（静默无回复的常见原因）, agent={}, topicId={}",
-                            agent.getName(), ctx.getTopicId());
-                    return null;
-                }
-                // Agent 自主收束：回复带 [[CONCLUDE]] 标记 → 剥离后由它触发结束流程
-                boolean wantsConclude = ctx.getTopicId() != null
-                        && content.contains(ContextBuilder.CONCLUDE_MARKER);
-                if (wantsConclude) {
-                    log.info("检测到 Agent 回复携带收束标记, agent={}, topicId={}", agent.getName(), ctx.getTopicId());
-                    content = ContextBuilder.stripConcludeMarker(content);
-                }
-                GroupMessage reply = null;
-                if (!content.isBlank()) {
-                    reply = saveAgentMessage(ctx, agent, content);
-                    log.info("Agent 发言已入库并广播, agent={}, messageId={}, 长度={}",
-                            agent.getName(), reply.getId(), content.length());
-                    chatPusher.pushToGroup(ctx.getGroupId(), WsConstants.NEW_MESSAGE, messageAssembler.toDto(reply));
-                    eventPublisher.publish(new MessageSent(reply.getId(), ctx.getGroupId(), ctx.getTopicId(),
-                            agent.getId(), SenderType.AGENT.name(), content, null, List.of()));
-                }
-                if (wantsConclude) {
-                    triggerAgentConclude(ctx.getTopicId(), agent);
-                    // 已进入收束流程，停止后续调度
-                    return null;
-                }
-                return reply;
-            } catch (Exception e) {
-                // 降级路由：接力给下一个 Agent（失败 Agent 下一轮仍参与调度）
-                Agent fallback = i + 1 < ranked.size() ? ranked.get(i + 1).agent() : null;
-                log.warn("Agent 调用失败降级, agent={}, fallback={}", agent.getName(),
-                        fallback == null ? "无" : fallback.getName(), e);
-                eventPublisher.publish(new AgentFailed(ctx.getGroupId(), ctx.getTopicId(),
-                        agent.getId(), agent.getName(), e.getMessage(),
-                        fallback == null ? null : fallback.getId(),
-                        fallback == null ? null : fallback.getName()));
-            } finally {
-                pushTyping(ctx.getGroupId(), agent, false);
-            }
-        }
-        // 所有 Agent 都失败
-        log.error("所有 Agent 均调用失败，本轮无人发言, groupId={}, topicId={}, 候选数={}",
-                ctx.getGroupId(), ctx.getTopicId(), ranked.size());
-        chatPusher.pushToGroup(ctx.getGroupId(), WsConstants.ERROR, Map.of(
-                "success", false,
-                "errorCode", ErrorCode.ALL_AGENTS_FAILED.name(),
-                "message", ErrorCode.ALL_AGENTS_FAILED.getDefaultMessage()));
-        return null;
-    }
+    /* ==================== 私有辅助 ==================== */
 
     /** LLM 调用（失败重试 1 次） */
     private String chatWithRetry(Agent agent, ContextBuilder.LlmContext ctx) {
@@ -393,20 +222,6 @@ public class ChatOrchestrator {
             log.warn("LLM 首次调用失败，重试 1 次, agent={}, 失败原因: {}", agent.getName(), first.getMessage());
             return llmService.chat(agent, ctx.systemPrompt(), ctx.turns());
         }
-    }
-
-    /* ==================== 私有辅助 ==================== */
-
-    private GroupMessage saveAgentMessage(MessageContext ctx, Agent agent, String content) {
-        GroupMessage reply = new GroupMessage();
-        reply.setChatGroupId(ctx.getGroupId());
-        reply.setTopicId(ctx.getTopicId());
-        reply.setSenderId(agent.getId());
-        reply.setSenderType(SenderType.AGENT);
-        reply.setMessageType(MessageType.TEXT);
-        reply.setContent(content);
-        messageRepository.save(reply);
-        return reply;
     }
 
     private void saveSystemNotice(Long groupId, Long topicId, String content) {
@@ -419,14 +234,6 @@ public class ChatOrchestrator {
         notice.setContent(content);
         messageRepository.save(notice);
         chatPusher.pushToGroup(groupId, WsConstants.NEW_MESSAGE, messageAssembler.toDto(notice));
-    }
-
-    private void pushTyping(Long groupId, Agent agent, boolean typing) {
-        chatPusher.pushToGroup(groupId, WsConstants.AGENT_TYPING, Map.of(
-                "groupId", groupId,
-                "agentId", agent.getId(),
-                "agentName", agent.getName(),
-                "isTyping", typing));
     }
 
     private void pushTopicStatus(Topic topic, String previousStatus) {
@@ -473,19 +280,5 @@ public class ChatOrchestrator {
             counts.put(agentId, messageRepository.countByTopicIdAndSender(topicId, agentId, SenderType.AGENT));
         }
         return counts;
-    }
-
-    private ExecutorService executorOf(Long groupId) {
-        return groupExecutors.computeIfAbsent(groupId,
-                id -> Executors.newSingleThreadExecutor(Thread.ofVirtual().name("group-" + id + "-", 0).factory()));
-    }
-
-    /** 异步任务兜底：未捕获异常会让虚拟线程任务静默消失，统一捕获并记录 */
-    private void safeRun(String taskName, Long groupId, Runnable task) {
-        try {
-            task.run();
-        } catch (Exception e) {
-            log.error("异步任务异常退出（可能导致静默无回复）: 任务={}, groupId={}", taskName, groupId, e);
-        }
     }
 }

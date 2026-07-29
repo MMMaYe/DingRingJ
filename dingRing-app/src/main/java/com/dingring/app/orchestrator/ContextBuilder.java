@@ -1,16 +1,19 @@
 package com.dingring.app.orchestrator;
 
+import com.dingring.app.service.GroupAppService;
 import com.dingring.domain.agent.Agent;
 import com.dingring.domain.group.GroupMessage;
 import com.dingring.domain.group.MessageRepository;
 import com.dingring.domain.group.SenderType;
 import com.dingring.domain.service.LlmService.ChatTurn;
 import com.dingring.domain.service.MemoryService;
+import com.dingring.domain.service.ProfileService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -27,17 +30,31 @@ public class ContextBuilder {
     /** Agent 自主收束标记：Agent 认为讨论可总结时在回复末尾输出，编排器检测到后触发结束流程 */
     public static final String CONCLUDE_MARKER = "[[CONCLUDE]]";
 
+    /** Agent 跳过本轮标记：无新观点时只输出该标记，不入库不广播；连续 PASS 触发收敛收束 */
+    public static final String PASS_MARKER = "[[PASS]]";
+
     /** 剥离收束标记（消息入库/结论落库前调用） */
     public static String stripConcludeMarker(String content) {
         return content == null ? null : content.replace(CONCLUDE_MARKER, "").trim();
     }
 
+    /** 剥离全部协作标记（CONCLUDE + PASS） */
+    public static String stripMarkers(String content) {
+        return content == null ? null
+                : content.replace(CONCLUDE_MARKER, "").replace(PASS_MARKER, "").trim();
+    }
+
     private final MessageRepository messageRepository;
     private final MemoryService memoryService;
+    private final ProfileService profileService;
 
     /** 滑动窗口大小（可配置，默认 200 条） */
     @Value("${dingring.orchestrator.context-window:200}")
     private int contextWindow;
+
+    /** 讨论态附带的近期闲聊条数（群氛围前置段） */
+    @Value("${dingring.orchestrator.chat-context-window:20}")
+    private int chatContextWindow;
 
     /**
      * 构建 Agent 发言的完整上下文。
@@ -52,16 +69,39 @@ public class ContextBuilder {
                             Function<GroupMessage, String> senderNameOf) {
         StringBuilder systemPrompt = new StringBuilder(buildSystemPrompt(agent, groupId));
         if (topicId != null) {
-            // 自主收束约定：任意 Agent 觉得讨论可以总结时，用标记告知编排器
-            systemPrompt.append("\n\n如果你认为当前主题已经讨论充分、可以收尾总结，")
+            // 协作协议：自主收束 + 跳过本轮
+            systemPrompt.append("\n\n协作协议：")
+                    .append("\n1. 如果你认为当前主题已经讨论充分、可以收尾总结，")
                     .append("请在本次发言的末尾另起一行输出标记 ").append(CONCLUDE_MARKER)
-                    .append("（仅在确实认为可以结束时输出，其他情况绝不要提及或输出该标记）。");
+                    .append("（仅在确实认为可以结束时输出，其他情况绝不要提及或输出该标记）。")
+                    .append("\n2. 如果你对当前讨论没有新的观点或补充，请只输出 ").append(PASS_MARKER)
+                    .append("（不要输出其他任何内容）；有实质内容时绝不要输出该标记。")
+                    .append("不要为了发言而发言，重复已有观点不如 ").append(PASS_MARKER).append("。");
         }
         List<GroupMessage> window = topicId != null
-                ? messageRepository.findRecentByTopicId(topicId, contextWindow)
+                ? mergeChatContext(groupId, messageRepository.findRecentByTopicId(topicId, contextWindow))
                 : messageRepository.findRecentByGroupId(groupId, contextWindow);
         List<ChatTurn> turns = toTurns(agent, window, senderNameOf);
         return new LlmContext(systemPrompt.toString(), turns);
+    }
+
+    /** 讨论态附带少量闲聊：主题窗口前合并最近 N 条未归属主题的消息（近期群氛围） */
+    private List<GroupMessage> mergeChatContext(Long groupId, List<GroupMessage> topicWindow) {
+        if (chatContextWindow <= 0) {
+            return topicWindow;
+        }
+        List<GroupMessage> chat = messageRepository.findRecentChatByGroupId(groupId, chatContextWindow);
+        if (chat.isEmpty()) {
+            return topicWindow;
+        }
+        List<GroupMessage> merged = new ArrayList<>(chat.size() + topicWindow.size());
+        merged.addAll(chat);
+        merged.addAll(topicWindow);
+        merged.sort(Comparator.comparing(GroupMessage::getCreateTime,
+                        Comparator.nullsFirst(Comparator.naturalOrder()))
+                .thenComparing(GroupMessage::getId,
+                        Comparator.nullsFirst(Comparator.naturalOrder())));
+        return merged;
     }
 
     /** 结论生成上下文：当前 Topic 全部消息 + 历史记忆（不走滑动窗口截断的 system 部分） */
@@ -93,6 +133,12 @@ public class ContextBuilder {
         String memory = memoryService.retrieveMemory(groupId);
         if (!memory.isBlank()) {
             sp.append("\n\n").append(memory);
+        }
+        // 跨群用户画像：让 Agent 更懂用户的表达习惯/情绪基调/思考方式
+        String profile = profileService.getProfile(GroupAppService.DEFAULT_USER_ID);
+        if (!profile.isBlank()) {
+            sp.append("\n\n关于群里用户的画像记忆（长期观察所得，供你更懂他/她，不要直接复述）：\n")
+                    .append(profile);
         }
         return sp.toString();
     }

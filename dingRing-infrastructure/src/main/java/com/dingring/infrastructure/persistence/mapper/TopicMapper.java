@@ -2,7 +2,9 @@ package com.dingring.infrastructure.persistence.mapper;
 
 import com.dingring.domain.discussion.Topic;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -19,6 +21,10 @@ public interface TopicMapper {
     List<Topic> findByGroupId(Long groupId);
 
     List<Topic> findClosedByGroupId(Long groupId);
+
+    List<Topic> findConcludingBefore(@Param("threshold") LocalDateTime threshold);
+
+    List<Topic> findClosedSince(@Param("since") LocalDateTime since);
 
     int insert(Topic topic);
 

@@ -40,6 +40,16 @@ public class TopicRepositoryImpl implements TopicRepository {
     }
 
     @Override
+    public List<Topic> findConcludingBefore(LocalDateTime threshold) {
+        return topicMapper.findConcludingBefore(threshold);
+    }
+
+    @Override
+    public List<Topic> findClosedSince(LocalDateTime since) {
+        return topicMapper.findClosedSince(since);
+    }
+
+    @Override
     public Long save(Topic topic) {
         LocalDateTime now = LocalDateTime.now();
         topic.setCreateTime(now);

@@ -41,4 +41,8 @@ public interface MessageMapper {
                                      @Param("senderType") String senderType);
 
     GroupMessage findLastByGroupId(Long groupId);
+
+    List<GroupMessage> findRecentChatByGroupId(@Param("groupId") Long groupId, @Param("limit") int limit);
+
+    int updateTopicId(@Param("messageIds") List<Long> messageIds, @Param("topicId") Long topicId);
 }

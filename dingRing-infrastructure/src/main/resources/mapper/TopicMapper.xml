@@ -42,6 +42,22 @@
         ORDER BY closed_at ASC, id ASC
     </select>
 
+    <!-- 看门狗：卡在 CONCLUDING 超时的主题（update_time 随每次乐观锁更新刷新） -->
+    <select id="findConcludingBefore" resultMap="topicMap">
+        SELECT <include refid="columns"/>
+        FROM topic
+        WHERE status = 'CONCLUDING' AND update_time &lt; #{threshold}
+        ORDER BY update_time ASC, id ASC
+    </select>
+
+    <!-- 卡片对账：对账窗口内关闭的主题 -->
+    <select id="findClosedSince" resultMap="topicMap">
+        SELECT <include refid="columns"/>
+        FROM topic
+        WHERE status = 'CLOSED' AND closed_at &gt;= #{since}
+        ORDER BY closed_at ASC, id ASC
+    </select>
+
     <insert id="insert" parameterType="com.dingring.domain.discussion.Topic"
             useGeneratedKeys="true" keyProperty="id">
         INSERT INTO topic (chat_group_id, title, status, conclusion, closed_at, version, feature, create_time, update_time)

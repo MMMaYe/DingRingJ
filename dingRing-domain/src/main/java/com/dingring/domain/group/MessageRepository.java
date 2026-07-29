@@ -36,4 +36,14 @@ public interface MessageRepository {
 
     /** 群最后一条消息（列表预览用） */
     Optional<GroupMessage> findLastByGroupId(Long groupId);
+
+    /** 群内最近 N 条未归属主题的闲聊消息（返回时间升序，追溯建题/闲聊上下文用） */
+    List<GroupMessage> findRecentChatByGroupId(Long groupId, int limit);
+
+    /**
+     * 批量回填消息的 topic_id（追溯建题用）。
+     *
+     * @return 实际更新条数
+     */
+    int updateTopicId(List<Long> messageIds, Long topicId);
 }

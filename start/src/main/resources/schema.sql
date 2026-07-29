@@ -90,3 +90,14 @@ CREATE TABLE IF NOT EXISTS knowledge_card (
 
 CREATE INDEX IF NOT EXISTS idx_card_topic ON knowledge_card (topic_id);
 CREATE INDEX IF NOT EXISTS idx_card_category ON knowledge_card (category);
+
+-- 用户画像表（跨群全局画像，纯文本覆盖写回；user_id 唯一键 upsert）
+CREATE TABLE IF NOT EXISTS user_profile (
+    id           BIGINT   PRIMARY KEY AUTO_INCREMENT COMMENT '主键',
+    user_id      BIGINT   NOT NULL COMMENT '用户 ID',
+    profile_text TEXT     NULL COMMENT '画像要点（纯文本）',
+    feature      TEXT     NULL COMMENT '扩展字段(JSON)',
+    create_time  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    update_time  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
+    CONSTRAINT uk_profile_user UNIQUE (user_id)
+);

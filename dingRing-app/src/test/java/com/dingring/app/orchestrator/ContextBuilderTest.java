@@ -6,6 +6,7 @@ import com.dingring.domain.group.MessageRepository;
 import com.dingring.domain.group.SenderType;
 import com.dingring.domain.service.LlmService.ChatTurn;
 import com.dingring.domain.service.MemoryService;
+import com.dingring.domain.service.ProfileService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -15,6 +16,7 @@ import java.lang.reflect.Field;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -32,14 +34,17 @@ class ContextBuilderTest {
 
     private MessageRepository messageRepository;
     private MemoryService memoryService;
+    private ProfileService profileService;
     private ContextBuilder contextBuilder;
 
     @BeforeEach
     void setUp() throws Exception {
         messageRepository = mock(MessageRepository.class);
         memoryService = mock(MemoryService.class);
-        contextBuilder = new ContextBuilder(messageRepository, memoryService);
+        profileService = mock(ProfileService.class);
+        contextBuilder = new ContextBuilder(messageRepository, memoryService, profileService);
         when(memoryService.retrieveMemory(1L)).thenReturn("");
+        when(profileService.getProfile(anyLong())).thenReturn("");
         setField(contextBuilder, "contextWindow", 200);
     }
 

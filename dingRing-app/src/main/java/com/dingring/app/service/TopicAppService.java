@@ -4,6 +4,7 @@ import com.dingring.app.dto.response.ConclusionDTO;
 import com.dingring.app.dto.response.MessageDTO;
 import com.dingring.app.dto.response.TopicSummary;
 import com.dingring.app.orchestrator.ChatOrchestrator;
+import com.dingring.app.orchestrator.DiscussionEngine;
 import com.dingring.common.constant.WsConstants;
 import com.dingring.common.exception.BizException;
 import com.dingring.common.exception.ErrorCode;
@@ -39,6 +40,7 @@ public class TopicAppService {
     private final AgentRepository agentRepository;
     private final MessageAssembler messageAssembler;
     private final ChatOrchestrator chatOrchestrator;
+    private final DiscussionEngine discussionEngine;
     private final DomainEventPublisher eventPublisher;
     private final ChatPusher chatPusher;
 
@@ -65,6 +67,8 @@ public class TopicAppService {
                 "topicId", topic.getId(),
                 "title", title,
                 "status", topic.getStatus().name()));
+        // 手动建题后唤醒引擎：进入讨论态自主推进
+        discussionEngine.wake(groupId);
         return toSummary(topic);
     }
 

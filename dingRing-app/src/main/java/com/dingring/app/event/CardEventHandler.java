@@ -32,7 +32,7 @@ public class CardEventHandler {
     private static final int MAX_RETRY = 3;
 
     private static final String CARD_PROMPT = """
-            你是知识卡片提取助手。请从给定的讨论结论中提取 3-5 张知识卡片（Q&A 对），\
+            你是知识卡片提取助手。请从给定的讨论结论中提取知识卡片（Q&A），\
             并为每张卡片识别分类。严格输出 JSON 数组，不要输出任何其他内容，格式：\
             [{"question": "...", "answer": "...", "category": "..."}]""";
 
@@ -49,7 +49,14 @@ public class CardEventHandler {
         Thread.ofVirtual().name("card-gen-" + event.getTopicId()).start(() -> generateCards(event));
     }
 
-    private void generateCards(TopicClosed event) {
+    /**
+     * 生成卡片（幂等：已有卡片则跳过）；{@code CardReconciler} 定时对账补偿同一入口。
+     */
+    public void generateCards(TopicClosed event) {
+        if (!cardRepository.findByTopicId(event.getTopicId()).isEmpty()) {
+            log.info("卡片生成跳过：主题已有卡片（幂等）, topicId={}", event.getTopicId());
+            return;
+        }
         Agent concluder = agentRepository.findById(event.getConcluderAgentId()).orElse(null);
         if (concluder == null) {
             log.warn("卡片生成跳过：总结 Agent 不存在, topicId={}", event.getTopicId());

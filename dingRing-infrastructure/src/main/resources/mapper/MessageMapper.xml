@@ -100,4 +100,26 @@
         LIMIT 1
     </select>
 
+    <!-- 未归属主题的闲聊消息：追溯建题回填/讨论态闲聊上下文用 -->
+    <select id="findRecentChatByGroupId" resultMap="messageMap">
+        SELECT * FROM (
+            SELECT <include refid="columns"/>
+            FROM message
+            WHERE chat_group_id = #{groupId} AND topic_id IS NULL
+            ORDER BY create_time DESC, id DESC
+            LIMIT #{limit}
+        ) t
+        ORDER BY t.create_time ASC, t.id ASC
+    </select>
+
+    <!-- 追溯建题：批量回填闲聊消息的 topic_id -->
+    <update id="updateTopicId">
+        UPDATE message
+        SET topic_id = #{topicId}
+        WHERE id IN
+        <foreach collection="messageIds" item="mid" open="(" separator="," close=")">
+            #{mid}
+        </foreach>
+    </update>
+
 </mapper>

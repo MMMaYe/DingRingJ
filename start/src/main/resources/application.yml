@@ -28,13 +28,31 @@ dingring:
   llm:
     # true = 使用 Mock LLM（无需真实 API Key，演示完整闭环）
     mock: false
+    # LLM HTTP 连接/读超时（秒）：必须设置，默认客户端无超时会永久卡死对话引擎线程
+    connect-timeout-seconds: 10
+    read-timeout-seconds: 120
   orchestrator:
     # 上下文滑动窗口（条）
     context-window: 200
     # 单主题 Agent 最大发言轮次（达到后自动触发结束）
     max-rounds: 20
-    # 用户不@任何人时的自动接话条数
+    # 用户不@任何人时的自动接话条数（闲聊态）
     auto-replies: 2
+    # 讨论态自主发言间隔随机区间（毫秒，拟人节奏）
+    pace-min-ms: 5000
+    pace-max-ms: 15000
+    # 不同 Agent 连续 PASS 达该数触发收敛收束
+    converge-pass-count: 2
+    # 讨论态附带的近期闲聊条数（群氛围前置段）
+    chat-context-window: 20
+    # 闲聊积累多少条触发画像提炼
+    profile-extract-threshold: 15
+    # 追溯建题最多回填闲聊条数
+    backfill-limit: 15
+    # CONCLUDING 状态超过该分钟数视为卡死（看门狗回滚）
+    concluding-timeout-minutes: 5
+    # 卡片对账回溯窗口（天）
+    card-reconcile-window-days: 7
 
 logging:
   level:

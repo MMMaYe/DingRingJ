@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 用户画像表 Mapper：user_id 唯一键 upsert -->
+<mapper namespace="com.dingring.infrastructure.persistence.mapper.UserProfileMapper">
+
+    <resultMap id="profileMap" type="com.dingring.domain.user.UserProfile">
+        <id column="id" property="id"/>
+        <result column="feature" property="feature"
+                typeHandler="com.dingring.infrastructure.persistence.typehandler.JsonMapTypeHandler"/>
+    </resultMap>
+
+    <sql id="columns">
+        id, user_id, profile_text, feature, create_time, update_time
+    </sql>
+
+    <select id="findByUserId" resultMap="profileMap">
+        SELECT <include refid="columns"/>
+        FROM user_profile
+        WHERE user_id = #{userId}
+    </select>
+
+    <insert id="upsert" parameterType="com.dingring.domain.user.UserProfile"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO user_profile (user_id, profile_text, feature, create_time, update_time)
+        VALUES (#{userId}, #{profileText},
+                #{feature, typeHandler=com.dingring.infrastructure.persistence.typehandler.JsonMapTypeHandler},
+                #{createTime}, #{updateTime})
+        ON DUPLICATE KEY UPDATE profile_text = VALUES(profile_text),
+                                update_time  = VALUES(update_time)
+    </insert>
+
+</mapper>

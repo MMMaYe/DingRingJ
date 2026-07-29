@@ -1,5 +1,6 @@
 package com.dingring.domain.discussion;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -18,6 +19,12 @@ public interface TopicRepository {
 
     /** 同群已 CLOSED 的历史主题（记忆检索用） */
     List<Topic> findClosedByGroupId(Long groupId);
+
+    /** CONCLUDING 且 update_time 早于阈值的主题（看门狗回滚用） */
+    List<Topic> findConcludingBefore(LocalDateTime threshold);
+
+    /** 某时刻之后关闭的 CLOSED 主题（卡片对账用） */
+    List<Topic> findClosedSince(LocalDateTime since);
 
     Long save(Topic topic);
 

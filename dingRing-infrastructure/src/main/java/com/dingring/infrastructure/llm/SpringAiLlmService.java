@@ -14,21 +14,34 @@ import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.openai.OpenAiChatModel;
 import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.ai.openai.api.OpenAiApi;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClient;
 
 import java.net.URI;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 
 /**
  * 基于 Spring AI OpenAI 兼容接口的 LLM 适配（DeepSeek / Kimi / GLM 等均走此实现）。
  * <p>按 Agent 配置（baseUrl/apiKey/model）动态构建 ChatModel，每个 Agent 可指向不同厂商。
+ * <p>必须设置读超时：默认 RestClient 无超时，网关偶发挂起会永久卡死对话引擎线程。
  */
 @Slf4j
 @Service
 @ConditionalOnProperty(name = "dingring.llm.mock", havingValue = "false", matchIfMissing = true)
 public class SpringAiLlmService implements LlmService {
+
+    /** 连接超时秒数 */
+    @Value("${dingring.llm.connect-timeout-seconds:10}")
+    private long connectTimeoutSeconds;
+
+    /** 读超时秒数（LLM 生成耗时较长，默认放宽到 120s） */
+    @Value("${dingring.llm.read-timeout-seconds:120}")
+    private long readTimeoutSeconds;
 
     @Override
     public String chat(Agent agent, String systemPrompt, List<ChatTurn> messages) {
@@ -73,10 +86,14 @@ public class SpringAiLlmService implements LlmService {
 
     private OpenAiChatModel buildChatModel(Agent agent) {
         UrlParts parts = resolveUrl(agent.getBaseUrl());
+        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
+        requestFactory.setConnectTimeout(Duration.ofSeconds(connectTimeoutSeconds));
+        requestFactory.setReadTimeout(Duration.ofSeconds(readTimeoutSeconds));
         OpenAiApi openAiApi = OpenAiApi.builder()
                 .baseUrl(parts.baseUrl())
                 .completionsPath(parts.completionsPath())
                 .apiKey(agent.getApiKey())
+                .restClientBuilder(RestClient.builder().requestFactory(requestFactory))
                 .build();
         OpenAiChatOptions options = OpenAiChatOptions.builder()
                 .model(agent.getModelName())

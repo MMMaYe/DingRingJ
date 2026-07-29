@@ -4,6 +4,7 @@ import com.dingring.app.dto.response.ConclusionDTO;
 import com.dingring.app.dto.response.MessageDTO;
 import com.dingring.app.dto.response.TopicSummary;
 import com.dingring.app.orchestrator.ChatOrchestrator;
+import com.dingring.app.orchestrator.DiscussionEngine;
 import com.dingring.common.exception.BizException;
 import com.dingring.common.response.PageResult;
 import com.dingring.domain.agent.Agent;
@@ -53,6 +54,7 @@ class TopicAppServiceTest {
     private AgentRepository agentRepository;
     private MessageAssembler messageAssembler;
     private ChatOrchestrator chatOrchestrator;
+    private DiscussionEngine discussionEngine;
     private DomainEventPublisher eventPublisher;
     private ChatPusher chatPusher;
     private TopicAppService service;
@@ -65,10 +67,11 @@ class TopicAppServiceTest {
         agentRepository = mock(AgentRepository.class);
         messageAssembler = mock(MessageAssembler.class);
         chatOrchestrator = mock(ChatOrchestrator.class);
+        discussionEngine = mock(DiscussionEngine.class);
         eventPublisher = mock(DomainEventPublisher.class);
         chatPusher = mock(ChatPusher.class);
         service = new TopicAppService(topicRepository, groupRepository, messageRepository,
-                agentRepository, messageAssembler, chatOrchestrator, eventPublisher, chatPusher);
+                agentRepository, messageAssembler, chatOrchestrator, discussionEngine, eventPublisher, chatPusher);
     }
 
     @Nested
