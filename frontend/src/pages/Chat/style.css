@@ -357,15 +357,6 @@
 .topic-panel__end-btn:hover { background: rgba(50,240,140,0.08); }
 .topic-panel__empty { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 16px 0; }
 .topic-panel__empty-text { font-size: 12px; color: var(--text-tertiary); }
-.topic-panel__start-btn {
-  display: flex; align-items: center; justify-content: center; gap: 4px;
-  width: 100%; height: 32px;
-  border: 1px solid var(--border-brand); border-radius: 6px;
-  background: transparent; color: var(--bg-brand);
-  font-size: 11px; font-weight: 500; cursor: pointer;
-  transition: all 0.15s;
-}
-.topic-panel__start-btn:hover { background: rgba(50,240,140,0.08); }
 .history-list { display: flex; flex-direction: column; gap: 4px; }
 .history-item { display: flex; align-items: center; justify-content: space-between; padding: 8px; border-radius: 6px; }
 .history-item:hover { background: var(--bg-overlay-l1); }

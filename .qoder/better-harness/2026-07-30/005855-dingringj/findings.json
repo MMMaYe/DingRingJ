@@ -1,0 +1,161 @@
+{
+  "summary": {
+    "projectName": "DingRingJ",
+    "locale": "zh-CN",
+    "modelId": "agent-work-loop-v4",
+    "reportContractVersion": 25,
+    "overview": "项目的 Maven 多模块与前端构建路线清晰、后端测试基础较好,但缺少面向 Agent 的确定性指令入口,前端与交付环节没有机械化验证门,多智能体编排核心链缺少可关联的诊断标识;本次为 session-limited 审查,会话行为证据面受限。",
+    "aiAgentPractice": {
+      "inspectedSurfaces": [],
+      "coverageRows": [
+        {
+          "surface": "Memories",
+          "scopes": [
+            "Project"
+          ],
+          "count": 24
+        },
+        {
+          "surface": "Rules",
+          "scopes": [
+            "Project"
+          ],
+          "count": 0
+        },
+        {
+          "surface": "Skills",
+          "scopes": [
+            "Project"
+          ],
+          "count": 0
+        },
+        {
+          "surface": "MCP",
+          "scopes": [
+            "Project"
+          ],
+          "count": 0
+        },
+        {
+          "surface": "Hooks",
+          "scopes": [
+            "Project"
+          ],
+          "count": 0
+        },
+        {
+          "surface": "Custom Agents",
+          "scopes": [
+            "Project"
+          ],
+          "count": 0
+        }
+      ]
+    },
+    "assignmentSummaries": [],
+    "dimensions": [
+      {
+        "id": "task-understanding",
+        "label": "任务理解",
+        "score": 52,
+        "summary": "仓库有架构/设计文档与 24 条项目 Memory,但无任何 AGENTS.md 或 Rules,模块边界与分层约束缺少确定性加载入口,只能依赖概率性 Memory 检索进入上下文。",
+        "findingRefs": [
+          "agent-instruction-entry-missing",
+          "core-boundary-drift-noise"
+        ]
+      },
+      {
+        "id": "controlled-execution",
+        "label": "可控执行",
+        "score": 62,
+        "summary": "8 个工作区清单可见,前端具备 dev/build/lint/preview 脚本,Java 模块经 Maven 可构建;但无根级启动/自检说明,窗口内未观察到受控启动或受支持操作的会话证据。",
+        "findingRefs": []
+      },
+      {
+        "id": "change-validation",
+        "label": "改动验证",
+        "score": 45,
+        "summary": "后端有 39 个 Java 测试文件;前端 13 个 tsx 源文件测试为 0 且无 test 脚本,最高频改动文件缺少行为级检查;编排核心链日志仅以 groupId 关联,失败诊断的可关联性不足。",
+        "findingRefs": [
+          "frontend-no-test-no-ci",
+          "orchestrator-correlation-id-missing"
+        ]
+      },
+      {
+        "id": "reliable-delivery",
+        "label": "可靠交付",
+        "score": 44,
+        "summary": "未发现 CI 工作流、评审或发布等验收边界证据,交付验收、审批与回滚路径在本次静态与会话观察范围内均未被观察到(Unobserved)。",
+        "findingRefs": [
+          "frontend-no-test-no-ci"
+        ]
+      },
+      {
+        "id": "learning-capture",
+        "label": "经验沉淀",
+        "score": 40,
+        "summary": "24 条项目 Memory 存在且标题层完整性干净(0 冲突),但检索、应用与结果改善均不可观察;窗口内仅 1 个候选 Episode 且意图证据受污染,无法判定重复工作或沉淀有效性。",
+        "findingRefs": []
+      }
+    ]
+  },
+  "findings": [
+    {
+      "id": "agent-instruction-entry-missing",
+      "title": "多模块 DDD 仓库没有任何确定性的 Agent 指令入口",
+      "severity": "Medium",
+      "reason": "事实:证据包 agentInstructions.status=missing(0 个 AGENTS.md),资产基线确认项目级 Rules/Skills/Hooks/Commands 全部为 0,仓库含 6 个 Maven 模块(domain/app/adapter/infrastructure/common/start)加 frontend 的明确 DDD 分层。推断:分层依赖方向、改动落点等约束目前只能经由 24 条项目 Memory 概率性检索进入上下文,或由用户每次重复陈述;Memory 是否被检索与应用未被观察。owner:仓库根目录(AGENTS.md 空位)。不确定性:会话证据面受限,尚无直接观察到因缺少指令而返工的 Episode。",
+      "expectedOutput": [
+        "让 Agent 在动手前就能确定改动应落在哪个模块与分层,并使用项目实际存在的构建/测试命令。"
+      ],
+      "expectedArtifact": "AGENTS.md",
+      "aiFixPrompt": "/better-harness fix this issue\n\n在仓库根目录创建 AGENTS.md:声明六个 Maven 模块(dingRing-domain/dingRing-app/dingRing-adapter/dingRing-infrastructure/dingRing-common/start)与 frontend 的职责边界、分层依赖方向(REST 入口在 adapter、编排在 app、领域模型在 domain、协议常量在 common),以及构建与测试命令(以根 pom.xml 与 frontend/package.json 中实际存在的命令为准,不发明命令)。仅新建该文件,不修改任何源码。\n\n## Validation\n\n- 确认 AGENTS.md 位于仓库根目录且被 git 跟踪\n- 逐条核对文件中的命令与 pom.xml、frontend/package.json 的实际配置一致",
+      "dimensionRefs": [
+        "task-understanding"
+      ]
+    },
+    {
+      "id": "frontend-no-test-no-ci",
+      "title": "改动最频繁的前端页面没有任何行为级检查,全仓也没有 CI 门",
+      "severity": "Medium",
+      "reason": "事实:frontend/src/pages/Chat/index.tsx 是全仓最热文件(30 天窗口 8 次提交、churn 1423),前端 tsx 测试文件为 0,package.json 仅有 dev/build/lint/preview 脚本,无 test 脚本;仓库无 .github/workflows 等任何 CI 配置(专员只读核实)。推断:对前端行为的改动只有类型检查与 oxlint 信号,后端 39 个 Java 测试与前端 0 测试形成反馈能力不对称,且没有机械化门在合并前拦截回归。owner:frontend/src 与仓库根(CI)。不确定性:未观察到已发生的回归事故,属结构性缺口。",
+      "expectedOutput": [
+        "对最热前端文件的改动获得可重复执行的行为级检查信号,而不是只有类型与 lint。"
+      ],
+      "expectedArtifact": "前端测试脚本与最小测试",
+      "aiFixPrompt": "/better-harness fix this issue\n\n为 frontend 建立最小快速反馈层:在 frontend/package.json 添加 test 脚本,并为最热路径(pages/Chat)编写至少一个行为级测试;与 Vite 配套的测试运行器需要先安装依赖,安装动作需单独确认授权。CI 工作流涉及外部平台写入,同样需单独授权后再添加。\n\n## Validation\n\n- 在 frontend 目录执行新增的 test 脚本并确认通过\n- 执行 npm run build 与 npm run lint 确认既有门未回归",
+      "dimensionRefs": [
+        "change-validation",
+        "reliable-delivery"
+      ]
+    },
+    {
+      "id": "orchestrator-correlation-id-missing",
+      "title": "多智能体编排链路日志缺少跨轮次关联标识,失败难以复盘",
+      "severity": "Medium",
+      "reason": "事实:WsMessageDispatcher 的 4 处日志均以 groupId/payload 为键,全链无 traceId/MDC/messageId 等稳定关联标识(专员只读核实);DiscussionEngine.java 达 799 行(commits=3, churn=817),ChatOrchestrator.java 284 行,为多智能体讨论核心。推断:一次讨论涉及多 Agent 多轮加 LLM 调用时,失败定位需在超长方法与仅按 groupId 聚合的日志间人工拼接,可观测性六门中的可关联(correlatable)为 Partial。owner:dingRing-app 编排层(DiscussionEngine/ChatOrchestrator)与 WS 入站边界。不确定性:『难以复盘』基于静态证据推断,运行时未验证。",
+      "expectedOutput": [
+        "任意一轮多 Agent 讨论的完整调用链可用单一标识在日志中检索与复盘。"
+      ],
+      "expectedArtifact": "编排链路关联标识日志改造",
+      "aiFixPrompt": "/better-harness fix this issue\n\n在 WsMessageDispatcher → ChatOrchestrator → DiscussionEngine 链路引入每条消息/每轮讨论的稳定关联标识(使用项目已有的 SLF4J 体系,如 MDC),使同一轮讨论的入站、编排、LLM 调用与结果日志可通过该标识串联;保持现有日志键与格式风格不变,只增不删。\n\n## Validation\n\n- 执行 mvn -q compile 确认编译通过\n- 运行 dingRing-app 相关测试,并检查日志输出包含新的关联标识字段",
+      "dimensionRefs": [
+        "change-validation"
+      ]
+    },
+    {
+      "id": "core-boundary-drift-noise",
+      "title": "核心代码边界未配置,自动变更评审信号出现已证实误报",
+      "severity": "Low",
+      "reason": "事实:证据包 coreCodeRules.status=missing(推断边界),changeDrift 将 React 页面 frontend/src/pages/Chat/index.tsx 误判为 CLI 源码并建议同步 README(项目为 Web 前端、无 CLI,专员核实无 commander/yargs 类依赖与 bin 入口)。推断:在无显式核心边界的前提下,通用 drift 规则对本项目噪声偏高,直接照做会引入无关文档改动;另证据包快照(5 文件/54 行)已落后当时工作树(9 文件/241 行删除),drift 的缺测试 advisory 与现状不符。owner:项目核心边界配置与采纳评审信号的流程。不确定性:分类器本身属工具侧,项目侧可修复的是边界配置与采纳前核对。",
+      "expectedOutput": [
+        "自动变更评审信号与项目实际结构一致,采纳建议前有现场 diff 核对步骤。"
+      ],
+      "expectedArtifact": "显式核心代码边界配置",
+      "aiFixPrompt": "/better-harness fix this issue\n\n为 core-change-watch 配置显式核心代码边界,将后端编排核心(dingRing-app/dingRing-domain)与前端页面区分;先查阅 core-change-watch 的配置契约再落地,不凭空发明配置语法。同时在采纳自动 drift 建议前,先以当前 git diff 核对触发文件性质与变更规模。\n\n## Validation\n\n- 重新生成 core-change-watch evidence-pack,确认 coreCodeRules 不再为 missing\n- 确认针对 Web 页面文件不再出现 cli-help-docs 类误报",
+      "dimensionRefs": [
+        "task-understanding"
+      ]
+    }
+  ]
+}

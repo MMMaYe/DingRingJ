@@ -17,7 +17,7 @@ import java.util.Map;
 
 /**
  * WS 入站消息分发器：解析 {type, data} 并路由到应用服务。
- * <p>C→S 消息类型：SEND_MESSAGE / REPLY_MESSAGE / CREATE_TOPIC / CONCLUDE_TOPIC。
+ * <p>C→S 消息类型：SEND_MESSAGE / REPLY_MESSAGE / CONCLUDE_TOPIC。
  */
 @Slf4j
 @Component
@@ -46,8 +46,6 @@ public class WsMessageDispatcher {
                         groupId, GroupAppService.DEFAULT_USER_ID,
                         data.path("content").asText(),
                         data.path("replyToMessageId").isNumber() ? data.path("replyToMessageId").asLong() : null);
-                case WsConstants.CREATE_TOPIC -> topicAppService.createTopic(
-                        groupId, data.path("title").asText());
                 case WsConstants.CONCLUDE_TOPIC -> topicAppService.conclude(
                         data.path("topicId").asLong());
                 default -> {

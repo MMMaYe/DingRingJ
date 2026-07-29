@@ -4,7 +4,6 @@ import com.dingring.app.dto.response.ConclusionDTO;
 import com.dingring.app.dto.response.MessageDTO;
 import com.dingring.app.dto.response.TopicSummary;
 import com.dingring.app.orchestrator.ChatOrchestrator;
-import com.dingring.app.orchestrator.DiscussionEngine;
 import com.dingring.common.exception.BizException;
 import com.dingring.common.response.PageResult;
 import com.dingring.domain.agent.Agent;
@@ -12,22 +11,12 @@ import com.dingring.domain.agent.AgentRepository;
 import com.dingring.domain.discussion.Topic;
 import com.dingring.domain.discussion.TopicRepository;
 import com.dingring.domain.discussion.TopicStatus;
-import com.dingring.domain.event.TopicCreated;
-import com.dingring.domain.group.Group;
-import com.dingring.domain.group.GroupMember;
-import com.dingring.domain.group.GroupRepository;
-import com.dingring.domain.group.MemberRole;
-import com.dingring.domain.group.MemberType;
 import com.dingring.domain.group.GroupMessage;
 import com.dingring.domain.group.MessageRepository;
-import com.dingring.domain.group.MessageType;
-import com.dingring.domain.group.SenderType;
-import com.dingring.domain.service.DomainEventPublisher;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.springframework.dao.DuplicateKeyException;
 
 import java.util.List;
 import java.util.Optional;
@@ -36,8 +25,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -49,90 +36,21 @@ import static org.mockito.Mockito.when;
 class TopicAppServiceTest {
 
     private TopicRepository topicRepository;
-    private GroupRepository groupRepository;
     private MessageRepository messageRepository;
     private AgentRepository agentRepository;
     private MessageAssembler messageAssembler;
     private ChatOrchestrator chatOrchestrator;
-    private DiscussionEngine discussionEngine;
-    private DomainEventPublisher eventPublisher;
-    private ChatPusher chatPusher;
     private TopicAppService service;
 
     @BeforeEach
     void setUp() {
         topicRepository = mock(TopicRepository.class);
-        groupRepository = mock(GroupRepository.class);
         messageRepository = mock(MessageRepository.class);
         agentRepository = mock(AgentRepository.class);
         messageAssembler = mock(MessageAssembler.class);
         chatOrchestrator = mock(ChatOrchestrator.class);
-        discussionEngine = mock(DiscussionEngine.class);
-        eventPublisher = mock(DomainEventPublisher.class);
-        chatPusher = mock(ChatPusher.class);
-        service = new TopicAppService(topicRepository, groupRepository, messageRepository,
-                agentRepository, messageAssembler, chatOrchestrator, discussionEngine, eventPublisher, chatPusher);
-    }
-
-    @Nested
-    @DisplayName("createTopic 创建主题")
-    class CreateTopic {
-
-        @Test
-        @DisplayName("群不存在时抛 BizException")
-        void groupNotFoundShouldThrow() {
-            when(groupRepository.findById(99L)).thenReturn(Optional.empty());
-
-            assertThatThrownBy(() -> service.createTopic(99L, "title"))
-                    .isInstanceOf(BizException.class)
-                    .hasMessageContaining("群不存在");
-        }
-
-        @Test
-        @DisplayName("群已有进行中的主题时抛 TOPIC_ALREADY_IN_PROGRESS")
-        void existingActiveTopicShouldThrow() {
-            when(groupRepository.findById(1L)).thenReturn(Optional.of(new Group()));
-            Topic existing = new Topic();
-            existing.setStatus(TopicStatus.IN_PROGRESS);
-            when(topicRepository.findActiveByGroupId(1L)).thenReturn(Optional.of(existing));
-
-            assertThatThrownBy(() -> service.createTopic(1L, "新主题"))
-                    .isInstanceOf(BizException.class)
-                    .hasMessageContaining("进行中的主题");
-        }
-
-        @Test
-        @DisplayName("save 抛 DuplicateKeyException 时转换为 BizException")
-        void duplicateKeyShouldConvertToBizException() {
-            when(groupRepository.findById(1L)).thenReturn(Optional.of(new Group()));
-            when(topicRepository.findActiveByGroupId(1L)).thenReturn(Optional.empty());
-            when(topicRepository.save(any(Topic.class))).thenThrow(new DuplicateKeyException("uk"));
-
-            assertThatThrownBy(() -> service.createTopic(1L, "重复标题"))
-                    .isInstanceOf(BizException.class)
-                    .hasMessageContaining("主题已存在或群内已有进行中的讨论");
-        }
-
-        @Test
-        @DisplayName("成功创建：发布 TopicCreated 事件 + 推送 WS + 返回摘要")
-        void shouldCreateSuccessfully() {
-            when(groupRepository.findById(1L)).thenReturn(Optional.of(new Group()));
-            when(topicRepository.findActiveByGroupId(1L)).thenReturn(Optional.empty());
-            when(topicRepository.save(any(Topic.class))).thenAnswer(inv -> {
-                Topic t = inv.getArgument(0);
-                t.setId(100L);
-                return 100L;
-            });
-            when(messageRepository.countByTopicId(100L)).thenReturn(0L);
-
-            TopicSummary summary = service.createTopic(1L, "Java 内存模型");
-
-            assertThat(summary.getId()).isEqualTo(100L);
-            assertThat(summary.getTitle()).isEqualTo("Java 内存模型");
-            assertThat(summary.getStatus()).isEqualTo("IN_PROGRESS");
-            verify(eventPublisher).publish(any(TopicCreated.class));
-            verify(chatPusher).pushToGroup(eq(1L), anyString(), any());
-        }
+        service = new TopicAppService(topicRepository, messageRepository,
+                agentRepository, messageAssembler, chatOrchestrator);
     }
 
     @Nested

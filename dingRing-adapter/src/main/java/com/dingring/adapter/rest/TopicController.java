@@ -1,6 +1,5 @@
 package com.dingring.adapter.rest;
 
-import com.dingring.app.dto.request.CreateTopicRequest;
 import com.dingring.app.dto.response.ConclusionDTO;
 import com.dingring.app.dto.response.KnowledgeCardDTO;
 import com.dingring.app.dto.response.MessageDTO;
@@ -9,12 +8,10 @@ import com.dingring.app.service.CardAppService;
 import com.dingring.app.service.TopicAppService;
 import com.dingring.common.response.ApiResponse;
 import com.dingring.common.response.PageResult;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -31,13 +28,6 @@ public class TopicController {
 
     private final TopicAppService topicAppService;
     private final CardAppService cardAppService;
-
-    /** 创建主题（开始一场讨论） */
-    @PostMapping("/groups/{groupId}/topics")
-    public ApiResponse<TopicSummary> createTopic(@PathVariable Long groupId,
-                                                 @Valid @RequestBody CreateTopicRequest request) {
-        return ApiResponse.ok(topicAppService.createTopic(groupId, request.getTitle()));
-    }
 
     /** 群的主题列表 */
     @GetMapping("/groups/{groupId}/topics")

@@ -1,6 +1,5 @@
 package com.dingring.adapter.rest;
 
-import com.dingring.app.dto.request.CreateTopicRequest;
 import com.dingring.app.dto.response.ConclusionDTO;
 import com.dingring.app.dto.response.KnowledgeCardDTO;
 import com.dingring.app.dto.response.MessageDTO;
@@ -10,7 +9,6 @@ import com.dingring.app.service.TopicAppService;
 import com.dingring.common.exception.BizException;
 import com.dingring.common.exception.ErrorCode;
 import com.dingring.common.response.PageResult;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -19,13 +17,11 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.util.List;
 
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
@@ -43,7 +39,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class TopicControllerTest {
 
     private MockMvc mockMvc;
-    private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Mock
     private TopicAppService topicAppService;
@@ -59,56 +54,6 @@ class TopicControllerTest {
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
-    }
-
-    @Nested
-    @DisplayName("POST /api/groups/{groupId}/topics 创建主题")
-    class CreateTopic {
-
-        @Test
-        @DisplayName("成功创建返回 200 + TopicSummary")
-        void shouldCreateTopic() throws Exception {
-            CreateTopicRequest req = new CreateTopicRequest();
-            req.setTitle("Java 内存模型");
-            TopicSummary summary = TopicSummary.builder().id(1L).title("Java 内存模型").status("IN_PROGRESS").build();
-            when(topicAppService.createTopic(eq(1L), eq("Java 内存模型"))).thenReturn(summary);
-
-            mockMvc.perform(post("/api/groups/1/topics")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(req)))
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.data.id").value(1L))
-                    .andExpect(jsonPath("$.data.title").value("Java 内存模型"));
-        }
-
-        @Test
-        @DisplayName("title 为空时返回 400")
-        void blankTitleShouldReturn400() throws Exception {
-            String body = """
-                    {"title":""}
-                    """;
-            mockMvc.perform(post("/api/groups/1/topics")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(body))
-                    .andExpect(status().isBadRequest())
-                    .andExpect(jsonPath("$.errorCode").value("PARAM_INVALID"));
-        }
-
-        @Test
-        @DisplayName("群已有进行中主题时返回 409")
-        void existingTopicShouldReturn409() throws Exception {
-            when(topicAppService.createTopic(eq(1L), any()))
-                    .thenThrow(new BizException(ErrorCode.TOPIC_ALREADY_IN_PROGRESS));
-
-            String body = """
-                    {"title":"新主题"}
-                    """;
-            mockMvc.perform(post("/api/groups/1/topics")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(body))
-                    .andExpect(status().isConflict())
-                    .andExpect(jsonPath("$.errorCode").value("TOPIC_ALREADY_IN_PROGRESS"));
-        }
     }
 
     @Nested

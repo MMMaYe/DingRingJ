@@ -46,7 +46,6 @@ export default function ChatPage() {
 
   // modals
   const [showCreateGroup, setShowCreateGroup] = useState(false);
-  const [showCreateTopic, setShowCreateTopic] = useState(false);
   const [showConclusion, setShowConclusion] = useState<ConclusionDTO | null>(null);
   const [conclusionCards, setConclusionCards] = useState<KnowledgeCardDTO[]>([]);
   // 群设置抽屉
@@ -55,8 +54,6 @@ export default function ChatPage() {
   // create group form
   const [cgName, setCgName] = useState('');
   const [cgSelectedAgents, setCgSelectedAgents] = useState<Set<number>>(new Set());
-  // create topic form
-  const [ctTitle, setCtTitle] = useState('');
 
   const chatBodyRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -435,15 +432,6 @@ export default function ChatPage() {
     } catch (e: any) { toast(e.message, 'error'); }
   }, [cgName, cgSelectedAgents, loadGroups, selectGroup]);
 
-  // ---- 发起讨论 ----
-  const submitCreateTopic = useCallback(async () => {
-    if (!group || !ctTitle.trim()) { toast('请输入讨论主题', 'error'); return; }
-    try {
-      await API.post(`/api/groups/${group.id}/topics`, { title: ctTitle.trim() });
-      setShowCreateTopic(false);
-    } catch (e: any) { toast(e.message, 'error'); }
-  }, [group, ctTitle]);
-
   // ---- 辅助 ----
   const handleReply = useCallback((m: MessageDTO) => {
     setReplyTo({ id: m.id, senderName: m.senderName, content: m.content.slice(0, 40) });
@@ -500,7 +488,7 @@ export default function ChatPage() {
                 <span className="chat-header__topic">
                   {activeTopic
                     ? <>当前主题：<em>{activeTopic.title}</em></>
-                    : '暂无进行中的讨论，发起一个主题开始学习吧'}
+                    : '暂无进行中的讨论，直接提问即可自动开启'}
                 </span>
               </div>
               <div className="chat-header__right">
@@ -705,10 +693,6 @@ export default function ChatPage() {
             ) : (
               <div className="topic-panel__empty">
                 <span className="topic-panel__empty-text">暂无进行中的讨论</span>
-                <button className="topic-panel__start-btn" onClick={() => setShowCreateTopic(true)}>
-                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><line x1="8" y1="3" x2="8" y2="13"/><line x1="3" y1="8" x2="13" y2="8"/></svg>
-                  发起讨论
-                </button>
               </div>
             )}
           </div>
@@ -871,18 +855,6 @@ export default function ChatPage() {
             })}
           </div>
         </section>
-      </Modal>
-
-      {/* 弹窗：发起讨论 */}
-      <Modal open={showCreateTopic} onClose={() => setShowCreateTopic(false)} title="发起主题讨论"
-        footer={<>
-          <button className="btn btn--ghost" onClick={() => setShowCreateTopic(false)}>取消</button>
-          <button className="btn btn--brand" onClick={submitCreateTopic}>开始讨论</button>
-        </>}>
-        <div className="form-row">
-          <label>讨论主题</label>
-          <input className="input" value={ctTitle} onChange={e => setCtTitle(e.target.value)} placeholder="如：什么是进程调度？" maxLength={255} />
-        </div>
       </Modal>
 
       {/* 弹窗：主题结论 */}

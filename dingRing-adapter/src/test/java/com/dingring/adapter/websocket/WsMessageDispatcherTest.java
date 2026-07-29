@@ -84,15 +84,6 @@ class WsMessageDispatcherTest {
         }
 
         @Test
-        @DisplayName("CREATE_TOPIC 路由到 topicAppService.createTopic")
-        void shouldRouteCreateTopic() {
-            dispatcher.dispatch(1L, session, payload(WsConstants.CREATE_TOPIC,
-                    "{\"title\":\"讨论 Java 内存模型\"}"));
-
-            verify(topicAppService).createTopic(eq(1L), eq("讨论 Java 内存模型"));
-        }
-
-        @Test
         @DisplayName("CONCLUDE_TOPIC 路由到 topicAppService.conclude")
         void shouldRouteConcludeTopic() {
             dispatcher.dispatch(1L, session, payload(WsConstants.CONCLUDE_TOPIC,

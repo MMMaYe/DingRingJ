@@ -11,7 +11,6 @@ public final class WsConstants {
     /* ==================== Client -> Server ==================== */
     public static final String SEND_MESSAGE = "SEND_MESSAGE";
     public static final String REPLY_MESSAGE = "REPLY_MESSAGE";
-    public static final String CREATE_TOPIC = "CREATE_TOPIC";
     public static final String CONCLUDE_TOPIC = "CONCLUDE_TOPIC";
 
     /* ==================== Server -> Client ==================== */
