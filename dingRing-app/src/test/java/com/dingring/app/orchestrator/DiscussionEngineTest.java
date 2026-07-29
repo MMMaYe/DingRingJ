@@ -73,6 +73,7 @@ class DiscussionEngineTest {
     private ChatPusher chatPusher;
     private MessageRouter messageRouter;
     private ProfileService profileService;
+    private ModeratorService moderatorService;
     private ChatOrchestrator chatOrchestrator;
     private DiscussionEngine engine;
 
@@ -91,10 +92,12 @@ class DiscussionEngineTest {
         chatPusher = mock(ChatPusher.class);
         messageRouter = mock(MessageRouter.class);
         profileService = mock(ProfileService.class);
+        moderatorService = mock(ModeratorService.class);
         chatOrchestrator = mock(ChatOrchestrator.class);
         engine = new DiscussionEngine(groupRepository, messageRepository, topicRepository,
                 agentRepository, speakerScheduler, contextBuilder, terminator, messageAssembler,
-                llmService, eventPublisher, chatPusher, messageRouter, profileService, chatOrchestrator);
+                llmService, eventPublisher, chatPusher, messageRouter, profileService,
+                moderatorService, chatOrchestrator);
         // 测试无等待：pace 0；两个不同 Agent PASS 即收敛
         setField("paceMinMs", 0L);
         setField("paceMaxMs", 0L);
@@ -390,6 +393,101 @@ class DiscussionEngineTest {
             verify(messageRepository, timeout(WAIT)).save(captor.capture());
             assertThat(captor.getValue().getContent()).isEqualTo("我觉得可以定了");
             verify(chatOrchestrator, timeout(WAIT)).conclude(eq(100L), isNull(), eq("AGENT"), eq(10L));
+        }
+    }
+
+    /* ==================== Moderator 主持（Phase 2） ==================== */
+
+    @Nested
+    @DisplayName("Moderator 主持")
+    class Moderator {
+
+        private Topic stubDiscussionOneRound() {
+            stubGroupWithTwoAgents();
+            Topic topic = activeTopic(100L, 1L);
+            // 推进一轮后主题失活，循环自然退出
+            when(topicRepository.findActiveByGroupId(1L))
+                    .thenReturn(Optional.of(topic))
+                    .thenReturn(Optional.empty());
+            when(terminator.reachedMaxRounds(100L)).thenReturn(false);
+            when(messageRepository.countByTopicIdAndSender(anyLong(), anyLong(), any())).thenReturn(0L);
+            return topic;
+        }
+
+        @Test
+        @DisplayName("主持人判断可收束：触发 MODERATOR 收束")
+        void moderatorConcludeShouldTriggerConclusion() {
+            stubGroupWithTwoAgents();
+            Topic topic = activeTopic(100L, 1L);
+            when(topicRepository.findActiveByGroupId(1L)).thenReturn(Optional.of(topic));
+            when(terminator.reachedMaxRounds(100L)).thenReturn(false);
+            when(messageRepository.countByTopicIdAndSender(anyLong(), anyLong(), any())).thenReturn(0L);
+            when(moderatorService.isEnabled()).thenReturn(true);
+            when(moderatorService.decide(any(Topic.class), anyList(), any()))
+                    .thenReturn(new ModeratorService.Decision(true, null, true, ""));
+
+            engine.wake(1L);
+
+            verify(chatOrchestrator, timeout(WAIT)).conclude(eq(100L), isNull(), eq("MODERATOR"), isNull());
+        }
+
+        @Test
+        @DisplayName("主持人指定发言者：提到降级链首位且引导语注入 system prompt")
+        void moderatorPickShouldPromoteSpeakerAndInjectGuidance() {
+            stubDiscussionOneRound();
+            when(moderatorService.isEnabled()).thenReturn(true);
+            when(moderatorService.decide(any(Topic.class), anyList(), any()))
+                    .thenReturn(new ModeratorService.Decision(true, 11L, false, "请从成本角度补充"));
+            when(llmService.chat(any(), any(), anyList())).thenReturn("成本角度的看法");
+
+            engine.wake(1L);
+
+            ArgumentCaptor<Agent> agentCaptor = ArgumentCaptor.forClass(Agent.class);
+            ArgumentCaptor<String> spCaptor = ArgumentCaptor.forClass(String.class);
+            verify(llmService, timeout(WAIT)).chat(agentCaptor.capture(), spCaptor.capture(), anyList());
+            assertThat(agentCaptor.getValue().getId()).isEqualTo(11L);
+            assertThat(spCaptor.getValue()).contains("主持人提示：请从成本角度补充");
+        }
+
+        @Test
+        @DisplayName("主持人判定失败（返回 null）：回退评分调度照常推进")
+        void moderatorFailureShouldFallbackToScheduler() {
+            stubDiscussionOneRound();
+            when(moderatorService.isEnabled()).thenReturn(true);
+            when(moderatorService.decide(any(Topic.class), anyList(), any())).thenReturn(null);
+            when(llmService.chat(any(), any(), anyList())).thenReturn("回退后的发言");
+
+            engine.wake(1L);
+
+            // 评分调度原序：老王（10L）先说，且无主持人提示
+            ArgumentCaptor<Agent> agentCaptor = ArgumentCaptor.forClass(Agent.class);
+            ArgumentCaptor<String> spCaptor = ArgumentCaptor.forClass(String.class);
+            verify(llmService, timeout(WAIT)).chat(agentCaptor.capture(), spCaptor.capture(), anyList());
+            assertThat(agentCaptor.getValue().getId()).isEqualTo(10L);
+            assertThat(spCaptor.getValue()).doesNotContain("主持人提示");
+        }
+
+        @Test
+        @DisplayName("用户 @提及短路主持人（指名优先级最高）")
+        void mentionShouldShortCircuitModerator() {
+            stubGroupWithTwoAgents();
+            Topic topic = activeTopic(100L, 1L);
+            // 判活序列：循环判活 → handleSignal 判活 → 第二轮循环判活（进 advanceDiscussion）→ 第三轮退出
+            when(topicRepository.findActiveByGroupId(1L))
+                    .thenReturn(Optional.of(topic))
+                    .thenReturn(Optional.of(topic))
+                    .thenReturn(Optional.of(topic))
+                    .thenReturn(Optional.empty());
+            when(terminator.reachedMaxRounds(100L)).thenReturn(false);
+            when(messageRepository.countByTopicIdAndSender(anyLong(), anyLong(), any())).thenReturn(0L);
+            when(moderatorService.isEnabled()).thenReturn(true);
+            stubRoute(MessageRouter.Intent.DISCUSS, "", MessageRouter.Confidence.HIGH);
+            when(llmService.chat(any(), any(), anyList())).thenReturn("被@后的应答");
+
+            engine.onUserSignal(1L, new DiscussionEngine.UserSignal(1L, "@小李 你怎么看", List.of(11L), null));
+
+            verify(llmService, timeout(WAIT)).chat(any(Agent.class), any(), anyList());
+            verify(moderatorService, never()).decide(any(), anyList(), any());
         }
     }
 

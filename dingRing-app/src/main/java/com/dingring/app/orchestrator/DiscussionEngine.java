@@ -102,6 +102,7 @@ public class DiscussionEngine {
     private final ChatPusher chatPusher;
     private final MessageRouter messageRouter;
     private final ProfileService profileService;
+    private final ModeratorService moderatorService;
     private final ChatOrchestrator chatOrchestrator;
 
     /** 讨论态自主发言间隔随机区间（毫秒，测试注 0） */
@@ -138,6 +139,7 @@ public class DiscussionEngine {
                             ChatPusher chatPusher,
                             MessageRouter messageRouter,
                             ProfileService profileService,
+                            ModeratorService moderatorService,
                             @Lazy ChatOrchestrator chatOrchestrator) {
         this.groupRepository = groupRepository;
         this.messageRepository = messageRepository;
@@ -152,6 +154,7 @@ public class DiscussionEngine {
         this.chatPusher = chatPusher;
         this.messageRouter = messageRouter;
         this.profileService = profileService;
+        this.moderatorService = moderatorService;
         this.chatOrchestrator = chatOrchestrator;
     }
 
@@ -486,15 +489,30 @@ public class DiscussionEngine {
             log.info("全员均已 PASS，讨论收敛, topicId={}", topic.getId());
             return tryConclude(topic.getId(), null, "CONVERGED", null);
         }
+        Map<Long, Long> speakCounts = loadSpeakCounts(topic.getId(), group);
+        // Moderator 主持人（Phase 2）：@提及短路主持人（用户指名优先级最高）；判定失败回退评分调度
+        Long preferredAgentId = null;
+        String guidance = null;
+        if (mentionId == null && moderatorService.isEnabled()) {
+            ModeratorService.Decision decision = moderatorService.decide(topic, all, speakCounts);
+            if (decision != null) {
+                if (decision.wantsConclude()) {
+                    log.info("Moderator 判断讨论可收束, topicId={}", topic.getId());
+                    return tryConclude(topic.getId(), null, "MODERATOR", null);
+                }
+                preferredAgentId = decision.nextSpeakerId();
+                guidance = decision.guidance();
+            }
+        }
         MessageContext ctx = MessageContext.builder()
                 .groupId(groupId)
                 .topicId(topic.getId())
                 .content("")
                 .mentionedAgentIds(mentionId == null ? List.of() : List.of(mentionId))
                 .repliedToAgentId(replyToId)
-                .speakCounts(loadSpeakCounts(topic.getId(), group))
+                .speakCounts(speakCounts)
                 .build();
-        SpeakResult result = speakOnce(candidates, ctx);
+        SpeakResult result = speakOnce(candidates, ctx, preferredAgentId, guidance);
         switch (result.outcome()) {
             case CONCLUDED, FAILED -> {
                 return true;
@@ -523,12 +541,22 @@ public class DiscussionEngine {
      * <p>闲聊态：空内容视为选择不发言。
      */
     private SpeakResult speakOnce(List<Agent> candidates, MessageContext ctx) {
+        return speakOnce(candidates, ctx, null, null);
+    }
+
+    /**
+     * 一次发言（可选 Moderator 增强）：主持人指定的发言者提到降级链首位，
+     * 引导语注入 system prompt 尾部（不入库不广播）。
+     */
+    private SpeakResult speakOnce(List<Agent> candidates, MessageContext ctx,
+                                  Long preferredAgentId, String moderatorGuidance) {
         boolean topicMode = ctx.getTopicId() != null;
         if (candidates.isEmpty()) {
             log.warn("无候选 Agent，无人可应答, groupId={}", ctx.getGroupId());
             return new SpeakResult(SpeakOutcome.FAILED, null);
         }
         List<SpeakerScheduler.ScoredAgent> ranked = speakerScheduler.rank(candidates, ctx);
+        ranked = promotePreferred(ranked, preferredAgentId);
         log.info("发言评分结果, groupId={}, topicId={}, 排序={}",
                 ctx.getGroupId(), ctx.getTopicId(),
                 ranked.stream().map(s -> s.agent().getName() + "(" + s.score() + "," + s.reason() + ")").toList());
@@ -543,6 +571,11 @@ public class DiscussionEngine {
             try {
                 ContextBuilder.LlmContext llmCtx = contextBuilder.build(
                         agent, ctx.getGroupId(), ctx.getTopicId(), messageAssembler::resolveSenderName);
+                if (moderatorGuidance != null && !moderatorGuidance.isBlank()) {
+                    llmCtx = new ContextBuilder.LlmContext(
+                            llmCtx.systemPrompt() + "\n\n主持人提示：" + moderatorGuidance,
+                            llmCtx.turns());
+                }
                 String content = chatWithRetry(agent, llmCtx);
                 boolean blank = content == null || content.isBlank();
                 if (topicMode && (blank || content.contains(ContextBuilder.PASS_MARKER))) {
@@ -604,6 +637,25 @@ public class DiscussionEngine {
             log.warn("LLM 首次调用失败，重试 1 次, agent={}, 失败原因: {}", agent.getName(), first.getMessage());
             return llmService.chat(agent, ctx.systemPrompt(), ctx.turns());
         }
+    }
+
+    /** Moderator 指定的发言者提到降级链首位（不在候选内则忽略，其余顺序不变） */
+    private List<SpeakerScheduler.ScoredAgent> promotePreferred(
+            List<SpeakerScheduler.ScoredAgent> ranked, Long preferredAgentId) {
+        if (preferredAgentId == null) {
+            return ranked;
+        }
+        SpeakerScheduler.ScoredAgent preferred = ranked.stream()
+                .filter(s -> preferredAgentId.equals(s.agent().getId()))
+                .findFirst().orElse(null);
+        if (preferred == null || ranked.get(0) == preferred) {
+            return ranked;
+        }
+        List<SpeakerScheduler.ScoredAgent> reordered = new java.util.ArrayList<>(ranked.size());
+        reordered.add(preferred);
+        ranked.stream().filter(s -> s != preferred).forEach(reordered::add);
+        log.info("Moderator 指定发言者提前, agent={}", preferred.agent().getName());
+        return reordered;
     }
 
     /* ==================== 私有辅助 ==================== */

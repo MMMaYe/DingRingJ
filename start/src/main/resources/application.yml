@@ -31,6 +31,13 @@ dingring:
     # LLM HTTP 连接/读超时（秒）：必须设置，默认客户端无超时会永久卡死对话引擎线程
     connect-timeout-seconds: 10
     read-timeout-seconds: 120
+  moderator:
+    # Moderator 主持人（Phase 2）：true 时由 LLM 接管选人/继续判断/收束判断；失败自动回退评分调度
+    enabled: false
+    # 主持人判定模型（空 = 复用群首个成员 Agent 的模型；建议配快模型如 step-3.7-flash）
+    model: ""
+    # 主持人判定输入的讨论消息窗口（条）
+    context-window: 30
   orchestrator:
     # 上下文滑动窗口（条）
     context-window: 200
