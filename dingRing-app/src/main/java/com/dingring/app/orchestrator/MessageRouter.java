@@ -1,5 +1,6 @@
 package com.dingring.app.orchestrator;
 
+import com.dingring.common.constant.PromptConstants;
 import com.dingring.domain.agent.Agent;
 import com.dingring.domain.service.LlmService;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -36,14 +37,6 @@ public class MessageRouter {
     /** 标题兜底截断长度 */
     private static final int TITLE_FALLBACK_LEN = 20;
 
-    private static final String SYSTEM_PROMPT = """
-            你是群聊意图分类器。请判断用户这条群聊消息的意图，三选一：\
-            CONCLUDE = 用户希望对当前正在进行的讨论做总结/收尾/出结论；\
-            DISCUSS = 用户抛出了一个值得群成员们展开讨论的话题/问题/求助（或正在深入推进一个话题）；\
-            CHAT = 日常寒暄、闲聊、情绪表达等其他内容。\
-            严格输出一行 JSON，不要输出任何其他内容，格式：\
-            {"intent": "CHAT|DISCUSS|CONCLUDE", "topicTitle": "意图为 DISCUSS 时给话题拟一个 15 字以内的标题，否则为空字符串", "confidence": "HIGH|LOW"}""";
-
     private final LlmService llmService;
     private final ObjectMapper objectMapper;
 
@@ -60,7 +53,7 @@ public class MessageRouter {
             String userInput = activeTopicTitle == null
                     ? "（当前群里没有进行中的讨论主题）\n用户消息：" + content
                     : "（当前群里正在讨论主题「" + activeTopicTitle + "」）\n用户消息：" + content;
-            String raw = llmService.chat(judge, SYSTEM_PROMPT,
+            String raw = llmService.chat(judge, PromptConstants.INTENT_CLASSIFIER,
                     List.of(LlmService.ChatTurn.user(userInput)));
             Route route = parse(raw, content);
             log.info("消息路由判定: judge={}, intent={}, confidence={}, topicTitle={}, 原文={}",

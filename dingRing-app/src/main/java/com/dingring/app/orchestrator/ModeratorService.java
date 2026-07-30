@@ -1,6 +1,7 @@
 package com.dingring.app.orchestrator;
 
 import com.dingring.app.service.MessageAssembler;
+import com.dingring.common.constant.PromptConstants;
 import com.dingring.domain.agent.Agent;
 import com.dingring.domain.discussion.Topic;
 import com.dingring.domain.group.GroupMessage;
@@ -45,15 +46,6 @@ public class ModeratorService {
         }
     }
 
-    private static final String SYSTEM_PROMPT = """
-            你是一场多人群聊讨论的主持人。请根据讨论主题、成员介绍、已发言次数和最近的讨论记录，判断：\
-            1. 讨论是否还有信息增量（还有值得展开的新角度/未充分讨论的分歧）；\
-            2. 下一位最能推进讨论的发言者（必须从成员花名中选，倾向让发言少的、视角互补的人开口）；\
-            3. 是否已经可以收尾出结论。\
-            严格输出一行 JSON，不要输出任何其他内容，格式：\
-            {"should_continue": true|false, "next_speaker": "成员花名", \
-            "should_conclude": true|false, "guidance": "给下一位发言者的一句话引导，可为空字符串"}""";
-
     private final LlmService llmService;
     private final ObjectMapper objectMapper;
     private final MessageRepository messageRepository;
@@ -85,7 +77,7 @@ public class ModeratorService {
             return null;
         }
         try {
-            String raw = llmService.chat(moderatorAgent(members.get(0)), SYSTEM_PROMPT,
+            String raw = llmService.chat(moderatorAgent(members.get(0)), PromptConstants.HOST_DECISION,
                     List.of(LlmService.ChatTurn.user(buildInput(topic, members, speakCounts))));
             Decision decision = parse(raw, members);
             log.info("Moderator 决策: topicId={}, shouldContinue={}, nextSpeakerId={}, shouldConclude={}, guidance={}",

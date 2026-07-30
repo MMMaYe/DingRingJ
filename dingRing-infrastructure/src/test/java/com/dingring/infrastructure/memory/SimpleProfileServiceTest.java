@@ -34,7 +34,7 @@ class SimpleProfileServiceTest {
     private Agent extractor;
 
     @BeforeEach
-    void setUp() {
+    void setUp() throws Exception {
         userProfileRepository = mock(UserProfileRepository.class);
         llmService = mock(LlmService.class);
         service = new SimpleProfileService(userProfileRepository, llmService);

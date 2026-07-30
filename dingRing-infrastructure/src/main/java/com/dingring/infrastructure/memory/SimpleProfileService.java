@@ -1,5 +1,6 @@
 package com.dingring.infrastructure.memory;
 
+import com.dingring.common.constant.PromptConstants;
 import com.dingring.domain.agent.Agent;
 import com.dingring.domain.service.LlmService;
 import com.dingring.domain.service.ProfileService;
@@ -21,12 +22,6 @@ import java.util.concurrent.ConcurrentHashMap;
 @Service
 @RequiredArgsConstructor
 public class SimpleProfileService implements ProfileService {
-
-    private static final String EXTRACT_PROMPT = """
-            你是用户画像分析师。请基于「已有画像」与「最近一段群聊对话」，输出更新后的用户画像。\
-            关注用户的表达习惯、情绪基调、决策偏好、思考方式等长期稳定特征，\
-            输出 3-6 条简短要点（纯文本，每行一条，以 - 开头），不要输出任何其他内容。\
-            注意：画像是跨群的全局特征，对话来自某一个群，不要把该群特定的讨论话题当作用户的长期特征。""";
 
     private final UserProfileRepository userProfileRepository;
     private final LlmService llmService;
@@ -53,7 +48,7 @@ public class SimpleProfileService implements ProfileService {
                 String existing = getProfile(userId);
                 String input = "已有画像：\n" + (existing.isBlank() ? "（暂无）" : existing)
                         + "\n\n最近对话（来自群「" + groupName + "」）：\n" + recentDialogue;
-                String merged = llmService.chat(extractor, EXTRACT_PROMPT,
+                String merged = llmService.chat(extractor, PromptConstants.USER_PROFILE_EXTRACT,
                         List.of(LlmService.ChatTurn.user(input)));
                 if (merged == null || merged.isBlank()) {
                     log.warn("画像提炼返回空，跳过写回, userId={}", userId);

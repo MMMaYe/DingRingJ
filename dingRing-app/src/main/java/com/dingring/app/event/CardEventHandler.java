@@ -2,6 +2,7 @@ package com.dingring.app.event;
 
 import com.dingring.app.service.ChatPusher;
 import com.dingring.common.constant.WsConstants;
+import com.dingring.common.constant.PromptConstants;
 import com.dingring.domain.agent.Agent;
 import com.dingring.domain.agent.AgentRepository;
 import com.dingring.domain.discussion.CardRepository;
@@ -31,11 +32,6 @@ public class CardEventHandler {
 
     private static final int MAX_RETRY = 3;
 
-    private static final String CARD_PROMPT = """
-            你是知识卡片提取助手。请从给定的讨论结论中提取知识卡片（Q&A），\
-            并为每张卡片识别分类。严格输出 JSON 数组，不要输出任何其他内容，格式：\
-            [{"question": "...", "answer": "...", "category": "..."}]""";
-
     private final AgentRepository agentRepository;
     private final CardRepository cardRepository;
     private final LlmService llmService;
@@ -64,7 +60,7 @@ public class CardEventHandler {
         }
         for (int attempt = 1; attempt <= MAX_RETRY; attempt++) {
             try {
-                String raw = llmService.chat(concluder, CARD_PROMPT,
+                String raw = llmService.chat(concluder, PromptConstants.KNOWLEDGE_EXTRACT,
                         List.of(LlmService.ChatTurn.user("讨论主题：" + event.getTitle()
                                 + "\n\n讨论结论：\n" + event.getConclusion())));
                 List<KnowledgeCard> cards = parseCards(raw, event.getTopicId());

@@ -7,6 +7,7 @@ import com.dingring.domain.group.MessageRepository;
 import com.dingring.domain.group.SenderType;
 import com.dingring.domain.service.LlmService.ChatTurn;
 import com.dingring.domain.service.MemoryService;
+import com.dingring.common.constant.PromptConstants;
 import com.dingring.domain.service.ProfileService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -70,13 +71,7 @@ public class ContextBuilder {
         StringBuilder systemPrompt = new StringBuilder(buildSystemPrompt(agent, groupId));
         if (topicId != null) {
             // 协作协议：自主收束 + 跳过本轮
-            systemPrompt.append("\n\n协作协议：")
-                    .append("\n1. 如果你认为当前主题已经讨论充分、可以收尾总结，")
-                    .append("请在本次发言的末尾另起一行输出标记 ").append(CONCLUDE_MARKER)
-                    .append("（仅在确实认为可以结束时输出，其他情况绝不要提及或输出该标记）。")
-                    .append("\n2. 如果你对当前讨论没有新的观点或补充，请只输出 ").append(PASS_MARKER)
-                    .append("（不要输出其他任何内容）；有实质内容时绝不要输出该标记。")
-                    .append("不要为了发言而发言，重复已有观点不如 ").append(PASS_MARKER).append("。");
+            systemPrompt.append("\n\n").append(PromptConstants.COLLABORATION_PROTOCOL);
         }
         List<GroupMessage> window = topicId != null
                 ? mergeChatContext(groupId, messageRepository.findRecentByTopicId(topicId, contextWindow))
@@ -111,9 +106,7 @@ public class ContextBuilder {
         if (concluder.getSystemPrompt() != null && !concluder.getSystemPrompt().isBlank()) {
             sp.append(concluder.getSystemPrompt()).append("\n\n");
         }
-        sp.append("你被推选为本次群讨论的总结者。请针对主题「").append(topicTitle)
-                .append("」，基于完整讨论记录，用 STAR 框架（Situation/Task/Action/Result）")
-                .append("输出 Markdown 格式的讨论结论，并对各成员观点做简要点评。");
+        sp.append(String.format(PromptConstants.CONCLUSION_STAR, topicTitle));
         String memory = memoryService.retrieveMemory(groupId);
         if (!memory.isBlank()) {
             sp.append("\n\n").append(memory);
@@ -127,9 +120,7 @@ public class ContextBuilder {
         if (agent.getSystemPrompt() != null && !agent.getSystemPrompt().isBlank()) {
             sp.append(agent.getSystemPrompt());
         }
-        sp.append("\n\n你正在参与一个多人群聊讨论，你的花名是「").append(agent.getName())
-                .append("」。历史消息以「花名: 内容」形式给出。请直接输出你的发言内容，")
-                .append("不要重复花名前缀，保持简洁聚焦，与前面的讨论衔接。");
+        sp.append("\n\n").append(String.format(PromptConstants.CHAT_BASE, agent.getName()));
         String memory = memoryService.retrieveMemory(groupId);
         if (!memory.isBlank()) {
             sp.append("\n\n").append(memory);
