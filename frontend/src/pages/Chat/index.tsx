@@ -7,7 +7,7 @@ import { formatTime } from './utils';
 import Modal from '../../components/Modal';
 import GroupSettings from '../../components/GroupSettings';
 import { toast } from '../../components/Toast';
-import useWebSocket from '../../hooks/useWebSocket';
+import { useWebSocketContext } from '../../context/WebSocketContext';
 import { API } from '../../api';
 import type {
   GroupSummary, GroupDetail, TopicSummary, MemberInfo,
@@ -61,7 +61,8 @@ export default function ChatPage() {
   const stickToBottomRef = useRef(true);
 
   const groupId = group?.id ?? null;
-  const { send, onMessage, connected } = useWebSocket(groupId);
+  const wsCtx = useWebSocketContext();
+  const connected = groupId !== null && wsCtx.isConnected(groupId);
 
   // ---- 稳定派生数据（供 memo 化的 MessageItem 使用） ----
   const agentNames = useMemo(
@@ -131,6 +132,16 @@ export default function ChatPage() {
   }, []);
 
   useEffect(() => { loadGroups(); }, [loadGroups]);
+
+  // ---- 为所有群建立 WS 连接（群列表变化时同步） ----
+  useEffect(() => {
+    groups.forEach(g => wsCtx.connectGroup(g.id));
+  }, [groups, wsCtx.connectGroup]);
+
+  // ---- 设置当前查看的群（用于未读判断） ----
+  useEffect(() => {
+    wsCtx.setCurrentGroupId(groupId);
+  }, [groupId, wsCtx.setCurrentGroupId]);
 
   // ---- 自动选群 ----
   useEffect(() => {
@@ -217,18 +228,18 @@ export default function ChatPage() {
   }, [groupId]);
 
   useEffect(() => {
-    onMessage((msg) => {
+    if (!groupId) return;
+    const unregister = wsCtx.onEvent((evGroupId, msg) => {
+      // 仅处理当前群的事件（影响 UI 状态）
+      if (evGroupId !== groupId) return;
       const d = msg.data;
       switch (msg.type) {
         case 'NEW_MESSAGE':
           setMessages(prev => [...prev, d as unknown as MessageDTO]);
-          // Agent 发言实时推进当前主题轮次（与后端熔断口径一致）
           if ((d as any).senderType === 'AGENT') {
             setActiveTopic(prev => prev && prev.id === (d as any).topicId ? { ...prev, round: prev.round + 1 } : prev);
           }
-          // 用户正在翻历史：不打断，计入新消息提示
           if (!stickToBottomRef.current) setUnseenCount(c => c + 1);
-          // 更新群列表预览
           setGroups(prev => prev.map(g =>
             g.id === groupId
               ? { ...g, lastMessagePreview: `${(d as any).senderName || ''}: ${String((d as any).content).slice(0, 30)}`, lastMessageTime: (d as any).createTime }
@@ -256,7 +267,6 @@ export default function ChatPage() {
           });
           break;
         case 'MESSAGE_COMPLETE': {
-          // 半成品气泡替换为落库后的正式消息
           const full = (d as any).message as MessageDTO;
           setStreams(prev => {
             const next = new Map(prev);
@@ -307,7 +317,8 @@ export default function ChatPage() {
           break;
       }
     });
-  }, [onMessage, groupId, activeTopic, loadGroups, loadTopics]);
+    return unregister;
+  }, [wsCtx, groupId, activeTopic, loadGroups, loadTopics]);
 
   // ---- 发消息 ----
   const hideMention = useCallback(() => setMentionState(s => ({ ...s, open: false })), []);
@@ -318,7 +329,7 @@ export default function ChatPage() {
     const payload = replyTo
       ? { type: 'REPLY_MESSAGE', data: { groupId: group.id, content, replyToMessageId: replyTo.id } }
       : { type: 'SEND_MESSAGE', data: { groupId: group.id, content } };
-    if (!send(payload)) {
+    if (!wsCtx.send(group.id, payload)) {
       toast('连接已断开，正在重连，请稍后重试', 'error');
       return;
     }
@@ -328,7 +339,7 @@ export default function ChatPage() {
     // 发送后复位输入框高度并回到底部
     if (inputRef.current) inputRef.current.style.height = 'auto';
     requestAnimationFrame(() => scrollToBottom(false));
-  }, [inputText, group, replyTo, send, scrollToBottom, hideMention]);
+  }, [inputText, group, replyTo, wsCtx, scrollToBottom, hideMention]);
 
   // ---- @mention ----
   const maybeShowMention = useCallback((text: string, cursorPos: number) => {
@@ -475,7 +486,9 @@ export default function ChatPage() {
             <div className="empty"><div className="empty__icon">👥</div>还没有群，点击下方按钮创建</div>
           ) : !filteredGroups.length ? (
             <div className="empty"><div className="empty__icon">🔍</div>没有匹配「{groupKw}」的群组</div>
-          ) : filteredGroups.map(g => (
+          ) : filteredGroups.map(g => {
+            const unread = wsCtx.getUnreadCount(g.id);
+            return (
             <div key={g.id} className={`group-item${group?.id === g.id ? ' group-item--active' : ''}`} onClick={() => { if (group?.id !== g.id) selectGroup(g.id); }}>
               <Avatar name={g.name} size="sm" />
               <div className="group-item__content">
@@ -483,6 +496,7 @@ export default function ChatPage() {
                   <div className="group-item__name-group">
                     <span className="group-item__name">{g.name}</span>
                     {g.activeTopicTitle && <span className="tag tag--brand">讨论中</span>}
+                    {unread > 0 && <span className="group-item__badge">{unread > 99 ? '99+' : unread}</span>}
                   </div>
                   <span className="group-item__time">{formatTime(g.lastMessageTime)}</span>
                 </div>
@@ -496,7 +510,8 @@ export default function ChatPage() {
                 <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M2.5 4h11M6.5 4V2.5h3V4M4 4l.7 9.5A1 1 0 0 0 5.7 14.5h4.6a1 1 0 0 0 1-.94L12 4M6.7 7v4.5M9.3 7v4.5"/></svg>
               </button>
             </div>
-          ))}
+            );
+          })}
         </div>
       </Sidebar>
 

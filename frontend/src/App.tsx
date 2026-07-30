@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { ToastContainer } from './components/Toast';
+import { WebSocketProvider } from './context/WebSocketContext';
 import ChatPage from './pages/Chat';
 
 // 非首屏页面懒加载：减小首屏包体，首次进入群聊更快
@@ -38,9 +39,9 @@ function PageTransition() {
 
 export default function App() {
   return (
-    <>
+    <WebSocketProvider>
       <PageTransition />
       <ToastContainer />
-    </>
+    </WebSocketProvider>
   );
 }
