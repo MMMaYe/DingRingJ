@@ -62,6 +62,15 @@
 }
 .k-card:hover { border-color: var(--border-brand); }
 .k-card__header { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+/* 删除卡片按钮：hover 时才显现 */
+.k-card__del {
+  flex-shrink: 0; display: none; align-items: center; justify-content: center;
+  width: 22px; height: 22px; padding: 0;
+  border: none; border-radius: 4px; background: transparent;
+  color: var(--text-tertiary); cursor: pointer;
+}
+.k-card:hover .k-card__del { display: flex; }
+.k-card__del:hover { color: var(--status-error-default); background: var(--status-error-surface-l1); }
 .k-card__q { font-size: 13px; font-weight: 600; color: var(--text-default-hover); line-height: 20px; flex: 1; min-width: 0; }
 .k-card__a {
   margin-top: 8px; font-size: 12px; color: var(--text-secondary); line-height: 19px;

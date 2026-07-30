@@ -49,4 +49,8 @@
                 #{createTime}, #{updateTime})
     </insert>
 
+    <delete id="deleteById">
+        DELETE FROM knowledge_card WHERE id = #{id}
+    </delete>
+
 </mapper>

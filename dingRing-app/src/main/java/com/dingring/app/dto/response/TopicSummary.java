@@ -17,5 +17,9 @@ public class TopicSummary {
     /** IN_PROGRESS / CONCLUDING / CLOSED / ARCHIVED */
     private String status;
     private long messageCount;
+    /** 当前轮次（Agent 发言条数，与收束熔断口径一致） */
+    private long round;
+    /** 最大讨论轮次 */
+    private int maxRounds;
     private LocalDateTime createTime;
 }

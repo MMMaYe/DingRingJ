@@ -23,6 +23,8 @@ public class Group {
     private Map<String, Object> knowledgeBaseConfig;
     /** 扩展字段 */
     private Map<String, Object> feature;
+    /** 逻辑删除标记（0 正常 / 1 已删） */
+    private Integer deleted;
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
 

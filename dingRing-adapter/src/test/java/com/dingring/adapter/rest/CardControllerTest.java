@@ -3,6 +3,8 @@ package com.dingring.adapter.rest;
 import com.dingring.app.dto.response.KnowledgeCardDTO;
 import com.dingring.app.dto.response.ReviewCardDTO;
 import com.dingring.app.service.CardAppService;
+import com.dingring.common.exception.BizException;
+import com.dingring.common.exception.ErrorCode;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -17,7 +19,10 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -129,6 +134,32 @@ class CardControllerTest {
             mockMvc.perform(get("/api/cards/categories"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.data.length()").value(0));
+        }
+    }
+
+    @Nested
+    @DisplayName("DELETE /api/cards/{id} 删除卡片")
+    class Delete {
+
+        @Test
+        @DisplayName("删除成功返回 success")
+        void shouldDeleteCard() throws Exception {
+            mockMvc.perform(delete("/api/cards/1"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.success").value(true));
+
+            verify(cardAppService).delete(1L);
+        }
+
+        @Test
+        @DisplayName("卡片不存在时返回 NOT_FOUND")
+        void shouldReturnNotFoundWhenCardMissing() throws Exception {
+            doThrow(new BizException(ErrorCode.NOT_FOUND, "卡片不存在: 999"))
+                    .when(cardAppService).delete(999L);
+
+            mockMvc.perform(delete("/api/cards/999"))
+                    .andExpect(jsonPath("$.success").value(false))
+                    .andExpect(jsonPath("$.errorCode").value("NOT_FOUND"));
         }
     }
 }

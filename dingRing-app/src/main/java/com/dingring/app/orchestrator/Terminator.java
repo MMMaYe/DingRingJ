@@ -17,7 +17,7 @@ public class Terminator {
     private final MessageRepository messageRepository;
 
     /** 最大讨论轮次（Agent 发言条数上限，可配置） */
-    @Value("${dingring.orchestrator.max-rounds:20}")
+    @Value("${dingring.orchestrator.max-rounds:100}")
     private int maxRounds;
 
     /** 每条用户消息触发的 Agent 自动接续发言条数 */
@@ -32,7 +32,7 @@ public class Terminator {
         return countAgentMessages(topicId) >= maxRounds;
     }
 
-    /** 当前轮次（Agent 发言条数） */
+    /** （Agent 发言条数） */
     public long currentRound(Long topicId) {
         return topicId == null ? 0 : countAgentMessages(topicId);
     }

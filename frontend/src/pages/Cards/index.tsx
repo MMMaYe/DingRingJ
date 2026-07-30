@@ -99,6 +99,18 @@ export default function CardsPage() {
 
   const current = reviewCards[reviewIdx];
 
+  // ---- 删除卡片 ----
+  const deleteCard = useCallback(async (card: KnowledgeCardDTO) => {
+    if (!window.confirm(`确定删除这张卡片吗？\n「${card.question.slice(0, 40)}」`)) return;
+    try {
+      await API.del(`/api/cards/${card.id}`);
+      toast('卡片已删除', 'success');
+      setDetailCard(prev => (prev?.id === card.id ? null : prev));
+      setCards(prev => prev.filter(c => c.id !== card.id));
+      loadCategories(); // 分类可能因最后一张卡片删除而消失
+    } catch (e: any) { toast(e.message, 'error'); }
+  }, [loadCategories]);
+
   return (
     <div className="app-shell">
       <Sidebar footer={<button className="sidebar__new-group" onClick={startReview}>▶ 开始复习</button>}>
@@ -208,6 +220,13 @@ export default function CardsPage() {
                 <div className="k-card__header">
                   <span className="k-card__q">Q: {c.question}</span>
                   {c.category && <span className="tag tag--brand">{c.category}</span>}
+                  <button
+                    className="k-card__del"
+                    title="删除卡片"
+                    onClick={(e) => { e.stopPropagation(); deleteCard(c); }}
+                  >
+                    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M2.5 4h11M6.5 4V2.5h3V4M4 4l.7 9.5A1 1 0 0 0 5.7 14.5h4.6a1 1 0 0 0 1-.94L12 4M6.7 7v4.5M9.3 7v4.5"/></svg>
+                  </button>
                 </div>
                 <div className="k-card__a k-card__a--hidden">A: {c.answer}</div>
                 <div className="k-card__footer">
@@ -230,7 +249,12 @@ export default function CardsPage() {
         eyebrow="Card"
         subtitle={detailCard ? `来自「${detailCard.topicTitle}」` : undefined}
         width={560}
-        footer={<button className="btn btn--ghost" onClick={() => setDetailCard(null)}>关闭</button>}
+        footer={(
+          <>
+            <button className="btn btn--danger" onClick={() => detailCard && deleteCard(detailCard)}>删除卡片</button>
+            <button className="btn btn--ghost" onClick={() => setDetailCard(null)}>关闭</button>
+          </>
+        )}
       >
         {detailCard && (
           <>

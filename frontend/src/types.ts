@@ -25,6 +25,10 @@ export interface TopicSummary {
   title: string;
   status: 'IN_PROGRESS' | 'CONCLUDING' | 'CLOSED';
   messageCount: number;
+  /** 当前轮次（Agent 发言条数，与后端熔断口径一致） */
+  round: number;
+  /** 最大讨论轮次 */
+  maxRounds: number;
   createTime: string;
 }
 

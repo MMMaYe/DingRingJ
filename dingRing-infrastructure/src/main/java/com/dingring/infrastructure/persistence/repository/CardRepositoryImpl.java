@@ -45,4 +45,9 @@ public class CardRepositoryImpl implements CardRepository {
             cardMapper.insert(card);
         }
     }
+
+    @Override
+    public int deleteById(Long id) {
+        return cardMapper.deleteById(id);
+    }
 }

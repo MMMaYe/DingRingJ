@@ -4,6 +4,7 @@ import com.dingring.app.dto.response.ConclusionDTO;
 import com.dingring.app.dto.response.MessageDTO;
 import com.dingring.app.dto.response.TopicSummary;
 import com.dingring.app.orchestrator.ChatOrchestrator;
+import com.dingring.app.orchestrator.Terminator;
 import com.dingring.common.exception.BizException;
 import com.dingring.common.exception.ErrorCode;
 import com.dingring.common.response.PageResult;
@@ -31,6 +32,7 @@ public class TopicAppService {
     private final AgentRepository agentRepository;
     private final MessageAssembler messageAssembler;
     private final ChatOrchestrator chatOrchestrator;
+    private final Terminator terminator;
 
     /** 触发结束讨论（REST / WS CONCLUDE_TOPIC） */
     public void conclude(Long topicId) {
@@ -85,6 +87,8 @@ public class TopicAppService {
                 .title(topic.getTitle())
                 .status(topic.getStatus().name())
                 .messageCount(messageRepository.countByTopicId(topic.getId()))
+                .round(terminator.currentRound(topic.getId()))
+                .maxRounds(terminator.getMaxRounds())
                 .createTime(topic.getCreateTime())
                 .build();
     }

@@ -6,6 +6,7 @@ import com.dingring.app.dto.response.GroupDetail;
 import com.dingring.app.dto.response.GroupSummary;
 import com.dingring.app.dto.response.MemberInfo;
 import com.dingring.app.dto.response.TopicSummary;
+import com.dingring.app.orchestrator.Terminator;
 import com.dingring.common.exception.BizException;
 import com.dingring.common.exception.ErrorCode;
 import com.dingring.common.exception.ParamException;
@@ -50,6 +51,7 @@ public class GroupAppService {
     private final MessageRepository messageRepository;
     private final UserRepository userRepository;
     private final DomainEventPublisher eventPublisher;
+    private final Terminator terminator;
 
     public GroupDetail create(CreateGroupRequest request) {
         List<Agent> agents = agentRepository.findByIds(request.getAgentIds());
@@ -91,6 +93,7 @@ public class GroupAppService {
                 .build();
     }
 
+    /** 删除群（逻辑删除，历史消息/主题/卡片数据保留） */
     public void delete(Long groupId) {
         groupRepository.findById(groupId)
                 .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "群不存在: " + groupId));
@@ -177,6 +180,8 @@ public class GroupAppService {
                 .title(topic.getTitle())
                 .status(topic.getStatus().name())
                 .messageCount(messageRepository.countByTopicId(topic.getId()))
+                .round(terminator.currentRound(topic.getId()))
+                .maxRounds(terminator.getMaxRounds())
                 .createTime(topic.getCreateTime())
                 .build();
     }

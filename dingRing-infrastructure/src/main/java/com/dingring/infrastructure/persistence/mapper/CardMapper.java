@@ -21,4 +21,6 @@ public interface CardMapper {
     List<String> findAllCategories();
 
     int insert(KnowledgeCard card);
+
+    int deleteById(Long id);
 }

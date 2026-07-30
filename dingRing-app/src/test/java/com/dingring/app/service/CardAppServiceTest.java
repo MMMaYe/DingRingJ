@@ -2,6 +2,7 @@ package com.dingring.app.service;
 
 import com.dingring.app.dto.response.KnowledgeCardDTO;
 import com.dingring.app.dto.response.ReviewCardDTO;
+import com.dingring.common.exception.BizException;
 import com.dingring.domain.discussion.CardRepository;
 import com.dingring.domain.discussion.KnowledgeCard;
 import com.dingring.domain.discussion.Topic;
@@ -15,7 +16,9 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -161,5 +164,30 @@ class CardAppServiceTest {
         when(cardRepository.findAllCategories()).thenReturn(List.of("Redis", "JVM", "并发"));
 
         assertThat(service.categories()).containsExactly("Redis", "JVM", "并发");
+    }
+
+    @Nested
+    @DisplayName("delete 删除卡片")
+    class Delete {
+
+        @Test
+        @DisplayName("删除存在的卡片成功")
+        void shouldDeleteExistingCard() {
+            when(cardRepository.deleteById(1L)).thenReturn(1);
+
+            service.delete(1L);
+
+            verify(cardRepository).deleteById(1L);
+        }
+
+        @Test
+        @DisplayName("卡片不存在时抛 NOT_FOUND")
+        void shouldThrowWhenCardNotFound() {
+            when(cardRepository.deleteById(999L)).thenReturn(0);
+
+            assertThatThrownBy(() -> service.delete(999L))
+                    .isInstanceOf(BizException.class)
+                    .hasMessageContaining("卡片不存在");
+        }
     }
 }

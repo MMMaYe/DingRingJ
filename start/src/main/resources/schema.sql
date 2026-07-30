@@ -37,6 +37,7 @@ CREATE TABLE IF NOT EXISTS chat_group (
     group_member          TEXT         NULL COMMENT '成员列表(JSON)',
     knowledge_base_config TEXT         NULL COMMENT '知识库配置(JSON)',
     feature               TEXT         NULL COMMENT '扩展字段(JSON)',
+    deleted               TINYINT      NOT NULL DEFAULT 0 COMMENT '逻辑删除:0正常1已删',
     create_time           DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time           DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间'
 );

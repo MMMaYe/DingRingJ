@@ -2,6 +2,8 @@ package com.dingring.app.service;
 
 import com.dingring.app.dto.response.KnowledgeCardDTO;
 import com.dingring.app.dto.response.ReviewCardDTO;
+import com.dingring.common.exception.BizException;
+import com.dingring.common.exception.ErrorCode;
 import com.dingring.domain.discussion.CardRepository;
 import com.dingring.domain.discussion.KnowledgeCard;
 import com.dingring.domain.discussion.Topic;
@@ -38,6 +40,13 @@ public class CardAppService {
     /** 全部分类（筛选面板用） */
     public List<String> categories() {
         return cardRepository.findAllCategories();
+    }
+
+    /** 删除卡片（物理删除） */
+    public void delete(Long cardId) {
+        if (cardRepository.deleteById(cardId) == 0) {
+            throw new BizException(ErrorCode.NOT_FOUND, "卡片不存在: " + cardId);
+        }
     }
 
     /**

@@ -15,4 +15,7 @@ public interface CardRepository {
     List<String> findAllCategories();
 
     void saveBatch(List<KnowledgeCard> cards);
+
+    /** @return 实际删除行数（0 表示卡片不存在） */
+    int deleteById(Long id);
 }

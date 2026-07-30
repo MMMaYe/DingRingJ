@@ -222,6 +222,10 @@ export default function ChatPage() {
       switch (msg.type) {
         case 'NEW_MESSAGE':
           setMessages(prev => [...prev, d as unknown as MessageDTO]);
+          // Agent 发言实时推进当前主题轮次（与后端熔断口径一致）
+          if ((d as any).senderType === 'AGENT') {
+            setActiveTopic(prev => prev && prev.id === (d as any).topicId ? { ...prev, round: prev.round + 1 } : prev);
+          }
           // 用户正在翻历史：不打断，计入新消息提示
           if (!stickToBottomRef.current) setUnseenCount(c => c + 1);
           // 更新群列表预览
@@ -260,6 +264,9 @@ export default function ChatPage() {
             return next;
           });
           setMessages(prev => [...prev, full]);
+          if (full.senderType === 'AGENT') {
+            setActiveTopic(prev => prev && prev.id === full.topicId ? { ...prev, round: prev.round + 1 } : prev);
+          }
           if (!stickToBottomRef.current) setUnseenCount(c => c + 1);
           setGroups(prev => prev.map(g =>
             g.id === groupId
@@ -276,7 +283,7 @@ export default function ChatPage() {
           });
           break;
         case 'TOPIC_CREATED':
-          setActiveTopic({ id: (d as any).topicId, title: (d as any).title, status: (d as any).status, messageCount: 0, createTime: '' });
+          setActiveTopic({ id: (d as any).topicId, title: (d as any).title, status: (d as any).status, messageCount: 0, round: (d as any).round ?? 0, maxRounds: (d as any).maxRounds ?? 20, createTime: '' });
           loadTopics();
           toast(`讨论开始：${(d as any).title}`, 'success');
           break;
@@ -432,6 +439,23 @@ export default function ChatPage() {
     } catch (e: any) { toast(e.message, 'error'); }
   }, [cgName, cgSelectedAgents, loadGroups, selectGroup]);
 
+  // ---- 删除群（逻辑删除，历史数据保留） ----
+  const deleteGroup = useCallback(async (targetId: number, name: string) => {
+    if (!window.confirm(`确定删除群「${name}」吗？`)) return;
+    try {
+      await API.del(`/api/groups/${targetId}`);
+      toast('群已删除', 'success');
+      setGroups(prev => prev.filter(g => g.id !== targetId));
+      // 删的是当前群：清空右侧，自动选群 effect 会切到剩余第一个群
+      if (group?.id === targetId) {
+        setGroup(null);
+        setActiveTopic(null);
+        setMessages([]);
+        setTopics([]);
+      }
+    } catch (e: any) { toast(e.message, 'error'); }
+  }, [group?.id]);
+
   // ---- 辅助 ----
   const handleReply = useCallback((m: MessageDTO) => {
     setReplyTo({ id: m.id, senderName: m.senderName, content: m.content.slice(0, 40) });
@@ -464,6 +488,13 @@ export default function ChatPage() {
                 </div>
                 <span className="group-item__preview">{g.lastMessagePreview || '暂无消息'}</span>
               </div>
+              <button
+                className="group-item__del"
+                title="删除群"
+                onClick={(e) => { e.stopPropagation(); deleteGroup(g.id, g.name); }}
+              >
+                <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M2.5 4h11M6.5 4V2.5h3V4M4 4l.7 9.5A1 1 0 0 0 5.7 14.5h4.6a1 1 0 0 0 1-.94L12 4M6.7 7v4.5M9.3 7v4.5"/></svg>
+              </button>
             </div>
           ))}
         </div>
@@ -673,7 +704,7 @@ export default function ChatPage() {
                     ? <span className="tag tag--neutral">已结束</span>
                     : <span className="tag tag--success">讨论中</span>}
                   <span className="topic-panel__round">
-                    {activeTopic.status === 'CONCLUDING' ? '已结束' : `轮次 ${activeTopic.messageCount}/20`}
+                    {activeTopic.status === 'CONCLUDING' ? '已结束' : `轮次 ${activeTopic.round}/${activeTopic.maxRounds}`}
                   </span>
                 </div>
                 <div className="topic-panel__actions">

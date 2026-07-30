@@ -432,7 +432,9 @@ public class DiscussionEngine {
                 "groupId", group.getId(),
                 "topicId", topic.getId(),
                 "title", topic.getTitle(),
-                "status", topic.getStatus().name()));
+                "status", topic.getStatus().name(),
+                "round", 0,
+                "maxRounds", terminator.getMaxRounds()));
         log.info("追溯式建题成功, groupId={}, topicId={}, title={}",
                 group.getId(), topic.getId(), topic.getTitle());
         return topic;

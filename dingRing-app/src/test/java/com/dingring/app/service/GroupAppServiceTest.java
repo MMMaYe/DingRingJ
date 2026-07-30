@@ -4,6 +4,7 @@ import com.dingring.app.dto.request.CreateGroupRequest;
 import com.dingring.app.dto.response.GroupDetail;
 import com.dingring.app.dto.response.GroupSummary;
 import com.dingring.app.dto.response.MemberInfo;
+import com.dingring.app.orchestrator.Terminator;
 import com.dingring.common.exception.BizException;
 import com.dingring.common.exception.ParamException;
 import com.dingring.domain.agent.Agent;
@@ -48,6 +49,7 @@ class GroupAppServiceTest {
     private MessageRepository messageRepository;
     private UserRepository userRepository;
     private DomainEventPublisher eventPublisher;
+    private Terminator terminator;
     private GroupAppService service;
 
     @BeforeEach
@@ -58,8 +60,9 @@ class GroupAppServiceTest {
         messageRepository = mock(MessageRepository.class);
         userRepository = mock(UserRepository.class);
         eventPublisher = mock(DomainEventPublisher.class);
+        terminator = mock(Terminator.class);
         service = new GroupAppService(groupRepository, agentRepository, topicRepository,
-                messageRepository, userRepository, eventPublisher);
+                messageRepository, userRepository, eventPublisher, terminator);
     }
 
     private Agent agent(Long id, String name) {

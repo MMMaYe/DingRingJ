@@ -16,18 +16,19 @@
     </resultMap>
 
     <sql id="columns">
-        id, name, owner_id, group_member, knowledge_base_config, feature, create_time, update_time
+        id, name, owner_id, group_member, knowledge_base_config, feature, deleted, create_time, update_time
     </sql>
 
     <select id="findById" resultMap="groupMap">
         SELECT <include refid="columns"/>
         FROM chat_group
-        WHERE id = #{id}
+        WHERE id = #{id} AND deleted = 0
     </select>
 
     <select id="findAll" resultMap="groupMap">
         SELECT <include refid="columns"/>
         FROM chat_group
+        WHERE deleted = 0
         ORDER BY update_time DESC
     </select>
 
@@ -52,8 +53,9 @@
         WHERE id = #{id}
     </update>
 
-    <delete id="deleteById">
-        DELETE FROM chat_group WHERE id = #{id}
-    </delete>
+    <!-- 逻辑删除：保留历史消息/主题/卡片数据 -->
+    <update id="deleteById">
+        UPDATE chat_group SET deleted = 1, update_time = NOW() WHERE id = #{id} AND deleted = 0
+    </update>
 
 </mapper>

@@ -9,6 +9,15 @@
 }
 .group-item:hover { background: var(--bg-overlay-l1); }
 .group-item--active { background: rgba(50,240,140,0.1); }
+/* 删除群按钮：hover 时才显现 */
+.group-item__del {
+  flex-shrink: 0; display: none; align-items: center; justify-content: center;
+  width: 22px; height: 22px; padding: 0;
+  border: none; border-radius: 4px; background: transparent;
+  color: var(--text-tertiary); cursor: pointer;
+}
+.group-item:hover .group-item__del { display: flex; }
+.group-item__del:hover { color: #ff6b6b; background: rgba(255,107,107,0.12); }
 .group-item__content { flex: 1; min-width: 0; }
 .group-item__top { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
 .group-item__name-group { display: flex; align-items: center; gap: 6px; min-width: 0; }

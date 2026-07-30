@@ -4,6 +4,7 @@ import com.dingring.app.dto.response.ConclusionDTO;
 import com.dingring.app.dto.response.MessageDTO;
 import com.dingring.app.dto.response.TopicSummary;
 import com.dingring.app.orchestrator.ChatOrchestrator;
+import com.dingring.app.orchestrator.Terminator;
 import com.dingring.common.exception.BizException;
 import com.dingring.common.response.PageResult;
 import com.dingring.domain.agent.Agent;
@@ -40,6 +41,7 @@ class TopicAppServiceTest {
     private AgentRepository agentRepository;
     private MessageAssembler messageAssembler;
     private ChatOrchestrator chatOrchestrator;
+    private Terminator terminator;
     private TopicAppService service;
 
     @BeforeEach
@@ -49,8 +51,9 @@ class TopicAppServiceTest {
         agentRepository = mock(AgentRepository.class);
         messageAssembler = mock(MessageAssembler.class);
         chatOrchestrator = mock(ChatOrchestrator.class);
+        terminator = mock(Terminator.class);
         service = new TopicAppService(topicRepository, messageRepository,
-                agentRepository, messageAssembler, chatOrchestrator);
+                agentRepository, messageAssembler, chatOrchestrator, terminator);
     }
 
     @Nested
