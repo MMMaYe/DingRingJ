@@ -2,6 +2,7 @@ package com.dingring.app.orchestrator;
 
 import com.dingring.app.service.MessageAssembler;
 import com.dingring.common.constant.PromptConstants;
+import com.dingring.common.util.LogHelper;
 import com.dingring.domain.agent.Agent;
 import com.dingring.domain.discussion.Topic;
 import com.dingring.domain.group.GroupMessage;
@@ -80,12 +81,13 @@ public class ModeratorService {
             String raw = llmService.chat(moderatorAgent(members.get(0)), PromptConstants.HOST_DECISION,
                     List.of(LlmService.ChatTurn.user(buildInput(topic, members, speakCounts))));
             Decision decision = parse(raw, members);
-            log.info("Moderator 决策: topicId={}, shouldContinue={}, nextSpeakerId={}, shouldConclude={}, guidance={}",
+            LogHelper.printLog(log, "ModeratorService.decide", "Moderator决策",
+                    "topicId=%d shouldContinue=%b nextSpeakerId=%s shouldConclude=%b guidance=%s",
                     topic.getId(), decision.shouldContinue(), decision.nextSpeakerId(),
                     decision.shouldConclude(), decision.guidance());
             return decision;
         } catch (Exception e) {
-            log.warn("Moderator 判定失败，回退评分调度, topicId={}", topic.getId(), e);
+            LogHelper.printWarnLog(log, "ModeratorService.decide", "判定失败回退评分调度", "topicId=" + topic.getId(), e);
             return null;
         }
     }
@@ -133,7 +135,7 @@ public class ModeratorService {
                 .map(Agent::getId)
                 .findFirst().orElse(null);
         if (nextSpeakerId == null && !speakerName.isBlank()) {
-            log.warn("Moderator 指定的发言者不在群内，回退评分调度, next_speaker={}", speakerName);
+            LogHelper.printWarnLog(log, "ModeratorService.parse", "指定发言者不在群内回退", "next_speaker=" + speakerName);
         }
         String guidance = node.path("guidance").asText("").trim();
         return new Decision(shouldContinue, nextSpeakerId, shouldConclude, guidance);

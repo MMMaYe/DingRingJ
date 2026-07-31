@@ -1,6 +1,7 @@
 package com.dingring.adapter.websocket;
 
 import com.dingring.app.service.ChatPusher;
+import com.dingring.common.util.LogHelper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -30,8 +31,8 @@ public class WsSessionManager implements ChatPusher {
     /** 连接建立后注册到群 */
     public void register(Long groupId, WebSocketSession session) {
         groupSessions.computeIfAbsent(groupId, k -> new CopyOnWriteArraySet<>()).add(session);
-        log.info("WS 连接注册: groupId={}, sessionId={}, 在线数={}",
-                groupId, session.getId(), groupSessions.get(groupId).size());
+        LogHelper.printLog(log, "WsSessionManager.register", "连接注册",
+                "groupId=%d sessionId=%s 在线数=%d", groupId, session.getId(), groupSessions.get(groupId).size());
     }
 
     /** 连接关闭后注销 */
@@ -43,7 +44,7 @@ public class WsSessionManager implements ChatPusher {
                 groupSessions.remove(groupId, sessions);
             }
         }
-        log.info("WS 连接注销: groupId={}, sessionId={}", groupId, session.getId());
+        LogHelper.printLog(log, "WsSessionManager.unregister", "连接注销", "groupId=%d sessionId=%s", groupId, session.getId());
     }
 
     @Override
@@ -73,7 +74,7 @@ public class WsSessionManager implements ChatPusher {
         try {
             return new TextMessage(objectMapper.writeValueAsString(Map.of("type", type, "data", data)));
         } catch (Exception e) {
-            log.error("WS 消息序列化失败: type={}", type, e);
+            LogHelper.printWarnLog(log, "WsSessionManager.encode", "消息序列化失败", "type=" + type, e);
             return null;
         }
     }
@@ -87,7 +88,7 @@ public class WsSessionManager implements ChatPusher {
                 }
             }
         } catch (Exception e) {
-            log.warn("WS 消息发送失败: sessionId={}", session.getId(), e);
+            LogHelper.printWarnLog(log, "WsSessionManager.sendSafely", "消息发送失败", "sessionId=" + session.getId(), e);
         }
     }
 }

@@ -6,6 +6,7 @@ import com.dingring.app.service.MessageAssembler;
 import com.dingring.common.constant.WsConstants;
 import com.dingring.common.exception.BizException;
 import com.dingring.common.exception.ErrorCode;
+import com.dingring.common.util.LogHelper;
 import com.dingring.domain.agent.Agent;
 import com.dingring.domain.agent.AgentRepository;
 import com.dingring.domain.discussion.Topic;
@@ -189,7 +190,7 @@ public class DiscussionEngine {
         try {
             runLoop(groupId, state);
         } catch (Exception e) {
-            log.error("对话引擎主循环异常退出, groupId={}", groupId, e);
+            LogHelper.printWarnLog(log, "DiscussionEngine.runLoopSafely", "主循环异常退出", "groupId=" + groupId, e);
         } finally {
             state.running.set(false);
             // 防丢唤醒：退出瞬间又有新信号到达则 CAS 抢回重启
@@ -200,27 +201,32 @@ public class DiscussionEngine {
     }
 
     private void runLoop(Long groupId, GroupState state) throws InterruptedException {
-        log.info("对话引擎循环启动, groupId={}", groupId);
-        while (true) {
-            Optional<Topic> active = topicRepository.findActiveByGroupId(groupId)
-                    .filter(Topic::isInProgress);
-            // 讨论态限时等待（超时即自主推进）；闲聊态不等待，队列空直接退出
-            UserSignal head = active.isPresent()
-                    ? state.queue.poll(pace(), TimeUnit.MILLISECONDS)
-                    : state.queue.poll();
-            if (head != null) {
-                if (handleSignal(groupId, state, fold(state.queue, head))) {
+        LogHelper.putTrace(groupId, null);
+        try {
+            LogHelper.printLog(log, "DiscussionEngine.runLoop", "循环启动", "groupId=%d", groupId);
+            while (true) {
+                Optional<Topic> active = topicRepository.findActiveByGroupId(groupId)
+                        .filter(Topic::isInProgress);
+                // 讨论态限时等待（超时即自主推进）；闲聊态不等待，队列空直接退出
+                UserSignal head = active.isPresent()
+                        ? state.queue.poll(pace(), TimeUnit.MILLISECONDS)
+                        : state.queue.poll();
+                if (head != null) {
+                    if (handleSignal(groupId, state, fold(state.queue, head))) {
+                        return;
+                    }
+                    continue;
+                }
+                if (active.isEmpty()) {
+                    LogHelper.printLog(log, "DiscussionEngine.runLoop", "闲聊态退出待唤醒", "groupId=%d", groupId);
                     return;
                 }
-                continue;
+                if (advanceDiscussion(groupId, state, active.get())) {
+                    return;
+                }
             }
-            if (active.isEmpty()) {
-                log.info("闲聊态队列空，引擎循环退出待唤醒, groupId={}", groupId);
-                return;
-            }
-            if (advanceDiscussion(groupId, state, active.get())) {
-                return;
-            }
+        } finally {
+            LogHelper.clearTrace();
         }
     }
 
@@ -236,7 +242,7 @@ public class DiscussionEngine {
             count++;
         }
         if (count > 1) {
-            log.info("折叠 {} 条连发消息，以最新一条为语境", count);
+            LogHelper.printLog(log, "DiscussionEngine.fold", "折叠连发消息", "count=%d", count);
         }
         return new Folded(new UserSignal(latest.userId(), latest.content(),
                 List.copyOf(mentions), latest.repliedToAgentId()), count);
@@ -257,7 +263,7 @@ public class DiscussionEngine {
         }
         List<Agent> agents = agentRepository.findByIds(group.memberAgentIds());
         if (agents.isEmpty()) {
-            log.warn("群内无成员 Agent，信号无人应答, groupId={}", groupId);
+            LogHelper.printWarnLog(log, "DiscussionEngine.handleSignal", "群内无成员Agent", "groupId=" + groupId);
             return false;
         }
         Optional<Topic> active = topicRepository.findActiveByGroupId(groupId)
@@ -321,7 +327,7 @@ public class DiscussionEngine {
             chatOrchestrator.conclude(topicId, operatorId, triggeredBy, concluderAgentId);
             return true;
         } catch (BizException e) {
-            log.warn("收束触发失败，循环继续, topicId={}, 原因: {}", topicId, e.getMessage());
+            LogHelper.printWarnLog(log, "DiscussionEngine.tryConclude", "收束触发失败", "topicId=" + topicId + " 原因: " + e.getMessage());
             return false;
         }
     }
@@ -375,7 +381,7 @@ public class DiscussionEngine {
         List<GroupMessage> recent = messageRepository.findRecentChatByGroupId(
                 group.getId(), profileExtractThreshold);
         String dialogue = formatDialogue(recent);
-        log.info("触发画像提炼, groupId={}, 输入消息数={}", group.getId(), recent.size());
+        LogHelper.printLog(log, "DiscussionEngine.triggerProfileExtraction", "触发画像提炼", "groupId=%d 输入消息数=%d", group.getId(), recent.size());
         Thread.ofVirtual().name("profile-extract-" + group.getId()).start(() ->
                 profileService.extractAndMerge(GroupAppService.DEFAULT_USER_ID,
                         extractor, group.getName(), dialogue));
@@ -398,8 +404,8 @@ public class DiscussionEngine {
         boolean create = route.confidence() == MessageRouter.Confidence.HIGH
                 || ++state.lowDiscussStreak >= LOW_DISCUSS_CREATE_STREAK;
         if (!create) {
-            log.info("低置信度讨论信号 {}/{}，暂不建题, groupId={}",
-                    state.lowDiscussStreak, LOW_DISCUSS_CREATE_STREAK, group.getId());
+            LogHelper.printLog(log, "DiscussionEngine.ensureTopic", "低置信度暂不建题",
+                    "streak=%d/%d groupId=%d", state.lowDiscussStreak, LOW_DISCUSS_CREATE_STREAK, group.getId());
             return null;
         }
         state.lowDiscussStreak = 0;
@@ -412,7 +418,7 @@ public class DiscussionEngine {
         } catch (DuplicateKeyException e) {
             Optional<Topic> existing = topicRepository.findActiveByGroupId(group.getId());
             if (existing.isPresent()) {
-                log.warn("建题并发冲突，沿用现有活跃主题, groupId={}", group.getId());
+                LogHelper.printWarnLog(log, "DiscussionEngine.ensureTopic", "建题并发冲突沿用现有", "groupId=" + group.getId());
                 return existing.get();
             }
             // 与历史主题标题撞车：加时间后缀重试一次
@@ -422,7 +428,7 @@ public class DiscussionEngine {
             try {
                 topicRepository.save(topic);
             } catch (DuplicateKeyException e2) {
-                log.warn("建题重试仍冲突，放弃本次建题, groupId={}", group.getId());
+                LogHelper.printWarnLog(log, "DiscussionEngine.ensureTopic", "建题重试仍冲突放弃", "groupId=" + group.getId());
                 return null;
             }
         }
@@ -435,8 +441,8 @@ public class DiscussionEngine {
                 "status", topic.getStatus().name(),
                 "round", 0,
                 "maxRounds", terminator.getMaxRounds()));
-        log.info("追溯式建题成功, groupId={}, topicId={}, title={}",
-                group.getId(), topic.getId(), topic.getTitle());
+        LogHelper.printLog(log, "DiscussionEngine.ensureTopic", "追溯式建题成功",
+                "groupId=%d topicId=%d title=%s", group.getId(), topic.getId(), topic.getTitle());
         return topic;
     }
 
@@ -450,7 +456,7 @@ public class DiscussionEngine {
                 .map(GroupMessage::getId)
                 .toList();
         int updated = messageRepository.updateTopicId(ids, topicId);
-        log.info("追溯回填闲聊消息完成, topicId={}, 回填条数={}", topicId, updated);
+        LogHelper.printLog(log, "DiscussionEngine.backfillChatMessages", "回填完成", "topicId=%d 回填条数=%d", topicId, updated);
     }
 
     private LocalDateTime lastClosedAt(Long groupId) {
@@ -468,7 +474,7 @@ public class DiscussionEngine {
     private boolean advanceDiscussion(Long groupId, GroupState state, Topic topic) {
         // 熔断兜底：达到最大轮次自动收束
         if (terminator.reachedMaxRounds(topic.getId())) {
-            log.info("达到最大轮次，自动触发收束, topicId={}", topic.getId());
+            LogHelper.printLog(log, "DiscussionEngine.advanceDiscussion", "达到最大轮次自动收束", "topicId=%d", topic.getId());
             return tryConclude(topic.getId(), null, "MAX_ROUNDS", null);
         }
         Group group = groupRepository.findById(groupId).orElse(null);
@@ -477,7 +483,7 @@ public class DiscussionEngine {
         }
         List<Agent> all = agentRepository.findByIds(group.memberAgentIds());
         if (all.isEmpty()) {
-            log.warn("讨论态无成员 Agent，循环退出, groupId={}", groupId);
+            LogHelper.printWarnLog(log, "DiscussionEngine.advanceDiscussion", "无成员Agent循环退出", "groupId=" + groupId);
             return true;
         }
         // 被 @ 的 Agent 即使已 PASS 也要应答一次
@@ -492,7 +498,7 @@ public class DiscussionEngine {
                 .filter(a -> !state.passedAgents.contains(a.getId()))
                 .toList();
         if (candidates.isEmpty()) {
-            log.info("全员均已 PASS，讨论收敛, topicId={}", topic.getId());
+            LogHelper.printLog(log, "DiscussionEngine.advanceDiscussion", "全员PASS讨论收敛", "topicId=%d", topic.getId());
             return tryConclude(topic.getId(), null, "CONVERGED", null);
         }
         Map<Long, Long> speakCounts = loadSpeakCounts(topic.getId(), group);
@@ -503,7 +509,7 @@ public class DiscussionEngine {
             ModeratorService.Decision decision = moderatorService.decide(topic, all, speakCounts);
             if (decision != null) {
                 if (decision.wantsConclude()) {
-                    log.info("Moderator 判断讨论可收束, topicId={}", topic.getId());
+                    LogHelper.printLog(log, "DiscussionEngine.advanceDiscussion", "Moderator判断可收束", "topicId=%d", topic.getId());
                     return tryConclude(topic.getId(), null, "MODERATOR", null);
                 }
                 preferredAgentId = decision.nextSpeakerId();
@@ -527,8 +533,8 @@ public class DiscussionEngine {
             case PASSED -> {
                 state.passedAgents.add(result.agent().getId());
                 if (state.passedAgents.size() >= convergePassCount) {
-                    log.info("{} 个不同 Agent 连续 PASS，讨论收敛, topicId={}",
-                            state.passedAgents.size(), topic.getId());
+                    LogHelper.printLog(log, "DiscussionEngine.advanceDiscussion", "连续PASS讨论收敛",
+                            "passCount=%d topicId=%d", state.passedAgents.size(), topic.getId());
                     return tryConclude(topic.getId(), null, "CONVERGED", null);
                 }
             }
@@ -558,18 +564,19 @@ public class DiscussionEngine {
                                   Long preferredAgentId, String moderatorGuidance) {
         boolean topicMode = ctx.getTopicId() != null;
         if (candidates.isEmpty()) {
-            log.warn("无候选 Agent，无人可应答, groupId={}", ctx.getGroupId());
+            LogHelper.printWarnLog(log, "DiscussionEngine.speakOnce", "无候选Agent", "groupId=" + ctx.getGroupId());
             return new SpeakResult(SpeakOutcome.FAILED, null);
         }
         List<SpeakerScheduler.ScoredAgent> ranked = speakerScheduler.rank(candidates, ctx);
         ranked = promotePreferred(ranked, preferredAgentId);
-        log.info("发言评分结果, groupId={}, topicId={}, 排序={}",
-                ctx.getGroupId(), ctx.getTopicId(),
+        LogHelper.printLog(log, "DiscussionEngine.speakOnce", "发言评分结果",
+                "groupId=%d topicId=%d 排序=%s", ctx.getGroupId(), ctx.getTopicId(),
                 ranked.stream().map(s -> s.agent().getName() + "(" + s.score() + "," + s.reason() + ")").toList());
         for (int i = 0; i < ranked.size(); i++) {
             SpeakerScheduler.ScoredAgent scored = ranked.get(i);
             Agent agent = scored.agent();
-            log.info("选中发言 Agent: {}, 分数={}, 理由={}, 降级链位置={}/{}",
+            LogHelper.printLog(log, "DiscussionEngine.speakOnce", "选中发言Agent",
+                    "name=%s score=%d reason=%s 降级链位置=%d/%d",
                     agent.getName(), scored.score(), scored.reason(), i + 1, ranked.size());
             eventPublisher.publish(new AgentSelected(ctx.getGroupId(), ctx.getTopicId(),
                     agent.getId(), agent.getName(), scored.reason(), scored.score()));
@@ -585,7 +592,11 @@ public class DiscussionEngine {
                 StreamEmitter emitter = streamingEnabled ? new StreamEmitter(ctx.getGroupId(), agent) : null;
                 String content;
                 try {
+                    LogHelper.printLog(log, "DiscussionEngine.speakOnce", "LLM调用开始", "agent=%s topicId=%d", agent.getName(), ctx.getTopicId());
+                    long llmStart = System.currentTimeMillis();
                     content = chatWithRetry(agent, llmCtx, emitter);
+                    LogHelper.printLog(log, "DiscussionEngine.speakOnce", "LLM调用完成", "agent=%s topicId=%d 耗时=%dms",
+                            agent.getName(), ctx.getTopicId(), System.currentTimeMillis() - llmStart);
                 } catch (Exception e) {
                     if (emitter != null) {
                         emitter.abort();
@@ -598,23 +609,24 @@ public class DiscussionEngine {
                     if (emitter != null) {
                         emitter.abort();
                     }
-                    log.info("Agent PASS 本轮, agent={}, topicId={}, 空内容={}",
-                            agent.getName(), ctx.getTopicId(), blank);
+                    LogHelper.printLog(log, "DiscussionEngine.speakOnce", "Agent PASS本轮",
+                            "agent=%s topicId=%d 空内容=%b", agent.getName(), ctx.getTopicId(), blank);
                     return new SpeakResult(SpeakOutcome.PASSED, agent);
                 }
                 if (blank) {
                     if (emitter != null) {
                         emitter.abort();
                     }
-                    log.info("Agent 返回空内容，视为选择不发言, agent={}, groupId={}",
-                            agent.getName(), ctx.getGroupId());
+                    LogHelper.printLog(log, "DiscussionEngine.speakOnce", "Agent返回空内容不发言",
+                            "agent=%s groupId=%d", agent.getName(), ctx.getGroupId());
                     return new SpeakResult(SpeakOutcome.SILENT, agent);
                 }
                 boolean wantsConclude = topicMode && content.contains(ContextBuilder.CONCLUDE_MARKER);
                 content = ContextBuilder.stripMarkers(content);
                 if (!content.isBlank()) {
                     GroupMessage reply = saveAgentMessage(ctx, agent, content);
-                    log.info("Agent 发言已入库并广播, agent={}, messageId={}, 长度={}, 流式={}",
+                    LogHelper.printLog(log, "DiscussionEngine.speakOnce", "Agent发言已入库广播",
+                            "agent=%s messageId=%d 长度=%d 流式=%b",
                             agent.getName(), reply.getId(), content.length(),
                             emitter != null && emitter.emitted);
                     if (emitter != null && emitter.emitted) {
@@ -631,8 +643,8 @@ public class DiscussionEngine {
                     emitter.abort();
                 }
                 if (wantsConclude) {
-                    log.info("检测到 Agent 回复携带收束标记, agent={}, topicId={}",
-                            agent.getName(), ctx.getTopicId());
+                    LogHelper.printLog(log, "DiscussionEngine.speakOnce", "检测到收束标记",
+                            "agent=%s topicId=%d", agent.getName(), ctx.getTopicId());
                     boolean concluded = tryConclude(ctx.getTopicId(), null, "AGENT", agent.getId());
                     return new SpeakResult(concluded ? SpeakOutcome.CONCLUDED : SpeakOutcome.SPOKE, agent);
                 }
@@ -640,8 +652,8 @@ public class DiscussionEngine {
             } catch (Exception e) {
                 // 降级路由：接力给下一个 Agent（失败 Agent 下一轮仍参与调度）
                 Agent fallback = i + 1 < ranked.size() ? ranked.get(i + 1).agent() : null;
-                log.warn("Agent 调用失败降级, agent={}, fallback={}", agent.getName(),
-                        fallback == null ? "无" : fallback.getName(), e);
+                LogHelper.printWarnLog(log, "DiscussionEngine.speakOnce", "Agent调用失败降级",
+                        "agent=" + agent.getName() + " fallback=" + (fallback == null ? "无" : fallback.getName()), e);
                 eventPublisher.publish(new AgentFailed(ctx.getGroupId(), ctx.getTopicId(),
                         agent.getId(), agent.getName(), e.getMessage(),
                         fallback == null ? null : fallback.getId(),
@@ -651,8 +663,8 @@ public class DiscussionEngine {
             }
         }
         // 所有 Agent 都失败
-        log.error("所有 Agent 均调用失败，本轮无人发言, groupId={}, topicId={}, 候选数={}",
-                ctx.getGroupId(), ctx.getTopicId(), ranked.size());
+        LogHelper.printWarnLog(log, "DiscussionEngine.speakOnce", "所有Agent均失败无人发言",
+                "groupId=%d topicId=%d 候选数=%d", ctx.getGroupId(), ctx.getTopicId(), ranked.size());
         chatPusher.pushToGroup(ctx.getGroupId(), WsConstants.ERROR, Map.of(
                 "success", false,
                 "errorCode", ErrorCode.ALL_AGENTS_FAILED.name(),
@@ -667,7 +679,8 @@ public class DiscussionEngine {
                     ? llmService.chatStream(agent, ctx.systemPrompt(), ctx.turns(), emitter::onDelta)
                     : llmService.chat(agent, ctx.systemPrompt(), ctx.turns());
         } catch (Exception first) {
-            log.warn("LLM 首次调用失败，重试 1 次, agent={}, 失败原因: {}", agent.getName(), first.getMessage());
+            LogHelper.printWarnLog(log, "DiscussionEngine.chatWithRetry", "LLM首次失败重试",
+                    "agent=" + agent.getName() + " 失败原因: " + first.getMessage());
             if (emitter != null) {
                 emitter.reset();
                 return llmService.chatStream(agent, ctx.systemPrompt(), ctx.turns(), emitter::onDelta);
@@ -736,7 +749,7 @@ public class DiscussionEngine {
         List<SpeakerScheduler.ScoredAgent> reordered = new java.util.ArrayList<>(ranked.size());
         reordered.add(preferred);
         ranked.stream().filter(s -> s != preferred).forEach(reordered::add);
-        log.info("Moderator 指定发言者提前, agent={}", preferred.agent().getName());
+        LogHelper.printLog(log, "DiscussionEngine.promotePreferred", "Moderator指定发言者提前", "agent=%s", preferred.agent().getName());
         return reordered;
     }
 
@@ -795,7 +808,7 @@ public class DiscussionEngine {
         try {
             task.run();
         } catch (Exception e) {
-            log.error("异步任务异常退出（可能导致静默无回复）: 任务={}, groupId={}", taskName, groupId, e);
+            LogHelper.printWarnLog(log, "DiscussionEngine.safeRun", "异步任务异常退出", "task=" + taskName + " groupId=" + groupId, e);
         }
     }
 }

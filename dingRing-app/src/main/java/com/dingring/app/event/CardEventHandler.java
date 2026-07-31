@@ -3,6 +3,7 @@ package com.dingring.app.event;
 import com.dingring.app.service.ChatPusher;
 import com.dingring.common.constant.WsConstants;
 import com.dingring.common.constant.PromptConstants;
+import com.dingring.common.util.LogHelper;
 import com.dingring.domain.agent.Agent;
 import com.dingring.domain.agent.AgentRepository;
 import com.dingring.domain.discussion.CardRepository;
@@ -50,12 +51,12 @@ public class CardEventHandler {
      */
     public void generateCards(TopicClosed event) {
         if (!cardRepository.findByTopicId(event.getTopicId()).isEmpty()) {
-            log.info("卡片生成跳过：主题已有卡片（幂等）, topicId={}", event.getTopicId());
+            LogHelper.printLog(log, "CardEventHandler.generateCards", "卡片生成跳过已有卡片", "topicId=%d", event.getTopicId());
             return;
         }
         Agent concluder = agentRepository.findById(event.getConcluderAgentId()).orElse(null);
         if (concluder == null) {
-            log.warn("卡片生成跳过：总结 Agent 不存在, topicId={}", event.getTopicId());
+            LogHelper.printWarnLog(log, "CardEventHandler.generateCards", "总结Agent不存在跳过", "topicId=" + event.getTopicId());
             return;
         }
         for (int attempt = 1; attempt <= MAX_RETRY; attempt++) {
@@ -77,14 +78,15 @@ public class CardEventHandler {
                                 "question", c.getQuestion(),
                                 "category", c.getCategory() == null ? "未分类" : c.getCategory()))
                                 .collect(Collectors.toList())));
-                log.info("知识卡片生成成功, topicId={}, count={}", event.getTopicId(), cards.size());
+                LogHelper.printLog(log, "CardEventHandler.generateCards", "卡片生成成功", "topicId=%d count=%d", event.getTopicId(), cards.size());
                 return;
             } catch (Exception e) {
-                log.warn("知识卡片生成失败({}/{}), topicId={}", attempt, MAX_RETRY, event.getTopicId(), e);
+                LogHelper.printWarnLog(log, "CardEventHandler.generateCards", "卡片生成失败重试",
+                        "attempt=%d/%d topicId=%d", attempt, MAX_RETRY, event.getTopicId(), e);
             }
         }
         // 重试 3 次仍失败：记录日志，不阻塞主流程
-        log.error("知识卡片生成最终失败, topicId={}", event.getTopicId());
+        LogHelper.printWarnLog(log, "CardEventHandler.generateCards", "卡片生成最终失败", "topicId=" + event.getTopicId());
     }
 
     /** 解析 LLM 输出（容忍 ```json 代码块包裹） */

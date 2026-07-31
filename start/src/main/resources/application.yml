@@ -65,15 +65,6 @@ dingring:
     card-reconcile-window-days: 7
     # 意图路由 LLM 读超时（秒）：路由在群串行执行器内同步调用，短超时避免卡住全群
     route-timeout-seconds: 15
-
-logging:
-  level:
-    com.dingring: info
-  file:
-    name: logs/dingring.log
-  logback:
-    rollingpolicy:
-      file-name-pattern: logs/dingring.%d{yyyy-MM-dd}.%i.log
-      max-file-size: 50MB
-      max-history: 30
-      total-size-cap: 1GB
+  logging:
+    # 是否完整打印 LLM prompt（生产可关闭以减少日志量）
+    llm-prompt-enabled: true

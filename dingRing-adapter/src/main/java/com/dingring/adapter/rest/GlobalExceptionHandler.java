@@ -3,6 +3,7 @@ package com.dingring.adapter.rest;
 import com.dingring.common.exception.BizException;
 import com.dingring.common.exception.ErrorCode;
 import com.dingring.common.response.ApiResponse;
+import com.dingring.common.util.LogHelper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -20,7 +21,7 @@ public class GlobalExceptionHandler {
     /** 业务异常 */
     @ExceptionHandler(BizException.class)
     public ResponseEntity<ApiResponse<Void>> handleBiz(BizException e) {
-        log.warn("业务异常: errorCode={}, message={}", e.getErrorCode(), e.getMessage());
+        LogHelper.printWarnLog(log, "GlobalExceptionHandler.handleBiz", "业务异常", "errorCode=" + e.getErrorCode() + " message=" + e.getMessage());
         return ResponseEntity.status(e.getErrorCode().getHttpStatus())
                 .body(ApiResponse.fail(e.getErrorCode(), e.getMessage()));
     }
@@ -46,7 +47,7 @@ public class GlobalExceptionHandler {
     /** 兜底异常 */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleOther(Exception e) {
-        log.error("系统内部异常", e);
+        LogHelper.printWarnLog(log, "GlobalExceptionHandler.handleOther", "系统内部异常", "", e);
         return ResponseEntity.status(ErrorCode.INTERNAL_ERROR.getHttpStatus())
                 .body(ApiResponse.fail(ErrorCode.INTERNAL_ERROR));
     }

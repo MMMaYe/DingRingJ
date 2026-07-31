@@ -1,6 +1,7 @@
 package com.dingring.app.task;
 
 import com.dingring.app.event.CardEventHandler;
+import com.dingring.common.util.LogHelper;
 import com.dingring.domain.discussion.CardRepository;
 import com.dingring.domain.discussion.Topic;
 import com.dingring.domain.discussion.TopicRepository;
@@ -47,15 +48,15 @@ public class CardReconciler {
                 }
                 Long concluderAgentId = topic.concludedByAgentId().orElse(null);
                 if (concluderAgentId == null) {
-                    log.warn("卡片对账跳过：主题无总结 Agent 记录, topicId={}", topic.getId());
+                    LogHelper.printWarnLog(log, "CardReconciler.reconcile", "主题无总结Agent记录跳过", "topicId=" + topic.getId());
                     continue;
                 }
-                log.info("卡片对账：发现无卡片的已关闭主题，补生成, topicId={}", topic.getId());
+                LogHelper.printLog(log, "CardReconciler.reconcile", "发现无卡片已关闭主题补生成", "topicId=%d", topic.getId());
                 cardEventHandler.generateCards(new TopicClosed(
                         topic.getId(), topic.getChatGroupId(), topic.getTitle(), topic.getConclusion(),
                         messageRepository.countByTopicId(topic.getId()), "RECONCILE", concluderAgentId));
             } catch (Exception e) {
-                log.error("卡片对账补生成失败, topicId={}", topic.getId(), e);
+                LogHelper.printWarnLog(log, "CardReconciler.reconcile", "补生成失败", "topicId=" + topic.getId(), e);
             }
         }
     }

@@ -6,6 +6,7 @@ import com.dingring.app.service.TopicAppService;
 import com.dingring.common.constant.WsConstants;
 import com.dingring.common.exception.BizException;
 import com.dingring.common.exception.ErrorCode;
+import com.dingring.common.util.LogHelper;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -33,11 +34,13 @@ public class WsMessageDispatcher {
      * @param groupId 该连接绑定的群（握手时从 query 解析）
      */
     public void dispatch(Long groupId, WebSocketSession session, String payload) {
+        LogHelper.putTrace(groupId, null);
         try {
             JsonNode root = objectMapper.readTree(payload);
             String type = root.path("type").asText("");
             JsonNode data = root.path("data");
-            log.info("WS 收到入站消息, groupId={}, type={}, payload={}", groupId, type, payload);
+            LogHelper.printLog(log, "WsMessageDispatcher.dispatch", "收到入站消息",
+                    "groupId=%d type=%s payload=%s", groupId, type, payload);
             switch (type) {
                 case WsConstants.SEND_MESSAGE -> chatOrchestrator.onUserMessage(
                         groupId, GroupAppService.DEFAULT_USER_ID,
@@ -49,16 +52,19 @@ public class WsMessageDispatcher {
                 case WsConstants.CONCLUDE_TOPIC -> topicAppService.conclude(
                         data.path("topicId").asLong());
                 default -> {
-                    log.warn("WS 未知消息类型，已忽略, groupId={}, type={}", groupId, type);
+                    LogHelper.printWarnLog(log, "WsMessageDispatcher.dispatch", "未知消息类型已忽略", "groupId=" + groupId + " type=" + type);
                     pushError(session, ErrorCode.PARAM_INVALID, "未知消息类型: " + type);
                 }
             }
         } catch (BizException e) {
-            log.warn("WS 消息处理业务异常, groupId={}, errorCode={}, message={}", groupId, e.getErrorCode(), e.getMessage());
+            LogHelper.printWarnLog(log, "WsMessageDispatcher.dispatch", "消息处理业务异常",
+                    "groupId=" + groupId + " errorCode=" + e.getErrorCode() + " message=" + e.getMessage());
             pushError(session, e.getErrorCode(), e.getMessage());
         } catch (Exception e) {
-            log.error("WS 消息处理异常: groupId={}, payload={}", groupId, payload, e);
+            LogHelper.printWarnLog(log, "WsMessageDispatcher.dispatch", "消息处理异常", "groupId=" + groupId + " payload=" + payload, e);
             pushError(session, ErrorCode.INTERNAL_ERROR, ErrorCode.INTERNAL_ERROR.getDefaultMessage());
+        } finally {
+            LogHelper.clearTrace();
         }
     }
 

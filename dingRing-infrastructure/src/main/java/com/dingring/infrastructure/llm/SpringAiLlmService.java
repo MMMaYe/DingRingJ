@@ -2,6 +2,7 @@ package com.dingring.infrastructure.llm;
 
 import com.dingring.common.exception.BizException;
 import com.dingring.common.exception.ErrorCode;
+import com.dingring.common.util.LogHelper;
 import com.dingring.domain.agent.Agent;
 import com.dingring.domain.service.LlmService;
 import lombok.extern.slf4j.Slf4j;
@@ -58,26 +59,29 @@ public class SpringAiLlmService implements LlmService {
         try {
             OpenAiChatModel chatModel = buildChatModel(agent, options);
             List<Message> aiMessages = toAiMessages(systemPrompt, messages);
-            log.info("LLM 请求开始, agent={}, model={}, baseUrl={}, systemPrompt长度={}, 上下文轮数={}",
-                    agent.getName(), agent.getModelName(), agent.getBaseUrl(),
-                    systemPrompt == null ? 0 : systemPrompt.length(), messages.size());
+            LogHelper.printLog(log, "LLM", "Prompt",
+                    "agent=%s model=%s\nsystemPrompt:\n%s\nturns(%d轮):\n%s",
+                    agent.getName(), agent.getModelName(), systemPrompt,
+                    aiMessages.size(), LogHelper.formatTurns(aiMessages));
             ChatResponse response = chatModel.call(new Prompt(aiMessages));
             String text = response.getResult().getOutput().getText();
             long cost = System.currentTimeMillis() - startAt;
             if (text == null || text.isBlank()) {
-                log.warn("LLM 返回空内容, agent={}, model={}, 耗时={}ms, 原始响应={}",
-                        agent.getName(), agent.getModelName(), cost, response.getResult());
+                LogHelper.printWarnLog(log, "LLM", "空响应",
+                        "agent=%s model=%s 耗时=%dms", agent.getName(), agent.getModelName(), cost);
             } else {
-                // 完整输出不截断，保证可观测性（静默无回复问题排查依据）
-                log.info("LLM 响应完成, agent={}, model={}, 耗时={}ms, 长度={}, 完整内容:\n{}",
+                LogHelper.printLog(log, "LLM", "响应",
+                        "agent=%s model=%s 耗时=%dms 长度=%d 完整内容:\n%s",
                         agent.getName(), agent.getModelName(), cost, text.length(), text);
             }
             return text == null ? "" : text.trim();
         } catch (BizException e) {
             throw e;
         } catch (Exception e) {
-            log.warn("LLM 调用失败, agent={}, model={}, 耗时={}ms",
-                    agent.getName(), agent.getModelName(), System.currentTimeMillis() - startAt, e);
+            LogHelper.printWarnLog(log, "LLM", "异常",
+                    "agent=%s model=%s 耗时=%dms error=%s",
+                    agent.getName(), agent.getModelName(),
+                    System.currentTimeMillis() - startAt, e.getMessage(), e);
             throw new BizException(ErrorCode.LLM_API_ERROR,
                     "LLM 调用失败: " + agent.getName() + " - " + e.getMessage());
         }
@@ -89,9 +93,10 @@ public class SpringAiLlmService implements LlmService {
         try {
             OpenAiChatModel chatModel = buildChatModel(agent, null);
             List<Message> aiMessages = toAiMessages(systemPrompt, messages);
-            log.info("LLM 流式请求开始, agent={}, model={}, baseUrl={}, systemPrompt长度={}, 上下文轮数={}",
-                    agent.getName(), agent.getModelName(), agent.getBaseUrl(),
-                    systemPrompt == null ? 0 : systemPrompt.length(), messages.size());
+            LogHelper.printLog(log, "LLM", "Prompt",
+                    "agent=%s model=%s\nsystemPrompt:\n%s\nturns(%d轮):\n%s",
+                    agent.getName(), agent.getModelName(), systemPrompt,
+                    aiMessages.size(), LogHelper.formatTurns(aiMessages));
             StringBuilder full = new StringBuilder();
             // 块间超时复用读超时配置：网关挂起时 Flux 报错退出，不永久卡死引擎线程
             chatModel.stream(new Prompt(aiMessages))
@@ -108,18 +113,21 @@ public class SpringAiLlmService implements LlmService {
             String text = full.toString();
             long cost = System.currentTimeMillis() - startAt;
             if (text.isBlank()) {
-                log.warn("LLM 流式返回空内容, agent={}, model={}, 耗时={}ms",
-                        agent.getName(), agent.getModelName(), cost);
+                LogHelper.printWarnLog(log, "LLM", "空响应",
+                        "agent=%s model=%s 耗时=%dms (流式)", agent.getName(), agent.getModelName(), cost);
             } else {
-                log.info("LLM 流式响应完成, agent={}, model={}, 耗时={}ms, 长度={}, 完整内容:\n{}",
+                LogHelper.printLog(log, "LLM", "响应",
+                        "agent=%s model=%s 耗时=%dms 长度=%d (流式) 完整内容:\n%s",
                         agent.getName(), agent.getModelName(), cost, text.length(), text);
             }
             return text.trim();
         } catch (BizException e) {
             throw e;
         } catch (Exception e) {
-            log.warn("LLM 流式调用失败, agent={}, model={}, 耗时={}ms",
-                    agent.getName(), agent.getModelName(), System.currentTimeMillis() - startAt, e);
+            LogHelper.printWarnLog(log, "LLM", "异常",
+                    "agent=%s model=%s 耗时=%dms (流式) error=%s",
+                    agent.getName(), agent.getModelName(),
+                    System.currentTimeMillis() - startAt, e.getMessage(), e);
             throw new BizException(ErrorCode.LLM_API_ERROR,
                     "LLM 流式调用失败: " + agent.getName() + " - " + e.getMessage());
         }

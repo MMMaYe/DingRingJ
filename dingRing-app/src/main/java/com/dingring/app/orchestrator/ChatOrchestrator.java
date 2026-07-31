@@ -6,6 +6,7 @@ import com.dingring.app.service.MessageAssembler;
 import com.dingring.common.constant.WsConstants;
 import com.dingring.common.exception.BizException;
 import com.dingring.common.exception.ErrorCode;
+import com.dingring.common.util.LogHelper;
 import com.dingring.domain.agent.Agent;
 import com.dingring.domain.agent.AgentRepository;
 import com.dingring.domain.event.MessageSent;
@@ -60,41 +61,47 @@ public class ChatOrchestrator {
      * @return 入库后的消息 DTO
      */
     public MessageDTO onUserMessage(Long groupId, Long userId, String content, Long replyToMessageId) {
-        Group group = groupRepository.findById(groupId)
-                .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "群不存在: " + groupId));
-        Optional<Topic> activeTopic = topicRepository.findActiveByGroupId(groupId);
-        Long topicId = activeTopic.map(Topic::getId).orElse(null);
+        LogHelper.putTrace(groupId, null);
+        try {
+            Group group = groupRepository.findById(groupId)
+                    .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "群不存在: " + groupId));
+            Optional<Topic> activeTopic = topicRepository.findActiveByGroupId(groupId);
+            Long topicId = activeTopic.map(Topic::getId).orElse(null);
 
-        // 消息入库（topic_id 自动归属）
-        GroupMessage message = new GroupMessage();
-        message.setChatGroupId(groupId);
-        message.setTopicId(topicId);
-        message.setSenderId(userId);
-        message.setSenderType(SenderType.USER);
-        message.setMessageType(MessageType.TEXT);
-        message.setContent(content);
-        message.setReplyToMessageId(replyToMessageId);
-        messageRepository.save(message);
+            // 消息入库（topic_id 自动归属）
+            GroupMessage message = new GroupMessage();
+            message.setChatGroupId(groupId);
+            message.setTopicId(topicId);
+            message.setSenderId(userId);
+            message.setSenderType(SenderType.USER);
+            message.setMessageType(MessageType.TEXT);
+            message.setContent(content);
+            message.setReplyToMessageId(replyToMessageId);
+            messageRepository.save(message);
 
-        MessageDTO dto = messageAssembler.toDto(message);
-        chatPusher.pushToGroup(groupId, WsConstants.NEW_MESSAGE, dto);
+            MessageDTO dto = messageAssembler.toDto(message);
+            chatPusher.pushToGroup(groupId, WsConstants.NEW_MESSAGE, dto);
 
-        List<Agent> groupAgents = agentRepository.findByIds(group.memberAgentIds());
-        List<Long> mentionedIds = parseMentions(content, groupAgents);
-        log.info("收到用户消息, groupId={}, topicId={}, messageId={}, 群内Agent数={}, @提及={}, 内容={}",
-                groupId, topicId, message.getId(), groupAgents.size(),
-                mentionedIds.isEmpty() ? "无" : mentionedIds, content);
-        if (topicId == null) {
-            log.info("当前群无活跃主题，消息不归属 Topic，仍正常触发调度, groupId={}", groupId);
+            List<Agent> groupAgents = agentRepository.findByIds(group.memberAgentIds());
+            List<Long> mentionedIds = parseMentions(content, groupAgents);
+            LogHelper.printLog(log, "ChatOrchestrator.onUserMessage", "收到消息",
+                    "groupId=%d topicId=%s messageId=%d 群内Agent数=%d @提及=%s 内容=%s",
+                    groupId, topicId, message.getId(), groupAgents.size(),
+                    mentionedIds.isEmpty() ? "无" : mentionedIds, content);
+            if (topicId == null) {
+                LogHelper.printLog(log, "ChatOrchestrator.onUserMessage", "无活跃主题", "groupId=%d", groupId);
+            }
+            // 消息发送事件（先预留在这）
+    //        eventPublisher.publish(new MessageSent(message.getId(), groupId, topicId, userId,
+    //                SenderType.USER.name(), content, replyToMessageId, mentionedIds));
+
+            // 投递信号：意图路由与应答由对话引擎异步驱动
+            discussionEngine.onUserSignal(groupId, new DiscussionEngine.UserSignal(
+                    userId, content, mentionedIds, resolveRepliedAgent(replyToMessageId)));
+            return dto;
+        } finally {
+            LogHelper.clearTrace();
         }
-        // 消息发送事件（先预留在这）
-//        eventPublisher.publish(new MessageSent(message.getId(), groupId, topicId, userId,
-//                SenderType.USER.name(), content, replyToMessageId, mentionedIds));
-
-        // 投递信号：意图路由与应答由对话引擎异步驱动
-        discussionEngine.onUserSignal(groupId, new DiscussionEngine.UserSignal(
-                userId, content, mentionedIds, resolveRepliedAgent(replyToMessageId)));
-        return dto;
     }
 
     /* ==================== 收束域 ==================== */
@@ -115,7 +122,8 @@ public class ChatOrchestrator {
      * @param concluderAgentId 总结 Agent ID（null = 调度评分最高者兜底）
      */
     public void conclude(Long topicId, Long operatorId, String triggeredBy, Long concluderAgentId) {
-        log.info("触发讨论收束, topicId={}, triggeredBy={}, 指定总结AgentId={}", topicId, triggeredBy, concluderAgentId);
+        LogHelper.printLog(log, "ChatOrchestrator.conclude", "触发讨论收束",
+                "topicId=%d triggeredBy=%s 指定总结AgentId=%s", topicId, triggeredBy, concluderAgentId);
         Topic topic = topicRepository.findById(topicId)
                 .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "主题不存在: " + topicId));
         topic.startConcluding();
@@ -134,11 +142,12 @@ public class ChatOrchestrator {
         Group group = groupRepository.findById(groupId).orElse(null);
         Agent concluder = resolveConcluder(group, topic, designatedConcluderId);
         if (concluder == null) {
-            log.warn("无可用总结 Agent，回滚讨论状态, topicId={}, 指定AgentId={}", topic.getId(), designatedConcluderId);
+            LogHelper.printWarnLog(log, "ChatOrchestrator.generateConclusion", "无可用总结Agent回滚", "topicId=" + topic.getId() + " 指定AgentId=" + designatedConcluderId);
             rollbackConclusion(topic, "群内没有可用的总结 Agent");
             return;
         }
-        log.info("开始生成结论, topicId={}, 总结Agent={}, triggeredBy={}", topic.getId(), concluder.getName(), triggeredBy);
+        LogHelper.printLog(log, "ChatOrchestrator.generateConclusion", "开始生成结论",
+                "topicId=%d 总结Agent=%s triggeredBy=%s", topic.getId(), concluder.getName(), triggeredBy);
         chatPusher.pushToGroup(groupId, WsConstants.AGENT_TYPING,
                 Map.of("groupId", groupId, "agentId", concluder.getId(), "agentName", concluder.getName(), "isTyping", true));
         try {
@@ -152,8 +161,8 @@ public class ChatOrchestrator {
             conclusion = ContextBuilder.stripMarkers(conclusion);
             topic.close(conclusion, concluder.getId());
             topicRepository.update(topic);
-            log.info("结论生成成功，主题已关闭, topicId={}, 总结Agent={}, 结论长度={}",
-                    topic.getId(), concluder.getName(), conclusion.length());
+            LogHelper.printLog(log, "ChatOrchestrator.generateConclusion", "结论生成成功主题已关闭",
+                    "topicId=%d 总结Agent=%s 结论长度=%d", topic.getId(), concluder.getName(), conclusion.length());
 
             long messageCount = messageRepository.countByTopicId(topic.getId());
             saveSystemNotice(groupId, topic.getId(),
@@ -168,7 +177,7 @@ public class ChatOrchestrator {
             eventPublisher.publish(new TopicClosed(topic.getId(), groupId, topic.getTitle(),
                     conclusion, messageCount, triggeredBy, concluder.getId()));
         } catch (Exception e) {
-            log.error("结论生成失败, topicId={}", topic.getId(), e);
+            LogHelper.printWarnLog(log, "ChatOrchestrator.generateConclusion", "结论生成失败", "topicId=" + topic.getId(), e);
             rollbackConclusion(topic, e.getMessage());
         } finally {
             chatPusher.pushToGroup(groupId, WsConstants.AGENT_TYPING,
@@ -205,7 +214,7 @@ public class ChatOrchestrator {
             topicRepository.update(topic);
             pushTopicStatus(topic, "CONCLUDING");
         } catch (Exception ex) {
-            log.error("结论失败回退异常, topicId={}", topic.getId(), ex);
+            LogHelper.printWarnLog(log, "ChatOrchestrator.rollbackConclusion", "回退异常", "topicId=" + topic.getId(), ex);
         }
         chatPusher.pushToGroup(topic.getChatGroupId(), WsConstants.ERROR, Map.of(
                 "success", false,
@@ -220,7 +229,8 @@ public class ChatOrchestrator {
         try {
             return llmService.chat(agent, ctx.systemPrompt(), ctx.turns());
         } catch (Exception first) {
-            log.warn("LLM 首次调用失败，重试 1 次, agent={}, 失败原因: {}", agent.getName(), first.getMessage());
+            LogHelper.printWarnLog(log, "ChatOrchestrator.chatWithRetry", "LLM首次失败重试",
+                    "agent=" + agent.getName() + " 失败原因: " + first.getMessage());
             return llmService.chat(agent, ctx.systemPrompt(), ctx.turns());
         }
     }

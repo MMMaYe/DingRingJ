@@ -2,6 +2,7 @@ package com.dingring.app.event;
 
 import com.dingring.app.service.GroupAppService;
 import com.dingring.app.service.MessageAssembler;
+import com.dingring.common.util.LogHelper;
 import com.dingring.domain.agent.Agent;
 import com.dingring.domain.agent.AgentRepository;
 import com.dingring.domain.event.TopicClosed;
@@ -51,23 +52,23 @@ public class ProfileEventHandler {
             }
             Agent extractor = resolveExtractor(event.getConcluderAgentId(), group);
             if (extractor == null) {
-                log.warn("画像提炼跳过：无可用 Agent, topicId={}", event.getTopicId());
+                LogHelper.printWarnLog(log, "ProfileEventHandler.extract", "无可用Agent跳过", "topicId=" + event.getTopicId());
                 return;
             }
             List<GroupMessage> messages = messageRepository.findRecentByTopicId(event.getTopicId(), DIALOGUE_LIMIT);
             // 用户没参与发言的讨论对画像无增量
             boolean hasUserMessage = messages.stream().anyMatch(m -> m.getSenderType() == SenderType.USER);
             if (!hasUserMessage) {
-                log.info("画像提炼跳过：本次讨论无用户发言, topicId={}", event.getTopicId());
+                LogHelper.printLog(log, "ProfileEventHandler.extract", "无用户发言跳过", "topicId=%d", event.getTopicId());
                 return;
             }
             String dialogue = messages.stream()
                     .map(m -> messageAssembler.resolveSenderName(m) + ": " + m.getContent())
                     .collect(Collectors.joining("\n"));
-            log.info("讨论结束触发画像提炼, topicId={}, 输入消息数={}", event.getTopicId(), messages.size());
+            LogHelper.printLog(log, "ProfileEventHandler.extract", "触发画像提炼", "topicId=%d 输入消息数=%d", event.getTopicId(), messages.size());
             profileService.extractAndMerge(GroupAppService.DEFAULT_USER_ID, extractor, group.getName(), dialogue);
         } catch (Exception e) {
-            log.warn("讨论结束画像提炼异常，跳过, topicId={}", event.getTopicId(), e);
+            LogHelper.printWarnLog(log, "ProfileEventHandler.extract", "画像提炼异常跳过", "topicId=" + event.getTopicId(), e);
         }
     }
 

@@ -3,6 +3,7 @@ package com.dingring.app.task;
 import com.dingring.app.orchestrator.DiscussionEngine;
 import com.dingring.app.service.ChatPusher;
 import com.dingring.common.constant.WsConstants;
+import com.dingring.common.util.LogHelper;
 import com.dingring.domain.discussion.Topic;
 import com.dingring.domain.discussion.TopicRepository;
 import lombok.RequiredArgsConstructor;
@@ -38,8 +39,8 @@ public class ConclusionWatchdog {
         List<Topic> stuck = topicRepository.findConcludingBefore(threshold);
         for (Topic topic : stuck) {
             try {
-                log.warn("发现卡死的 CONCLUDING 主题，回滚为 IN_PROGRESS, topicId={}, updateTime={}",
-                        topic.getId(), topic.getUpdateTime());
+                LogHelper.printWarnLog(log, "ConclusionWatchdog.rescueStuckTopics", "发现卡死CONCLUDING主题回滚",
+                        "topicId=%d updateTime=%s", topic.getId(), topic.getUpdateTime());
                 topic.rollbackToInProgress();
                 if (!topicRepository.update(topic)) {
                     // 乐观锁冲突：状态已被别处流转，无需处理
@@ -53,7 +54,7 @@ public class ConclusionWatchdog {
                         "previousStatus", "CONCLUDING"));
                 discussionEngine.wake(topic.getChatGroupId());
             } catch (Exception e) {
-                log.error("卡死主题回滚失败, topicId={}", topic.getId(), e);
+                LogHelper.printWarnLog(log, "ConclusionWatchdog.rescueStuckTopics", "卡死主题回滚失败", "topicId=" + topic.getId(), e);
             }
         }
     }

@@ -8,8 +8,10 @@ import com.dingring.domain.group.SenderType;
 import com.dingring.domain.service.LlmService.ChatTurn;
 import com.dingring.domain.service.MemoryService;
 import com.dingring.common.constant.PromptConstants;
+import com.dingring.common.util.LogHelper;
 import com.dingring.domain.service.ProfileService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -24,6 +26,7 @@ import java.util.function.Function;
  * 上下文构建：Agent 人设 + 滑动窗口最近 N 条消息 + 历史 Topic 结论记忆（见技术方案 6.3）。
  * <p>群聊语境：所有消息拼上发送者花名前缀合成 USER 轮次，Agent 自己的历史发言为 ASSISTANT 轮次。
  */
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class ContextBuilder {
@@ -77,7 +80,15 @@ public class ContextBuilder {
                 ? mergeChatContext(groupId, messageRepository.findRecentByTopicId(topicId, contextWindow))
                 : messageRepository.findRecentByGroupId(groupId, contextWindow);
         List<ChatTurn> turns = toTurns(agent, window, senderNameOf);
-        return new LlmContext(systemPrompt.toString(), turns);
+        String sp = systemPrompt.toString();
+        int baseLen = (agent.getSystemPrompt() != null ? agent.getSystemPrompt().length() : 0)
+                + PromptConstants.CHAT_BASE.length() + 20;
+        boolean hasMemory = sp.length() > baseLen + 50;
+        boolean hasProfile = sp.contains("画像");
+        LogHelper.printLog(log, "ContextBuilder.build", "构建完成",
+                "groupId=%d topicId=%s 消息条数=%d systemPrompt长度=%d 含记忆=%b 含画像=%b",
+                groupId, topicId, turns.size(), sp.length(), hasMemory, hasProfile);
+        return new LlmContext(sp, turns);
     }
 
     /** 讨论态附带少量闲聊：主题窗口前合并最近 N 条未归属主题的消息（近期群氛围） */
@@ -112,7 +123,10 @@ public class ContextBuilder {
             sp.append("\n\n").append(memory);
         }
         List<GroupMessage> all = messageRepository.findRecentByTopicId(topicId, contextWindow);
-        return new LlmContext(sp.toString(), toTurns(concluder, all, senderNameOf));
+        String spFinal = sp.toString();
+        LogHelper.printLog(log, "ContextBuilder.buildForConclusion", "结论上下文",
+                "topicId=%s 消息条数=%d systemPrompt长度=%d", topicId, all.size(), spFinal.length());
+        return new LlmContext(spFinal, toTurns(concluder, all, senderNameOf));
     }
 
     private String buildSystemPrompt(Agent agent, Long groupId) {

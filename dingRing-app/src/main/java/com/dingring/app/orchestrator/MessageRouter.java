@@ -1,6 +1,7 @@
 package com.dingring.app.orchestrator;
 
 import com.dingring.common.constant.PromptConstants;
+import com.dingring.common.util.LogHelper;
 import com.dingring.domain.agent.Agent;
 import com.dingring.domain.service.LlmService;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -68,12 +69,13 @@ public class MessageRouter {
                     List.of(LlmService.ChatTurn.user(userInput)),
                     new LlmService.CallOptions(ROUTE_TEMPERATURE, ROUTE_MAX_TOKENS, routeTimeoutSeconds));
             Route route = parse(raw, content);
-            log.info("消息路由判定: judge={}, intent={}, confidence={}, topicTitle={}, 原文={}",
+            LogHelper.printLog(log, "MessageRouter.route", "消息路由判定",
+                    "judge=%s intent=%s confidence=%s topicTitle=%s 原文=%s",
                     judge.getName(), route.intent(), route.confidence(), route.topicTitle(), content);
             return route;
         } catch (Exception e) {
             // 判定失败降级闲聊：宁可少建题，不可乱建题
-            log.warn("消息路由判定失败，降级 CHAT, judge={}", judge.getName(), e);
+            LogHelper.printWarnLog(log, "MessageRouter.route", "路由判定失败降级CHAT", "judge=" + judge.getName(), e);
             return Route.chat();
         }
     }
