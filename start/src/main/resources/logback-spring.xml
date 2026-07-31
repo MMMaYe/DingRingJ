@@ -36,6 +36,7 @@
             <appender-ref ref="FILE"/>
         </root>
         <logger name="com.dingring" level="DEBUG"/>
+        <logger name="com.dingring.infra.persistence.mapper" level="INFO"/>
     </springProfile>
 
     <!-- 生产环境：仅文件 -->
