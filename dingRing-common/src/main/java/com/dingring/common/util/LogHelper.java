@@ -1,6 +1,7 @@
 package com.dingring.common.util;
 
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 
 import java.lang.reflect.Method;
@@ -15,6 +16,16 @@ public final class LogHelper {
     private static final String TRACE_KEY = "traceId";
 
     private LogHelper() {
+    }
+
+    /**
+     * 获取指定类的 Logger 实例。
+     *
+     * @param clazz 目标类
+     * @return SLF4J Logger
+     */
+    public static Logger of(Class<?> clazz) {
+        return LoggerFactory.getLogger(clazz);
     }
 
     // ======================== ① 通用日志打印 ========================
