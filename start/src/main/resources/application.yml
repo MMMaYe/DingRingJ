@@ -63,6 +63,8 @@ dingring:
     concluding-timeout-minutes: 5
     # 卡片对账回溯窗口（天）
     card-reconcile-window-days: 7
+    # 意图路由 LLM 读超时（秒）：路由在群串行执行器内同步调用，短超时避免卡住全群
+    route-timeout-seconds: 15
 
 logging:
   level:

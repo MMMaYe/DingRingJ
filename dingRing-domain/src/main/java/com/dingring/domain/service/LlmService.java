@@ -21,6 +21,17 @@ public interface LlmService {
     String chat(Agent agent, String systemPrompt, List<ChatTurn> messages);
 
     /**
+     * 带单次参数覆盖的对话补全：意图分类等确定性任务用低温/小 maxTokens/短超时，
+     * 避免复用 Agent 会话参数（temperature 0.7、读超时 120s）导致判定抖动或长时间卡住调用方。
+     * <p>默认实现忽略覆盖参数回退 {@link #chat}（Mock 等实现无需感知）。
+     *
+     * @param options 单次调用参数覆盖（null = 完全沿用 Agent 配置）
+     */
+    default String chat(Agent agent, String systemPrompt, List<ChatTurn> messages, CallOptions options) {
+        return chat(agent, systemPrompt, messages);
+    }
+
+    /**
      * 流式对话补全：逐块回调 {@code onDelta}，返回拼接后的完整内容（落库语义与 {@link #chat} 一致）。
      * <p>默认实现回退非流式：不支持流式的实现/场景下整段返回，不触发 delta 回调。
      *
@@ -45,5 +56,15 @@ public interface LlmService {
         public static ChatTurn assistant(String content) {
             return new ChatTurn("ASSISTANT", content);
         }
+    }
+
+    /**
+     * 单次调用参数覆盖。字段为 null（或超时 &le;0）表示沿用 Agent 配置/全局默认。
+     *
+     * @param temperature        采样温度（分类任务建议 0）
+     * @param maxTokens          生成上限（分类输出为小 JSON，建议限小）
+     * @param readTimeoutSeconds 读超时秒数（短超时避免卡死调用方线程）
+     */
+    record CallOptions(Double temperature, Integer maxTokens, Long readTimeoutSeconds) {
     }
 }

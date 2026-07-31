@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -37,6 +38,16 @@ public class MessageRouter {
     /** 标题兜底截断长度 */
     private static final int TITLE_FALLBACK_LEN = 20;
 
+    /** 分类输出为小 JSON，限制生成上限控制成本 */
+    private static final int ROUTE_MAX_TOKENS = 256;
+
+    /** 分类要确定性输出，不复用 Agent 会话温度（默认 0.7 会导致判定抖动） */
+    private static final double ROUTE_TEMPERATURE = 0.0;
+
+    /** 路由读超时秒数：路由在群串行执行器内同步调用，短超时避免卡住全群 */
+    @Value("${dingring.orchestrator.route-timeout-seconds:15}")
+    private long routeTimeoutSeconds;
+
     private final LlmService llmService;
     private final ObjectMapper objectMapper;
 
@@ -54,7 +65,8 @@ public class MessageRouter {
                     ? "（当前群里没有进行中的讨论主题）\n用户消息：" + content
                     : "（当前群里正在讨论主题「" + activeTopicTitle + "」）\n用户消息：" + content;
             String raw = llmService.chat(judge, PromptConstants.INTENT_CLASSIFIER,
-                    List.of(LlmService.ChatTurn.user(userInput)));
+                    List.of(LlmService.ChatTurn.user(userInput)),
+                    new LlmService.CallOptions(ROUTE_TEMPERATURE, ROUTE_MAX_TOKENS, routeTimeoutSeconds));
             Route route = parse(raw, content);
             log.info("消息路由判定: judge={}, intent={}, confidence={}, topicTitle={}, 原文={}",
                     judge.getName(), route.intent(), route.confidence(), route.topicTitle(), content);

@@ -7,17 +7,20 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
  * {@link MessageRouter} 意图路由单元测试。
  * <p>核心规则：LLM 输出 JSON 解析 → Route；任何失败降级 CHAT/LOW（宁可少建题不乱建题）。
+  * <p>路由走带 {@link LlmService.CallOptions} 的低温/短超时重载，打桩针对 4 参方法。
  */
 @DisplayName("MessageRouter 意图路由")
 class MessageRouterTest {
@@ -36,7 +39,8 @@ class MessageRouterTest {
     }
 
     private void stubLlm(String raw) {
-        when(llmService.chat(any(Agent.class), anyString(), anyList())).thenReturn(raw);
+        when(llmService.chat(any(Agent.class), anyString(), anyList(),
+                any(LlmService.CallOptions.class))).thenReturn(raw);
     }
 
     @Nested
@@ -86,6 +90,19 @@ class MessageRouterTest {
             assertThat(route.intent()).isEqualTo(MessageRouter.Intent.DISCUSS);
             assertThat(route.confidence()).isEqualTo(MessageRouter.Confidence.LOW);
         }
+
+        @Test
+        @DisplayName("路由调用携带低温/限额 CallOptions（不复用 Agent 会话参数）")
+        void routeShouldUseLowTempOptions() {
+            stubLlm("{\"intent\": \"CHAT\", \"topicTitle\": \"\", \"confidence\": \"LOW\"}");
+
+            router.route(judge, "随便聊聊", null);
+
+            ArgumentCaptor<LlmService.CallOptions> captor = ArgumentCaptor.forClass(LlmService.CallOptions.class);
+            verify(llmService).chat(any(Agent.class), anyString(), anyList(), captor.capture());
+            assertThat(captor.getValue().temperature()).isZero();
+            assertThat(captor.getValue().maxTokens()).isEqualTo(256);
+        }
     }
 
     @Nested
@@ -121,7 +138,8 @@ class MessageRouterTest {
         @Test
         @DisplayName("LLM 抛异常时降级 CHAT/LOW")
         void llmFailureShouldDegradeChat() {
-            when(llmService.chat(any(Agent.class), anyString(), anyList()))
+            when(llmService.chat(any(Agent.class), anyString(), anyList(),
+                    any(LlmService.CallOptions.class)))
                     .thenThrow(new RuntimeException("LLM 超时"));
 
             MessageRouter.Route route = router.route(judge, "hello", null);

@@ -87,8 +87,9 @@ public class ChatOrchestrator {
         if (topicId == null) {
             log.info("当前群无活跃主题，消息不归属 Topic，仍正常触发调度, groupId={}", groupId);
         }
-        eventPublisher.publish(new MessageSent(message.getId(), groupId, topicId, userId,
-                SenderType.USER.name(), content, replyToMessageId, mentionedIds));
+        // 消息发送事件（先预留在这）
+//        eventPublisher.publish(new MessageSent(message.getId(), groupId, topicId, userId,
+//                SenderType.USER.name(), content, replyToMessageId, mentionedIds));
 
         // 投递信号：意图路由与应答由对话引擎异步驱动
         discussionEngine.onUserSignal(groupId, new DiscussionEngine.UserSignal(

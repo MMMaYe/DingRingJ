@@ -49,9 +49,14 @@ public class SpringAiLlmService implements LlmService {
 
     @Override
     public String chat(Agent agent, String systemPrompt, List<ChatTurn> messages) {
+        return chat(agent, systemPrompt, messages, null);
+    }
+
+    @Override
+    public String chat(Agent agent, String systemPrompt, List<ChatTurn> messages, CallOptions options) {
         long startAt = System.currentTimeMillis();
         try {
-            OpenAiChatModel chatModel = buildChatModel(agent);
+            OpenAiChatModel chatModel = buildChatModel(agent, options);
             List<Message> aiMessages = toAiMessages(systemPrompt, messages);
             log.info("LLM 请求开始, agent={}, model={}, baseUrl={}, systemPrompt长度={}, 上下文轮数={}",
                     agent.getName(), agent.getModelName(), agent.getBaseUrl(),
@@ -82,7 +87,7 @@ public class SpringAiLlmService implements LlmService {
     public String chatStream(Agent agent, String systemPrompt, List<ChatTurn> messages, Consumer<String> onDelta) {
         long startAt = System.currentTimeMillis();
         try {
-            OpenAiChatModel chatModel = buildChatModel(agent);
+            OpenAiChatModel chatModel = buildChatModel(agent, null);
             List<Message> aiMessages = toAiMessages(systemPrompt, messages);
             log.info("LLM 流式请求开始, agent={}, model={}, baseUrl={}, systemPrompt长度={}, 上下文轮数={}",
                     agent.getName(), agent.getModelName(), agent.getBaseUrl(),
@@ -135,11 +140,19 @@ public class SpringAiLlmService implements LlmService {
         return aiMessages;
     }
 
-    private OpenAiChatModel buildChatModel(Agent agent) {
+    private OpenAiChatModel buildChatModel(Agent agent, CallOptions options) {
+        // 单次覆盖参数优先，未指定则沿用 Agent 配置/全局默认（意图分类等确定性任务需低温/短超时）
+        double temperature = options != null && options.temperature() != null
+                ? options.temperature() : agent.temperature();
+        int maxTokens = options != null && options.maxTokens() != null
+                ? options.maxTokens() : agent.maxTokens();
+        long readTimeout = options != null && options.readTimeoutSeconds() != null
+                && options.readTimeoutSeconds() > 0
+                ? options.readTimeoutSeconds() : readTimeoutSeconds;
         UrlParts parts = resolveUrl(agent.getBaseUrl());
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
         requestFactory.setConnectTimeout(Duration.ofSeconds(connectTimeoutSeconds));
-        requestFactory.setReadTimeout(Duration.ofSeconds(readTimeoutSeconds));
+        requestFactory.setReadTimeout(Duration.ofSeconds(readTimeout));
         // 流式走 WebClient（无 reactor-netty，用 JDK HttpClient 连接器）；读超时由 Flux.timeout 块间控制
         HttpClient jdkHttpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(connectTimeoutSeconds))
@@ -151,14 +164,14 @@ public class SpringAiLlmService implements LlmService {
                 .restClientBuilder(RestClient.builder().requestFactory(requestFactory))
                 .webClientBuilder(WebClient.builder().clientConnector(new JdkClientHttpConnector(jdkHttpClient)))
                 .build();
-        OpenAiChatOptions options = OpenAiChatOptions.builder()
+        OpenAiChatOptions chatOptions = OpenAiChatOptions.builder()
                 .model(agent.getModelName())
-                .temperature(agent.temperature())
-                .maxTokens(agent.maxTokens())
+                .temperature(temperature)
+                .maxTokens(maxTokens)
                 .build();
         return OpenAiChatModel.builder()
                 .openAiApi(openAiApi)
-                .defaultOptions(options)
+                .defaultOptions(chatOptions)
                 .build();
     }
 
