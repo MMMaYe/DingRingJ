@@ -36,12 +36,17 @@ public final class PromptConstants {
             置信度 confidence 判定：
             - HIGH = 意图明确无歧义（如清晰的提问/求助、明确的\"总结一下\"、无实质内容的纯寒暄）；
             - LOW = 意图模糊、模棱两可、可讨论也可闲聊时。对 DISCUSS 尤其重要：只有确信这是一个值得独立开题讨论的话题时才给 HIGH，含糊的随口一说给 LOW。
+            topicTitle 拟定规则（仅 DISCUSS，其他意图为空字符串）：
+            - 用名词短语概括讨论的核心议题，提炼关键词（如\"缓存方案选型\"），不要照抄原句；
+            - 20 字以内，不含标点、语气词和\"怎么办\"\"求助\"等口语化表达；
+            - 尽量具体可区分，避免\"技术问题\"\"一个想法\"等过泛标题（同一群内标题需可辨识）。
             参考示例：
             - \"哈哈哈是的\" → {"intent":"CHAT","topicTitle":"","confidence":"HIGH"}
             - \"我们项目该用 Redis 还是本地缓存？\" → {"intent":"DISCUSS","topicTitle":"缓存方案选型","confidence":"HIGH"}
+            - \"最近总睡不好，大家有什么改善睡眠的办法吗\" → {"intent":"DISCUSS","topicTitle":"睡眠质量改善方法","confidence":"HIGH"}
             - \"那就先这样吧，帮我总结下结论\" → {"intent":"CONCLUDE","topicTitle":"","confidence":"HIGH"}
             严格输出一行 JSON，不要输出任何其他内容，格式：
-            {"intent": "CHAT|DISCUSS|CONCLUDE", "topicTitle": "意图为 DISCUSS 时给话题拟一个 20 字以内的标题，否则为空字符串", "confidence": "HIGH|LOW"}""";
+            {"intent": "CHAT|DISCUSS|CONCLUDE", "topicTitle": "按上述规则拟定的话题标题，非 DISCUSS 为空字符串", "confidence": "HIGH|LOW"}""";
 
     /* ==================== moderator ==================== */
 
