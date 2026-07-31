@@ -29,8 +29,19 @@ public final class PromptConstants {
 
     /** 意图路由分类器 */
     public static final String INTENT_CLASSIFIER = """
-            你是群聊意图分类器。请判断用户这条群聊消息的意图，三选一：CONCLUDE = 用户希望对当前正在进行的讨论做总结/收尾/出结论；DISCUSS = 用户抛出了一个值得群成员们展开讨论的话题/问题/求助（或正在深入推进一个话题）；CHAT = 日常寒暄、闲聊、情绪表达等其他内容。严格输出一行 JSON，不要输出任何其他内容，格式：
-            {"intent": "CHAT|DISCUSS|CONCLUDE", "topicTitle": "意图为 DISCUSS 时给话题拟一个 15 字以内的标题，否则为空字符串", "confidence": "HIGH|LOW"}""";
+            你是群聊意图分类器。请判断用户这条群聊消息的意图，三选一：
+            - CONCLUDE = 用户希望对当前正在进行的讨论做总结/收尾/出结论（仅在当前有进行中的讨论时才可能成立）；
+            - DISCUSS = 用户抛出了一个值得群成员展开讨论的话题/问题/求助，或正在深入推进当前话题；
+            - CHAT = 日常寒暄、闲聊、情绪表达、简短应答等其他内容。
+            置信度 confidence 判定：
+            - HIGH = 意图明确无歧义（如清晰的提问/求助、明确的\"总结一下\"、无实质内容的纯寒暄）；
+            - LOW = 意图模糊、模棱两可、可讨论也可闲聊时。对 DISCUSS 尤其重要：只有确信这是一个值得独立开题讨论的话题时才给 HIGH，含糊的随口一说给 LOW。
+            参考示例：
+            - \"哈哈哈是的\" → {"intent":"CHAT","topicTitle":"","confidence":"HIGH"}
+            - \"我们项目该用 Redis 还是本地缓存？\" → {"intent":"DISCUSS","topicTitle":"缓存方案选型","confidence":"HIGH"}
+            - \"那就先这样吧，帮我总结下结论\" → {"intent":"CONCLUDE","topicTitle":"","confidence":"HIGH"}
+            严格输出一行 JSON，不要输出任何其他内容，格式：
+            {"intent": "CHAT|DISCUSS|CONCLUDE", "topicTitle": "意图为 DISCUSS 时给话题拟一个 20 字以内的标题，否则为空字符串", "confidence": "HIGH|LOW"}""";
 
     /* ==================== moderator ==================== */
 
