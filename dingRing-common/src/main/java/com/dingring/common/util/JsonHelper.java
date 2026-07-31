@@ -1,30 +1,26 @@
 package com.dingring.common.util;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.JavaType;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONObject;
+import com.alibaba.fastjson.TypeReference;
+import com.alibaba.fastjson.serializer.SerializerFeature;
 import org.slf4j.Logger;
 
+import java.lang.reflect.Type;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
 /**
- * JSON 辅助工具：基于 Jackson {@link ObjectMapper} 的常用操作封装。
- * <p>内部持有静态 ObjectMapper 单例，所有方法均为 {@code public static}。
+ * JSON 辅助工具：基于 fastjson 的常用操作封装。
+ * <p>所有方法均为 {@code public static}，异常时返回 null 或默认值。
  */
 public final class JsonHelper {
 
     private static final Logger log = LogHelper.of(JsonHelper.class);
 
-    private static final ObjectMapper MAPPER = new ObjectMapper()
-            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
-            .configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
-
     private JsonHelper() {
+        throw new UnsupportedOperationException("工具类不允许实例化");
     }
 
     // ======================== ① 序列化 ========================
@@ -40,8 +36,8 @@ public final class JsonHelper {
             return null;
         }
         try {
-            return MAPPER.writeValueAsString(obj);
-        } catch (JsonProcessingException e) {
+            return JSON.toJSONString(obj);
+        } catch (Exception e) {
             log.error("[Json][序列化] toJson 失败: {}", e.getMessage(), e);
             return null;
         }
@@ -58,9 +54,27 @@ public final class JsonHelper {
             return null;
         }
         try {
-            return MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(obj);
-        } catch (JsonProcessingException e) {
+            return JSON.toJSONString(obj, SerializerFeature.PrettyFormat);
+        } catch (Exception e) {
             log.error("[Json][序列化] toJsonPretty 失败: {}", e.getMessage(), e);
+            return null;
+        }
+    }
+
+    /**
+     * 将 Map 对象序列化为 JSON 字符串。
+     *
+     * @param map Map 对象
+     * @return JSON 字符串；map 为 null/空或异常时返回 null
+     */
+    public static String mapToJson(Map<String, Object> map) {
+        if (map == null || map.isEmpty()) {
+            return null;
+        }
+        try {
+            return JSON.toJSONString(map);
+        } catch (Exception e) {
+            log.error("[Json][序列化] mapToJson 失败, size={}: {}", map.size(), e.getMessage(), e);
             return null;
         }
     }
@@ -76,11 +90,11 @@ public final class JsonHelper {
      * @return 反序列化后的对象；json 为空或异常时返回 null
      */
     public static <T> T fromJson(String json, Class<T> clazz) {
-        if (json == null || json.isEmpty()) {
+        if (json == null || json.isEmpty() || clazz == null) {
             return null;
         }
         try {
-            return MAPPER.readValue(json, clazz);
+            return JSON.parseObject(json, clazz);
         } catch (Exception e) {
             log.error("[Json][反序列化] fromJson({}) 失败: {}", clazz.getSimpleName(), e.getMessage(), e);
             return null;
@@ -96,11 +110,11 @@ public final class JsonHelper {
      * @return 反序列化后的对象；json 为空或异常时返回 null
      */
     public static <T> T fromJson(String json, TypeReference<T> typeReference) {
-        if (json == null || json.isEmpty()) {
+        if (json == null || json.isEmpty() || typeReference == null) {
             return null;
         }
         try {
-            return MAPPER.readValue(json, typeReference);
+            return JSON.parseObject(json, typeReference.getType());
         } catch (Exception e) {
             log.error("[Json][反序列化] fromJson(TypeReference) 失败: {}", e.getMessage(), e);
             return null;
@@ -108,21 +122,21 @@ public final class JsonHelper {
     }
 
     /**
-     * 将 JSON 字符串反序列化为 {@link JavaType} 指定的对象。
+     * 将 JSON 字符串反序列化为 {@link Type} 指定的对象。
      *
-     * @param json     JSON 字符串
-     * @param javaType Jackson JavaType
-     * @param <T>      泛型
+     * @param json JSON 字符串
+     * @param type 目标类型
+     * @param <T>  泛型
      * @return 反序列化后的对象；json 为空或异常时返回 null
      */
-    public static <T> T fromJson(String json, JavaType javaType) {
-        if (json == null || json.isEmpty()) {
+    public static <T> T fromJson(String json, Type type) {
+        if (json == null || json.isEmpty() || type == null) {
             return null;
         }
         try {
-            return MAPPER.readValue(json, javaType);
+            return JSON.parseObject(json, type);
         } catch (Exception e) {
-            log.error("[Json][反序列化] fromJson(JavaType) 失败: {}", e.getMessage(), e);
+            log.error("[Json][反序列化] fromJson(Type) 失败: {}", e.getMessage(), e);
             return null;
         }
     }
@@ -140,7 +154,7 @@ public final class JsonHelper {
             return Collections.emptyMap();
         }
         try {
-            return MAPPER.readValue(json, new TypeReference<Map<String, Object>>() {});
+            return JSON.parseObject(json, new TypeReference<Map<String, Object>>() {});
         } catch (Exception e) {
             log.error("[Json][集合] toMap 失败: {}", e.getMessage(), e);
             return Collections.emptyMap();
@@ -156,12 +170,11 @@ public final class JsonHelper {
      * @return List 对象；json 为空或异常时返回空 List
      */
     public static <T> List<T> toList(String json, Class<T> clazz) {
-        if (json == null || json.isEmpty()) {
+        if (json == null || json.isEmpty() || clazz == null) {
             return Collections.emptyList();
         }
         try {
-            JavaType type = MAPPER.getTypeFactory().constructCollectionType(List.class, clazz);
-            return MAPPER.readValue(json, type);
+            return JSON.parseArray(json, clazz);
         } catch (Exception e) {
             log.error("[Json][集合] toList({}) 失败: {}", clazz.getSimpleName(), e.getMessage(), e);
             return Collections.emptyList();
@@ -181,7 +194,7 @@ public final class JsonHelper {
             return false;
         }
         try {
-            MAPPER.readTree(str);
+            JSON.parse(str);
             return true;
         } catch (Exception e) {
             return false;
@@ -200,23 +213,11 @@ public final class JsonHelper {
             return null;
         }
         try {
-            var node = MAPPER.readTree(json);
-            var valueNode = node.get(key);
-            return valueNode == null || valueNode.isNull() ? null : valueNode.asText();
+            JSONObject jsonObject = JSON.parseObject(json);
+            return jsonObject != null ? jsonObject.getString(key) : null;
         } catch (Exception e) {
             log.error("[Json][取值] getStringValue(key={}) 失败: {}", key, e.getMessage(), e);
             return null;
         }
-    }
-
-    // ======================== ⑤ 内部实例暴露 ========================
-
-    /**
-     * 返回内部 {@link ObjectMapper} 单例，供需要自定义配置的场景使用。
-     *
-     * @return ObjectMapper 实例
-     */
-    public static ObjectMapper getObjectMapper() {
-        return MAPPER;
     }
 }
