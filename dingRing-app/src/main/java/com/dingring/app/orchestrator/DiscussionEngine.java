@@ -524,7 +524,7 @@ public class DiscussionEngine {
                 .repliedToAgentId(replyToId)
                 .speakCounts(speakCounts)
                 .build();
-        SpeakResult result = speakOnce(candidates, ctx, preferredAgentId, guidance);
+        SpeakResult result = speakOnce(candidates, all, ctx, preferredAgentId, guidance);
         switch (result.outcome()) {
             case CONCLUDED, FAILED -> {
                 return true;
@@ -550,17 +550,18 @@ public class DiscussionEngine {
     /**
      * 一次发言：按评分降序为降级链依次尝试（重试 1 次后接力下一个 Agent）。
      * <p>讨论态（topicId != null）：空内容/[[PASS]] 视为跳过本轮；[[CONCLUDE]] 触发收束。
-     * <p>闲聊态：空内容视为选择不发言。
+     * <p>闲聊态：空内容视为选择不发言。无 PASS 过滤，候选即群内全量成员。
      */
-    private SpeakResult speakOnce(List<Agent> candidates, MessageContext ctx) {
-        return speakOnce(candidates, ctx, null, null);
+    private SpeakResult speakOnce(List<Agent> agents, MessageContext ctx) {
+        return speakOnce(agents, agents, ctx, null, null);
     }
 
     /**
      * 一次发言（可选 Moderator 增强）：主持人指定的发言者提到降级链首位，
      * 引导语注入 system prompt 尾部（不入库不广播）。
+     * <p>members 为群内全量成员（含已 PASS 者），用于上下文中的成员名单注入。
      */
-    private SpeakResult speakOnce(List<Agent> candidates, MessageContext ctx,
+    private SpeakResult speakOnce(List<Agent> candidates, List<Agent> members, MessageContext ctx,
                                   Long preferredAgentId, String moderatorGuidance) {
         boolean topicMode = ctx.getTopicId() != null;
         if (candidates.isEmpty()) {
@@ -583,7 +584,7 @@ public class DiscussionEngine {
             pushTyping(ctx.getGroupId(), agent, true);
             try {
                 ContextBuilder.LlmContext llmCtx = contextBuilder.build(
-                        agent, ctx.getGroupId(), ctx.getTopicId(), messageAssembler::resolveSenderName);
+                        agent, members, ctx.getGroupId(), ctx.getTopicId(), messageAssembler::resolveSenderName);
                 if (moderatorGuidance != null && !moderatorGuidance.isBlank()) {
                     llmCtx = new ContextBuilder.LlmContext(
                             llmCtx.systemPrompt() + "\n\n主持人提示：" + moderatorGuidance,

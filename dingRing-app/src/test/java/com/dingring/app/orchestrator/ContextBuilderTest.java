@@ -90,7 +90,7 @@ class ContextBuilderTest {
             Agent self = agent(10L, "老王", "你是后端专家");
             when(messageRepository.findRecentByTopicId(100L, 200)).thenReturn(List.of());
 
-            ContextBuilder.LlmContext ctx = contextBuilder.build(self, 1L, 100L, m -> "用户");
+            ContextBuilder.LlmContext ctx = contextBuilder.build(self, List.of(self), 1L, 100L, m -> "用户");
 
             assertThat(ctx.turns()).hasSize(1);
             assertThat(ctx.turns().get(0).role()).isEqualTo("USER");
@@ -106,7 +106,7 @@ class ContextBuilderTest {
                     agentMsg(2L, 10L, "补充一下：可以用 ZSET 排序")
             ));
 
-            ContextBuilder.LlmContext ctx = contextBuilder.build(self, 1L, 100L, m -> "老王");
+            ContextBuilder.LlmContext ctx = contextBuilder.build(self, List.of(self), 1L, 100L, m -> "老王");
 
             assertThat(ctx.turns()).extracting(ChatTurn::role)
                     .containsExactly("ASSISTANT", "ASSISTANT");
@@ -123,7 +123,7 @@ class ContextBuilderTest {
                     userMsg(2L, 1L, "用户A", "怎么避免？")
             ));
 
-            ContextBuilder.LlmContext ctx = contextBuilder.build(self, 1L, 100L, m -> "用户A");
+            ContextBuilder.LlmContext ctx = contextBuilder.build(self, List.of(self), 1L, 100L, m -> "用户A");
 
             assertThat(ctx.turns()).hasSize(1);
             ChatTurn turn = ctx.turns().get(0);
@@ -141,7 +141,7 @@ class ContextBuilderTest {
                     userMsg(3L, 1L, "用户", "继续说说")
             ));
 
-            ContextBuilder.LlmContext ctx = contextBuilder.build(self, 1L, 100L, m -> "用户");
+            ContextBuilder.LlmContext ctx = contextBuilder.build(self, List.of(self), 1L, 100L, m -> "用户");
 
             assertThat(ctx.turns()).extracting(ChatTurn::role)
                     .containsExactly("USER", "ASSISTANT", "USER");
@@ -156,12 +156,39 @@ class ContextBuilderTest {
             when(memoryService.retrieveMemory(1L)).thenReturn("历史结论：Redis 用 ZSET");
             when(messageRepository.findRecentByTopicId(100L, 200)).thenReturn(List.of());
 
-            ContextBuilder.LlmContext ctx = contextBuilder.build(self, 1L, 100L, m -> "用户");
+            ContextBuilder.LlmContext ctx = contextBuilder.build(self, List.of(self), 1L, 100L, m -> "用户");
 
             assertThat(ctx.systemPrompt())
                     .contains("你是后端架构师")              // 人设
                     .contains("你的花名是「老王」")          // 群聊语境
                     .contains("历史结论：Redis 用 ZSET");    // 历史记忆
+        }
+
+        @Test
+        @DisplayName("systemPrompt 含群成员名单：本人标「你」，他人带简介")
+        void systemPromptShouldContainMemberRoster() {
+            Agent self = agent(10L, "老王", "你是后端架构师。擅长分布式系统");
+            Agent other = agent(11L, "小李", null);
+            other.setDescription("产品经理，关注用户价值");
+            when(messageRepository.findRecentByTopicId(100L, 200)).thenReturn(List.of());
+
+            ContextBuilder.LlmContext ctx = contextBuilder.build(self, List.of(self, other), 1L, 100L, m -> "用户");
+
+            assertThat(ctx.systemPrompt())
+                    .contains("群成员名单")                        // 名单段存在
+                    .contains("- 你（老王）：你是后端架构师")     // 本人标「你」+ 人设首句
+                    .contains("- 小李：产品经理，关注用户价值"); // 他人用 description
+        }
+
+        @Test
+        @DisplayName("成员列表为空时不注入名单段")
+        void emptyMembersShouldSkipRoster() {
+            Agent self = agent(10L, "老王", null);
+            when(messageRepository.findRecentByTopicId(100L, 200)).thenReturn(List.of());
+
+            ContextBuilder.LlmContext ctx = contextBuilder.build(self, List.of(), 1L, 100L, m -> "用户");
+
+            assertThat(ctx.systemPrompt()).doesNotContain("群成员名单");
         }
 
         @Test
@@ -172,7 +199,7 @@ class ContextBuilderTest {
                     userMsg(1L, 1L, "用户", "hi")
             ));
 
-            ContextBuilder.LlmContext ctx = contextBuilder.build(self, 1L, null, m -> "用户");
+            ContextBuilder.LlmContext ctx = contextBuilder.build(self, List.of(self), 1L, null, m -> "用户");
 
             assertThat(ctx.turns()).hasSize(1);
             assertThat(ctx.turns().get(0).content()).isEqualTo("用户: hi");

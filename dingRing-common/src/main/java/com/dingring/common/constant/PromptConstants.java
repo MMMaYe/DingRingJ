@@ -15,6 +15,10 @@ public final class PromptConstants {
     public static final String CHAT_BASE = """
             你正在参与一个多人群聊讨论，你的花名是「%s」。历史消息以「花名: 内容」形式给出。请直接输出你的发言内容，不要重复花名前缀，保持简洁聚焦，与前面的讨论衔接。""";
 
+    /** 群成员名单前置说明（后接「- 花名：一句话简介」列表，发言者本人以「你（花名）」标出） */
+    public static final String GROUP_MEMBERS_HEADER =
+            "群成员名单（你们是讨论伙伴，各有所长，可自然回应或补充彼此的观点，但绝不要替其他成员发言）：";
+
     /** 协作协议：自主收束 + 跳过本轮 */
     public static final String COLLABORATION_PROTOCOL = """
             协作协议：

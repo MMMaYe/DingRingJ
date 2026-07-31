@@ -60,18 +60,23 @@ public class ContextBuilder {
     @Value("${dingring.orchestrator.chat-context-window:20}")
     private int chatContextWindow;
 
+    /** 成员一句话简介最大长度（防名单撑爆 token） */
+    private static final int MEMBER_INTRO_MAX_LEN = 30;
+
     /**
      * 构建 Agent 发言的完整上下文。
      *
      * @param agent           发言 Agent
+     * @param members         群内全部成员 Agent（含发言者自己，用于拼接成员名单）
      * @param groupId         群 ID
      * @param topicId         主题 ID（null = 闲聊，取群窗口）
      * @param senderNameOf    发送者名称解析函数
      * @return system prompt + 对话轮次
      */
-    public LlmContext build(Agent agent, Long groupId, Long topicId,
+    public LlmContext build(Agent agent, List<Agent> members, Long groupId, Long topicId,
                             Function<GroupMessage, String> senderNameOf) {
-        StringBuilder systemPrompt = new StringBuilder(buildSystemPrompt(agent, groupId));
+        String roster = buildMemberRoster(agent, members);
+        StringBuilder systemPrompt = new StringBuilder(buildSystemPrompt(agent, roster, groupId));
         if (topicId != null) {
             // 协作协议：自主收束 + 跳过本轮
             systemPrompt.append("\n\n").append(PromptConstants.COLLABORATION_PROTOCOL);
@@ -82,7 +87,7 @@ public class ContextBuilder {
         List<ChatTurn> turns = toTurns(agent, window, senderNameOf);
         String sp = systemPrompt.toString();
         int baseLen = (agent.getSystemPrompt() != null ? agent.getSystemPrompt().length() : 0)
-                + PromptConstants.CHAT_BASE.length() + 20;
+                + PromptConstants.CHAT_BASE.length() + roster.length() + 20;
         boolean hasMemory = sp.length() > baseLen + 50;
         boolean hasProfile = sp.contains("画像");
         LogHelper.printLog(log, "ContextBuilder.build", "构建完成",
@@ -129,12 +134,15 @@ public class ContextBuilder {
         return new LlmContext(spFinal, toTurns(concluder, all, senderNameOf));
     }
 
-    private String buildSystemPrompt(Agent agent, Long groupId) {
+    private String buildSystemPrompt(Agent agent, String memberRoster, Long groupId) {
         StringBuilder sp = new StringBuilder();
         if (agent.getSystemPrompt() != null && !agent.getSystemPrompt().isBlank()) {
             sp.append(agent.getSystemPrompt());
         }
         sp.append("\n\n").append(String.format(PromptConstants.CHAT_BASE, agent.getName()));
+        if (!memberRoster.isBlank()) {
+            sp.append("\n\n").append(memberRoster);
+        }
         String memory = memoryService.retrieveMemory(groupId);
         if (!memory.isBlank()) {
             sp.append("\n\n").append(memory);
@@ -146,6 +154,35 @@ public class ContextBuilder {
                     .append(profile);
         }
         return sp.toString();
+    }
+
+    /** 群成员名单段：花名 + 一句话简介，发言者本人标「你」强化自我认知（抑制冒充他人发言） */
+    private String buildMemberRoster(Agent self, List<Agent> members) {
+        if (members == null || members.isEmpty()) {
+            return "";
+        }
+        StringBuilder roster = new StringBuilder(PromptConstants.GROUP_MEMBERS_HEADER);
+        for (Agent m : members) {
+            boolean isSelf = self.getId() != null && self.getId().equals(m.getId());
+            roster.append("\n- ").append(isSelf ? "你（" + m.getName() + "）" : m.getName());
+            String intro = memberIntro(m);
+            if (!intro.isBlank()) {
+                roster.append("：").append(intro);
+            }
+        }
+        return roster.toString();
+    }
+
+    /** 成员一句话简介：优先性格描述，否则取人设首句（不重复注入完整 systemPrompt） */
+    private String memberIntro(Agent m) {
+        String source = m.getDescription() != null && !m.getDescription().isBlank()
+                ? m.getDescription()
+                : m.getSystemPrompt();
+        if (source == null || source.isBlank()) {
+            return "";
+        }
+        String first = source.strip().split("[。\n！？!?]", 2)[0].strip();
+        return first.length() > MEMBER_INTRO_MAX_LEN ? first.substring(0, MEMBER_INTRO_MAX_LEN) : first;
     }
 
     /**

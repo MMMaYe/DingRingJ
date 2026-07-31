@@ -165,7 +165,7 @@ class DiscussionEngineTest {
                     .map(a -> new SpeakerScheduler.ScoredAgent(a, 100, "测试"))
                     .toList();
         });
-        when(contextBuilder.build(any(), anyLong(), any(), any()))
+        when(contextBuilder.build(any(), anyList(), anyLong(), any(), any()))
                 .thenReturn(new ContextBuilder.LlmContext("sp", List.of(LlmService.ChatTurn.user("hi"))));
     }
 
