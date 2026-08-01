@@ -16,6 +16,7 @@ import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.openai.OpenAiChatModel;
 import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.ai.openai.api.OpenAiApi;
+import org.springframework.ai.openai.api.ResponseFormat;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
@@ -177,7 +178,10 @@ public class SpringAiLlmService implements LlmService {
                 .build();
         OpenAiChatOptions chatOptions = OpenAiChatOptions.builder()
                 .model(agent.getModelName())
+                //temperature和topP统称为核采样（nucleus sampling）技术，用于控制生成文本的随机性与确定性
+                //一般只建议调整其中一个参数
                 .temperature(temperature)
+//                .topP(0.95)
                 .maxTokens(maxTokens)
                 .build();
         return OpenAiChatModel.builder()
