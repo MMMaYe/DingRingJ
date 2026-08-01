@@ -33,7 +33,7 @@ public class Agent {
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
 
-    private static final double DEFAULT_TEMPERATURE = 0.7;
+    private static final double DEFAULT_TEMPERATURE = 1.0;
     private static final int DEFAULT_MAX_TOKENS = 4096;
 
     public double temperature() {
