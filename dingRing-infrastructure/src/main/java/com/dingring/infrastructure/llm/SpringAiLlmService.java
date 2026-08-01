@@ -5,6 +5,7 @@ import com.dingring.common.exception.ErrorCode;
 import com.dingring.common.util.LogHelper;
 import com.dingring.domain.agent.Agent;
 import com.dingring.domain.service.LlmService;
+import com.dingring.infrastructure.aop.Event;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.Message;
@@ -53,6 +54,7 @@ public class SpringAiLlmService implements LlmService {
         return chat(agent, systemPrompt, messages, null);
     }
 
+    @Event(eventCode = "CHAT_TO_LLM", eventName = "非流式调用LLM")
     @Override
     public String chat(Agent agent, String systemPrompt, List<ChatTurn> messages, CallOptions options) {
         long startAt = System.currentTimeMillis();
@@ -88,6 +90,7 @@ public class SpringAiLlmService implements LlmService {
     }
 
     @Override
+    @Event(eventCode = "CHAT_TO_LLM", eventName = "流式调用LLM")
     public String chatStream(Agent agent, String systemPrompt, List<ChatTurn> messages, Consumer<String> onDelta) {
         long startAt = System.currentTimeMillis();
         try {

@@ -717,6 +717,7 @@ public class DiscussionEngine {
     }
 
     /** LLM 调用（失败重试 1 次）；流式模式下重试前废弃旧流、换新 streamId 重开 */
+    @Event(eventCode = "CHAT", eventName = "调用LLM")
     private String chatWithRetry(Agent agent, ContextBuilder.LlmContext ctx, StreamEmitter emitter) {
         try {
             return emitter != null
@@ -779,6 +780,7 @@ public class DiscussionEngine {
     }
 
     /** Moderator 指定的发言者提到降级链首位（不在候选内则忽略，其余顺序不变） */
+    @Event(eventCode = "PROMOTE_PREFERRED", eventName = "Moderator指定发言者提前")
     private List<SpeakerScheduler.ScoredAgent> promotePreferred(
             List<SpeakerScheduler.ScoredAgent> ranked, Long preferredAgentId) {
         if (preferredAgentId == null) {
