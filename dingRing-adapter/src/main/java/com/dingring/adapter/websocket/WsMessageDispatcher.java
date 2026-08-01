@@ -6,6 +6,7 @@ import com.dingring.app.service.TopicAppService;
 import com.dingring.common.constant.WsConstants;
 import com.dingring.common.exception.BizException;
 import com.dingring.common.exception.ErrorCode;
+import com.dingring.common.util.JsonHelper;
 import com.dingring.common.util.LogHelper;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -35,12 +36,14 @@ public class WsMessageDispatcher {
      */
     public void dispatch(Long groupId, WebSocketSession session, String payload) {
         LogHelper.putTrace(groupId, null);
+        LogHelper.printLog(WsMessageDispatcher.class, "WsMessageDispatcher.dispatch", "DISPATCH", "开始执行dispatch",
+                "groupId={} session={}", groupId, JsonHelper.toJson(session));
         try {
             JsonNode root = objectMapper.readTree(payload);
             String type = root.path("type").asText("");
             JsonNode data = root.path("data");
-            LogHelper.printLog(log, "WsMessageDispatcher.dispatch", "收到入站消息",
-                    "groupId=%d type=%s payload=%s", groupId, type, payload);
+            LogHelper.printLog(WsMessageDispatcher.class, "WsMessageDispatcher.dispatch", "DISPATCH", "收到入站消息",
+                    JsonHelper.mapToJson(Map.of("groupId", groupId, "type", type, "payload", payload)));
             switch (type) {
                 case WsConstants.SEND_MESSAGE -> chatOrchestrator.onUserMessage(
                         groupId, GroupAppService.DEFAULT_USER_ID,
@@ -52,16 +55,16 @@ public class WsMessageDispatcher {
                 case WsConstants.CONCLUDE_TOPIC -> topicAppService.conclude(
                         data.path("topicId").asLong());
                 default -> {
-                    LogHelper.printWarnLog(log, "WsMessageDispatcher.dispatch", "未知消息类型已忽略", "groupId=" + groupId + " type=" + type);
+                    LogHelper.printWarnLog(WsMessageDispatcher.class, "WsMessageDispatcher.dispatch", "DISPATCH", "未知消息类型已忽略", "groupId={} type={}", groupId, type);
                     pushError(session, ErrorCode.PARAM_INVALID, "未知消息类型: " + type);
                 }
             }
         } catch (BizException e) {
-            LogHelper.printWarnLog(log, "WsMessageDispatcher.dispatch", "消息处理业务异常",
-                    "groupId=" + groupId + " errorCode=" + e.getErrorCode() + " message=" + e.getMessage());
+            LogHelper.printWarnLog(WsMessageDispatcher.class, "WsMessageDispatcher.dispatch", "DISPATCH", "消息处理业务异常",
+                    "groupId={} errorCode={} message={}", groupId, e.getErrorCode(), e.getMessage());
             pushError(session, e.getErrorCode(), e.getMessage());
         } catch (Exception e) {
-            LogHelper.printWarnLog(log, "WsMessageDispatcher.dispatch", "消息处理异常", "groupId=" + groupId + " payload=" + payload, e);
+            LogHelper.printWarnLog(WsMessageDispatcher.class, "WsMessageDispatcher.dispatch", "DISPATCH", "消息处理异常", "groupId={} payload={}", groupId, payload, e);
             pushError(session, ErrorCode.INTERNAL_ERROR, ErrorCode.INTERNAL_ERROR.getDefaultMessage());
         } finally {
             LogHelper.clearTrace();

@@ -1,8 +1,8 @@
 package com.dingring.infrastructure.llm;
 
+import com.dingring.common.util.LogHelper;
 import com.dingring.domain.agent.Agent;
 import com.dingring.domain.service.LlmService;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
@@ -14,7 +14,6 @@ import java.util.function.Consumer;
  * Mock LLM 实现（dingring.llm.mock=true 启用），无需真实 API Key 即可演示核心闭环。
  * <p>根据 systemPrompt 中的任务标记返回模拟发言 / STAR 结论 / 卡片 JSON。
  */
-@Slf4j
 @Service
 @ConditionalOnProperty(name = "dingring.llm.mock", havingValue = "true")
 public class MockLlmService implements LlmService {
@@ -32,7 +31,7 @@ public class MockLlmService implements LlmService {
             reply = mockReply(agent, lastUser);
         }
         // 与真实 LLM 实现保持一致：完整输出不截断，便于链路观测
-        log.info("Mock LLM 响应, agent={}, 长度={}, 完整内容:\n{}", agent.getName(), reply.length(), reply);
+        LogHelper.printLog(MockLlmService.class, "MockLlmService.chat", "MOCK_LLM_RESP", "Mock LLM 响应", "agent={} length={} content=\n{}", agent.getName(), reply.length(), reply);
         return reply;
     }
 

@@ -48,15 +48,15 @@ public class CardReconciler {
                 }
                 Long concluderAgentId = topic.concludedByAgentId().orElse(null);
                 if (concluderAgentId == null) {
-                    LogHelper.printWarnLog(log, "CardReconciler.reconcile", "主题无总结Agent记录跳过", "topicId=" + topic.getId());
+                    LogHelper.printWarnLog(CardReconciler.class, "CardReconciler.reconcile", "RECONCILE", "主题无总结Agent记录跳过", "topicId={}", topic.getId());
                     continue;
                 }
-                LogHelper.printLog(log, "CardReconciler.reconcile", "发现无卡片已关闭主题补生成", "topicId=%d", topic.getId());
+                LogHelper.printLog(CardReconciler.class, "CardReconciler.reconcile", "RECONCILE", "发现无卡片已关闭主题补生成", "topicId={}", topic.getId());
                 cardEventHandler.generateCards(new TopicClosed(
                         topic.getId(), topic.getChatGroupId(), topic.getTitle(), topic.getConclusion(),
                         messageRepository.countByTopicId(topic.getId()), "RECONCILE", concluderAgentId));
             } catch (Exception e) {
-                LogHelper.printWarnLog(log, "CardReconciler.reconcile", "补生成失败", "topicId=" + topic.getId(), e);
+                LogHelper.printWarnLog(CardReconciler.class, "CardReconciler.reconcile", "RECONCILE", "补生成失败", "topicId={}", topic.getId(), e);
             }
         }
     }

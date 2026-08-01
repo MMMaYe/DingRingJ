@@ -90,8 +90,8 @@ public class ContextBuilder {
                 + PromptConstants.CHAT_BASE.length() + roster.length() + 20;
         boolean hasMemory = sp.length() > baseLen + 50;
         boolean hasProfile = sp.contains("画像");
-        LogHelper.printLog(log, "ContextBuilder.build", "构建完成",
-                "groupId=%d topicId=%s 消息条数=%d systemPrompt长度=%d 含记忆=%b 含画像=%b",
+        LogHelper.printLog(ContextBuilder.class, "ContextBuilder.build", "BUILD", "构建完成",
+                "groupId={} topicId={} 消息条数={} systemPrompt长度={} 含记忆={} 含画像={}",
                 groupId, topicId, turns.size(), sp.length(), hasMemory, hasProfile);
         return new LlmContext(sp, turns);
     }
@@ -129,8 +129,8 @@ public class ContextBuilder {
         }
         List<GroupMessage> all = messageRepository.findRecentByTopicId(topicId, contextWindow);
         String spFinal = sp.toString();
-        LogHelper.printLog(log, "ContextBuilder.buildForConclusion", "结论上下文",
-                "topicId=%s 消息条数=%d systemPrompt长度=%d", topicId, all.size(), spFinal.length());
+        LogHelper.printLog(ContextBuilder.class, "ContextBuilder.buildForConclusion", "BUILD_FOR_CONCLUSION", "结论上下文",
+                "topicId={} 消息条数={} systemPrompt长度={}", topicId, all.size(), spFinal.length());
         return new LlmContext(spFinal, toTurns(concluder, all, senderNameOf));
     }
 

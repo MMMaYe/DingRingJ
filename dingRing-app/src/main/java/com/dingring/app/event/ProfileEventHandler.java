@@ -52,23 +52,23 @@ public class ProfileEventHandler {
             }
             Agent extractor = resolveExtractor(event.getConcluderAgentId(), group);
             if (extractor == null) {
-                LogHelper.printWarnLog(log, "ProfileEventHandler.extract", "无可用Agent跳过", "topicId=" + event.getTopicId());
+                LogHelper.printWarnLog(ProfileEventHandler.class, "ProfileEventHandler.extract", "EXTRACT", "无可用Agent跳过", "topicId={}", event.getTopicId());
                 return;
             }
             List<GroupMessage> messages = messageRepository.findRecentByTopicId(event.getTopicId(), DIALOGUE_LIMIT);
             // 用户没参与发言的讨论对画像无增量
             boolean hasUserMessage = messages.stream().anyMatch(m -> m.getSenderType() == SenderType.USER);
             if (!hasUserMessage) {
-                LogHelper.printLog(log, "ProfileEventHandler.extract", "无用户发言跳过", "topicId=%d", event.getTopicId());
+                LogHelper.printLog(ProfileEventHandler.class, "ProfileEventHandler.extract", "EXTRACT", "无用户发言跳过", "topicId={}", event.getTopicId());
                 return;
             }
             String dialogue = messages.stream()
                     .map(m -> messageAssembler.resolveSenderName(m) + ": " + m.getContent())
                     .collect(Collectors.joining("\n"));
-            LogHelper.printLog(log, "ProfileEventHandler.extract", "触发画像提炼", "topicId=%d 输入消息数=%d", event.getTopicId(), messages.size());
+            LogHelper.printLog(ProfileEventHandler.class, "ProfileEventHandler.extract", "EXTRACT", "触发画像提炼", "topicId={} 输入消息数={}", event.getTopicId(), messages.size());
             profileService.extractAndMerge(GroupAppService.DEFAULT_USER_ID, extractor, group.getName(), dialogue);
         } catch (Exception e) {
-            LogHelper.printWarnLog(log, "ProfileEventHandler.extract", "画像提炼异常跳过", "topicId=" + event.getTopicId(), e);
+            LogHelper.printWarnLog(ProfileEventHandler.class, "ProfileEventHandler.extract", "EXTRACT", "画像提炼异常跳过", "topicId={}", event.getTopicId(), e);
         }
     }
 

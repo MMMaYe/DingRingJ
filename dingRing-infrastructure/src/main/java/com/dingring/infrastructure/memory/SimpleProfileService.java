@@ -1,13 +1,13 @@
 package com.dingring.infrastructure.memory;
 
 import com.dingring.common.constant.PromptConstants;
+import com.dingring.common.util.LogHelper;
 import com.dingring.domain.agent.Agent;
 import com.dingring.domain.service.LlmService;
 import com.dingring.domain.service.ProfileService;
 import com.dingring.domain.user.UserProfile;
 import com.dingring.domain.user.UserProfileRepository;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -18,7 +18,6 @@ import java.util.concurrent.ConcurrentHashMap;
  * 用户画像服务 v1：LLM 读近期对话，与既有全局画像增量合并后覆盖写回（纯文本，不做向量化）。
  * <p>用户维度串行：同一用户的提炼任务用锁排队，防多群同时触发互相覆盖。
  */
-@Slf4j
 @Service
 @RequiredArgsConstructor
 public class SimpleProfileService implements ProfileService {
@@ -51,7 +50,7 @@ public class SimpleProfileService implements ProfileService {
                 String merged = llmService.chat(extractor, PromptConstants.USER_PROFILE_EXTRACT,
                         List.of(LlmService.ChatTurn.user(input)));
                 if (merged == null || merged.isBlank()) {
-                    log.warn("画像提炼返回空，跳过写回, userId={}", userId);
+                    LogHelper.printWarnLog(SimpleProfileService.class, "SimpleProfileService.extractProfile", "PROFILE_EMPTY", "画像提炼返回空，跳过写回", "userId={}", userId);
                     return;
                 }
                 UserProfile profile = userProfileRepository.findByUserId(userId)
@@ -62,10 +61,10 @@ public class SimpleProfileService implements ProfileService {
                         });
                 profile.setProfileText(merged.trim());
                 userProfileRepository.upsert(profile);
-                log.info("画像提炼写回成功, userId={}, 画像长度={}", userId, merged.trim().length());
+                LogHelper.printLog(SimpleProfileService.class, "SimpleProfileService.extractProfile", "PROFILE_WRITE_OK", "画像提炼写回成功", "userId={} length={}", userId, merged.trim().length());
             } catch (Exception e) {
                 // 提炼失败仅日志留痕，不影响主流程
-                log.warn("画像提炼失败，跳过本次, userId={}", userId, e);
+                LogHelper.printWarnLog(SimpleProfileService.class, "SimpleProfileService.extractProfile", "PROFILE_EXTRACT_FAIL", "画像提炼失败，跳过本次", "userId={}", e, userId);
             }
         }
     }

@@ -59,27 +59,27 @@ public class SpringAiLlmService implements LlmService {
         try {
             OpenAiChatModel chatModel = buildChatModel(agent, options);
             List<Message> aiMessages = toAiMessages(systemPrompt, messages);
-            LogHelper.printLog(log, "LLM", "Prompt",
-                    "agent=%s model=%s\nsystemPrompt:\n%s\nturns(%d轮):\n%s",
+            LogHelper.printLog(SpringAiLlmService.class, "SpringAiLlmService.chat", "CHAT_PROMPT", "Prompt",
+                    "agent={} model={}\nsystemPrompt:\n%s\nturns({}轮):\n{}",
                     agent.getName(), agent.getModelName(), systemPrompt,
                     aiMessages.size(), LogHelper.formatTurns(aiMessages));
             ChatResponse response = chatModel.call(new Prompt(aiMessages));
             String text = response.getResult().getOutput().getText();
             long cost = System.currentTimeMillis() - startAt;
             if (text == null || text.isBlank()) {
-                LogHelper.printWarnLog(log, "LLM", "空响应",
-                        "agent=%s model=%s 耗时=%dms", agent.getName(), agent.getModelName(), cost);
+                LogHelper.printWarnLog(SpringAiLlmService.class, "SpringAiLlmService.chat", "CHAT_EMPTY_RESPONSE", "空响应",
+                        "agent={} model={} 耗时={}ms", agent.getName(), agent.getModelName(), cost);
             } else {
-                LogHelper.printLog(log, "LLM", "响应",
-                        "agent=%s model=%s 耗时=%dms 长度=%d 完整内容:\n%s",
+                LogHelper.printLog(SpringAiLlmService.class, "SpringAiLlmService.chat", "CHAT_RESPONSE", "响应",
+                        "agent={} model={} 耗时={}ms 长度={} 完整内容:\n{}",
                         agent.getName(), agent.getModelName(), cost, text.length(), text);
             }
             return text == null ? "" : text.trim();
         } catch (BizException e) {
             throw e;
         } catch (Exception e) {
-            LogHelper.printWarnLog(log, "LLM", "异常",
-                    "agent=%s model=%s 耗时=%dms error=%s",
+            LogHelper.printWarnLog(SpringAiLlmService.class, "SpringAiLlmService.chat", "CHAT_ERROR", "异常",
+                    "agent={} model={} 耗时={}ms error={}",
                     agent.getName(), agent.getModelName(),
                     System.currentTimeMillis() - startAt, e.getMessage(), e);
             throw new BizException(ErrorCode.LLM_API_ERROR,
@@ -93,8 +93,8 @@ public class SpringAiLlmService implements LlmService {
         try {
             OpenAiChatModel chatModel = buildChatModel(agent, null);
             List<Message> aiMessages = toAiMessages(systemPrompt, messages);
-            LogHelper.printLog(log, "LLM", "Prompt",
-                    "agent=%s model=%s\nsystemPrompt:\n%s\nturns(%d轮):\n%s",
+            LogHelper.printLog(SpringAiLlmService.class, "SpringAiLlmService.chatStream", "STREAM_PROMPT", "Prompt",
+                    "agent={} model={}\nsystemPrompt:\n%s\nturns({}轮):\n{}",
                     agent.getName(), agent.getModelName(), systemPrompt,
                     aiMessages.size(), LogHelper.formatTurns(aiMessages));
             StringBuilder full = new StringBuilder();
@@ -113,19 +113,19 @@ public class SpringAiLlmService implements LlmService {
             String text = full.toString();
             long cost = System.currentTimeMillis() - startAt;
             if (text.isBlank()) {
-                LogHelper.printWarnLog(log, "LLM", "空响应",
-                        "agent=%s model=%s 耗时=%dms (流式)", agent.getName(), agent.getModelName(), cost);
+                LogHelper.printWarnLog(SpringAiLlmService.class, "SpringAiLlmService.chatStream", "STREAM_EMPTY_RESPONSE", "空响应",
+                        "agent={} model={} 耗时={}ms (流式)", agent.getName(), agent.getModelName(), cost);
             } else {
-                LogHelper.printLog(log, "LLM", "响应",
-                        "agent=%s model=%s 耗时=%dms 长度=%d (流式) 完整内容:\n%s",
+                LogHelper.printLog(SpringAiLlmService.class, "SpringAiLlmService.chatStream", "STREAM_RESPONSE", "响应",
+                        "agent={} model={} 耗时={}ms 长度={} (流式) 完整内容:\n{}",
                         agent.getName(), agent.getModelName(), cost, text.length(), text);
             }
             return text.trim();
         } catch (BizException e) {
             throw e;
         } catch (Exception e) {
-            LogHelper.printWarnLog(log, "LLM", "异常",
-                    "agent=%s model=%s 耗时=%dms (流式) error=%s",
+            LogHelper.printWarnLog(SpringAiLlmService.class, "SpringAiLlmService.chatStream", "STREAM_ERROR", "异常",
+                    "agent={} model={} 耗时={}ms (流式) error={}",
                     agent.getName(), agent.getModelName(),
                     System.currentTimeMillis() - startAt, e.getMessage(), e);
             throw new BizException(ErrorCode.LLM_API_ERROR,

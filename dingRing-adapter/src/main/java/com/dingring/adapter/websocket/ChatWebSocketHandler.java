@@ -27,7 +27,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
         Long groupId = parseGroupId(session);
         if (groupId == null) {
-            LogHelper.printWarnLog(log, "ChatWebSocketHandler.afterConnectionEstablished", "连接缺少groupId参数关闭", "uri=" + session.getUri());
+            LogHelper.printWarnLog(ChatWebSocketHandler.class, "ChatWebSocketHandler.afterConnectionEstablished", "AFTER_CONNECTION_ESTABLISHED", "连接缺少groupId参数关闭", "uri={}", session.getUri());
             session.close(CloseStatus.BAD_DATA.withReason("缺少 groupId 参数"));
             return;
         }

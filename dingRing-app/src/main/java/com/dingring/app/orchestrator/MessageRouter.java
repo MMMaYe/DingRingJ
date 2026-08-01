@@ -69,13 +69,13 @@ public class MessageRouter {
                     List.of(LlmService.ChatTurn.user(userInput)),
                     new LlmService.CallOptions(ROUTE_TEMPERATURE, ROUTE_MAX_TOKENS, routeTimeoutSeconds));
             Route route = parse(raw, content);
-            LogHelper.printLog(log, "MessageRouter.route", "消息路由判定",
-                    "judge=%s intent=%s confidence=%s topicTitle=%s 原文=%s",
+            LogHelper.printLog(MessageRouter.class, "MessageRouter.route", "ROUTE", "消息路由判定",
+                    "judge={} intent={} confidence={} topicTitle={} 原文={}",
                     judge.getName(), route.intent(), route.confidence(), route.topicTitle(), content);
             return route;
         } catch (Exception e) {
             // 判定失败降级闲聊：宁可少建题，不可乱建题
-            LogHelper.printWarnLog(log, "MessageRouter.route", "路由判定失败降级CHAT", "judge=" + judge.getName(), e);
+            LogHelper.printWarnLog(MessageRouter.class, "MessageRouter.route", "ROUTE", "路由判定失败降级CHAT", "judge={}", judge.getName(), e);
             return Route.chat();
         }
     }

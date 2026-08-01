@@ -4,7 +4,6 @@ import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.alibaba.fastjson.TypeReference;
 import com.alibaba.fastjson.serializer.SerializerFeature;
-import org.slf4j.Logger;
 
 import java.lang.reflect.Type;
 import java.util.Collections;
@@ -17,7 +16,6 @@ import java.util.Map;
  */
 public final class JsonHelper {
 
-    private static final Logger log = LogHelper.of(JsonHelper.class);
 
     private JsonHelper() {
         throw new UnsupportedOperationException("工具类不允许实例化");
@@ -38,7 +36,7 @@ public final class JsonHelper {
         try {
             return JSON.toJSONString(obj);
         } catch (Exception e) {
-            log.error("[Json][序列化] toJson 失败: {}", e.getMessage(), e);
+            LogHelper.printErrorLog(JsonHelper.class, "JsonHelper.toJson", "SERIALIZE_FAIL", "序列化失败", "error={}", e, e.getMessage());
             return null;
         }
     }
@@ -56,7 +54,7 @@ public final class JsonHelper {
         try {
             return JSON.toJSONString(obj, SerializerFeature.PrettyFormat);
         } catch (Exception e) {
-            log.error("[Json][序列化] toJsonPretty 失败: {}", e.getMessage(), e);
+            LogHelper.printErrorLog(JsonHelper.class, "JsonHelper.toJsonPretty", "SERIALIZE_PRETTY_FAIL", "美化序列化失败", "error={}", e, e.getMessage());
             return null;
         }
     }
@@ -74,7 +72,7 @@ public final class JsonHelper {
         try {
             return JSON.toJSONString(map);
         } catch (Exception e) {
-            log.error("[Json][序列化] mapToJson 失败, size={}: {}", map.size(), e.getMessage(), e);
+            LogHelper.printErrorLog(JsonHelper.class, "JsonHelper.mapToJson", "MAP_SERIALIZE_FAIL", "Map序列化失败", "size={} error={}", e, map.size(), e.getMessage());
             return null;
         }
     }
@@ -96,7 +94,7 @@ public final class JsonHelper {
         try {
             return JSON.parseObject(json, clazz);
         } catch (Exception e) {
-            log.error("[Json][反序列化] fromJson({}) 失败: {}", clazz.getSimpleName(), e.getMessage(), e);
+            LogHelper.printErrorLog(JsonHelper.class, "JsonHelper.fromJson", "DESERIALIZE_FAIL", "反序列化失败", "type={} error={}", e, clazz.getSimpleName(), e.getMessage());
             return null;
         }
     }
@@ -116,7 +114,7 @@ public final class JsonHelper {
         try {
             return JSON.parseObject(json, typeReference.getType());
         } catch (Exception e) {
-            log.error("[Json][反序列化] fromJson(TypeReference) 失败: {}", e.getMessage(), e);
+            LogHelper.printErrorLog(JsonHelper.class, "JsonHelper.fromJson", "DESERIALIZE_TYPE_REF_FAIL", "类型引用反序列化失败", "error={}", e, e.getMessage());
             return null;
         }
     }
@@ -136,7 +134,7 @@ public final class JsonHelper {
         try {
             return JSON.parseObject(json, type);
         } catch (Exception e) {
-            log.error("[Json][反序列化] fromJson(Type) 失败: {}", e.getMessage(), e);
+            LogHelper.printErrorLog(JsonHelper.class, "JsonHelper.fromJson", "DESERIALIZE_TYPE_FAIL", "类型反序列化失败", "error={}", e, e.getMessage());
             return null;
         }
     }
@@ -156,7 +154,7 @@ public final class JsonHelper {
         try {
             return JSON.parseObject(json, new TypeReference<Map<String, Object>>() {});
         } catch (Exception e) {
-            log.error("[Json][集合] toMap 失败: {}", e.getMessage(), e);
+            LogHelper.printErrorLog(JsonHelper.class, "JsonHelper.toMap", "TO_MAP_FAIL", "转Map失败", "error={}", e, e.getMessage());
             return Collections.emptyMap();
         }
     }
@@ -176,7 +174,7 @@ public final class JsonHelper {
         try {
             return JSON.parseArray(json, clazz);
         } catch (Exception e) {
-            log.error("[Json][集合] toList({}) 失败: {}", clazz.getSimpleName(), e.getMessage(), e);
+            LogHelper.printErrorLog(JsonHelper.class, "JsonHelper.toList", "TO_LIST_FAIL", "转List失败", "type={} error={}", e, clazz.getSimpleName(), e.getMessage());
             return Collections.emptyList();
         }
     }
@@ -216,7 +214,7 @@ public final class JsonHelper {
             JSONObject jsonObject = JSON.parseObject(json);
             return jsonObject != null ? jsonObject.getString(key) : null;
         } catch (Exception e) {
-            log.error("[Json][取值] getStringValue(key={}) 失败: {}", key, e.getMessage(), e);
+            LogHelper.printErrorLog(JsonHelper.class, "JsonHelper.getStringValue", "GET_STRING_FAIL", "取值失败", "key={} error={}", e, key, e.getMessage());
             return null;
         }
     }

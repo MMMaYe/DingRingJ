@@ -31,8 +31,8 @@ public class WsSessionManager implements ChatPusher {
     /** 连接建立后注册到群 */
     public void register(Long groupId, WebSocketSession session) {
         groupSessions.computeIfAbsent(groupId, k -> new CopyOnWriteArraySet<>()).add(session);
-        LogHelper.printLog(log, "WsSessionManager.register", "连接注册",
-                "groupId=%d sessionId=%s 在线数=%d", groupId, session.getId(), groupSessions.get(groupId).size());
+        LogHelper.printLog(WsSessionManager.class, "WsSessionManager.register", "REGISTER", "连接注册",
+                "groupId={} sessionId={} 在线数={}", groupId, session.getId(), groupSessions.get(groupId).size());
     }
 
     /** 连接关闭后注销 */
@@ -44,7 +44,7 @@ public class WsSessionManager implements ChatPusher {
                 groupSessions.remove(groupId, sessions);
             }
         }
-        LogHelper.printLog(log, "WsSessionManager.unregister", "连接注销", "groupId=%d sessionId=%s", groupId, session.getId());
+        LogHelper.printLog(WsSessionManager.class, "WsSessionManager.unregister", "UNREGISTER", "连接注销", "groupId={} sessionId={}", groupId, session.getId());
     }
 
     @Override
@@ -74,7 +74,7 @@ public class WsSessionManager implements ChatPusher {
         try {
             return new TextMessage(objectMapper.writeValueAsString(Map.of("type", type, "data", data)));
         } catch (Exception e) {
-            LogHelper.printWarnLog(log, "WsSessionManager.encode", "消息序列化失败", "type=" + type, e);
+            LogHelper.printWarnLog(WsSessionManager.class, "WsSessionManager.encode", "ENCODE", "消息序列化失败", "type={}", type, e);
             return null;
         }
     }
@@ -88,7 +88,7 @@ public class WsSessionManager implements ChatPusher {
                 }
             }
         } catch (Exception e) {
-            LogHelper.printWarnLog(log, "WsSessionManager.sendSafely", "消息发送失败", "sessionId=" + session.getId(), e);
+            LogHelper.printWarnLog(WsSessionManager.class, "WsSessionManager.sendSafely", "SEND_SAFELY", "消息发送失败", "sessionId={}", session.getId(), e);
         }
     }
 }

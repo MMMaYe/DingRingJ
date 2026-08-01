@@ -81,13 +81,13 @@ public class ModeratorService {
             String raw = llmService.chat(moderatorAgent(members.get(0)), PromptConstants.HOST_DECISION,
                     List.of(LlmService.ChatTurn.user(buildInput(topic, members, speakCounts))));
             Decision decision = parse(raw, members);
-            LogHelper.printLog(log, "ModeratorService.decide", "Moderator决策",
-                    "topicId=%d shouldContinue=%b nextSpeakerId=%s shouldConclude=%b guidance=%s",
+            LogHelper.printLog(ModeratorService.class, "ModeratorService.decide", "DECIDE", "Moderator决策",
+                    "topicId={} shouldContinue={} nextSpeakerId={} shouldConclude={} guidance={}",
                     topic.getId(), decision.shouldContinue(), decision.nextSpeakerId(),
                     decision.shouldConclude(), decision.guidance());
             return decision;
         } catch (Exception e) {
-            LogHelper.printWarnLog(log, "ModeratorService.decide", "判定失败回退评分调度", "topicId=" + topic.getId(), e);
+            LogHelper.printWarnLog(ModeratorService.class, "ModeratorService.decide", "DECIDE", "判定失败回退评分调度", "topicId={}", topic.getId(), e);
             return null;
         }
     }
@@ -135,7 +135,7 @@ public class ModeratorService {
                 .map(Agent::getId)
                 .findFirst().orElse(null);
         if (nextSpeakerId == null && !speakerName.isBlank()) {
-            LogHelper.printWarnLog(log, "ModeratorService.parse", "指定发言者不在群内回退", "next_speaker=" + speakerName);
+            LogHelper.printWarnLog(ModeratorService.class, "ModeratorService.parse", "PARSE", "指定发言者不在群内回退", "next_speaker={}", speakerName);
         }
         String guidance = node.path("guidance").asText("").trim();
         return new Decision(shouldContinue, nextSpeakerId, shouldConclude, guidance);

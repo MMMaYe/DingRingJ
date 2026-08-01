@@ -39,8 +39,8 @@ public class ConclusionWatchdog {
         List<Topic> stuck = topicRepository.findConcludingBefore(threshold);
         for (Topic topic : stuck) {
             try {
-                LogHelper.printWarnLog(log, "ConclusionWatchdog.rescueStuckTopics", "发现卡死CONCLUDING主题回滚",
-                        "topicId=%d updateTime=%s", topic.getId(), topic.getUpdateTime());
+                LogHelper.printWarnLog(ConclusionWatchdog.class, "ConclusionWatchdog.rescueStuckTopics", "RESCUE_STUCK_TOPICS", "发现卡死CONCLUDING主题回滚",
+                        "topicId={} updateTime={}", topic.getId(), topic.getUpdateTime());
                 topic.rollbackToInProgress();
                 if (!topicRepository.update(topic)) {
                     // 乐观锁冲突：状态已被别处流转，无需处理
@@ -54,7 +54,7 @@ public class ConclusionWatchdog {
                         "previousStatus", "CONCLUDING"));
                 discussionEngine.wake(topic.getChatGroupId());
             } catch (Exception e) {
-                LogHelper.printWarnLog(log, "ConclusionWatchdog.rescueStuckTopics", "卡死主题回滚失败", "topicId=" + topic.getId(), e);
+                LogHelper.printWarnLog(ConclusionWatchdog.class, "ConclusionWatchdog.rescueStuckTopics", "RESCUE_STUCK_TOPICS", "卡死主题回滚失败", "topicId={}", topic.getId(), e);
             }
         }
     }
