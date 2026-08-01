@@ -21,7 +21,7 @@ public class Terminator {
     private int maxRounds;
 
     /** 每条用户消息触发的 Agent 自动接续发言条数 */
-    @Value("${dingring.orchestrator.auto-replies:2}")
+    @Value("${dingring.orchestrator.auto-replies}")
     private int autoReplies;
 
     /** 是否已达最大轮次（触发自动收束，triggeredBy=MAX_ROUNDS） */

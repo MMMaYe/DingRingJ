@@ -65,7 +65,7 @@ public final class JsonHelper {
      * @param map Map 对象
      * @return JSON 字符串；map 为 null/空或异常时返回 null
      */
-    public static String mapToJson(Map<String, Object> map) {
+    public static String mapToJsonStr(Map<String, Object> map) {
         if (map == null || map.isEmpty()) {
             return null;
         }
@@ -218,4 +218,15 @@ public final class JsonHelper {
             return null;
         }
     }
+
+    /**
+     * String转成JSON
+     */
+    public static JSONObject toJsonObject(String json) {
+        if (json == null || json.isEmpty()) {
+            return null;
+        }
+        return JSON.parseObject(json);
+    }
+
 }

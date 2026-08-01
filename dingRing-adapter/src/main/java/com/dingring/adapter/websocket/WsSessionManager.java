@@ -2,6 +2,7 @@ package com.dingring.adapter.websocket;
 
 import com.dingring.app.service.ChatPusher;
 import com.dingring.common.util.LogHelper;
+import com.dingring.infrastructure.aop.Event;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -79,6 +80,7 @@ public class WsSessionManager implements ChatPusher {
         }
     }
 
+    @Event(eventCode = "SEND_MESSAGE_TO_GROUP", eventName = "向群发送消息")
     private void sendSafely(WebSocketSession session, TextMessage message) {
         try {
             if (session.isOpen()) {

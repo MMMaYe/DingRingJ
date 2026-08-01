@@ -23,6 +23,7 @@ import com.dingring.domain.discussion.Topic;
 import com.dingring.domain.discussion.TopicRepository;
 import com.dingring.domain.service.DomainEventPublisher;
 import com.dingring.domain.service.LlmService;
+import com.dingring.infrastructure.aop.Event;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -65,8 +66,7 @@ public class ChatOrchestrator {
         LogHelper.putTrace(groupId, null);
 
         LogHelper.printLog(ChatOrchestrator.class, "ChatOrchestrator.onUserMessage", "ON_USER_MESSAGE", "开始执行onUserMessage",
-                "groupId={} content={} replyToMessageId={}",
-                groupId, content, replyToMessageId);
+                "request={}", JsonHelper.toJsonPretty(Map.of("groupId", groupId, "userId", userId, "content", content, "replyToMessageId", replyToMessageId)));
 
         try {
             Group group = groupRepository.findById(groupId)
@@ -127,9 +127,8 @@ public class ChatOrchestrator {
      *
      * @param concluderAgentId 总结 Agent ID（null = 调度评分最高者兜底）
      */
+    @Event(eventCode = "CONCLUDE", eventName = "触发讨论收束")
     public void conclude(Long topicId, Long operatorId, String triggeredBy, Long concluderAgentId) {
-        LogHelper.printLog(ChatOrchestrator.class, "ChatOrchestrator.conclude", "CONCLUDE", "触发讨论收束",
-                "topicId={} triggeredBy={} 指定总结AgentId={}", topicId, triggeredBy, concluderAgentId);
         Topic topic = topicRepository.findById(topicId)
                 .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "主题不存在: " + topicId));
         topic.startConcluding();
@@ -137,12 +136,16 @@ public class ChatOrchestrator {
             throw new BizException(ErrorCode.TOPIC_NOT_IN_PROGRESS, "主题状态已变更，请刷新后重试");
         }
         pushTopicStatus(topic, "IN_PROGRESS");
-        eventPublisher.publish(new TopicConcluding(topic.getId(), topic.getChatGroupId(), topic.getTitle()));
+
+        //TODO：先预留在这里
+//        eventPublisher.publish(new TopicConcluding(topic.getId(), topic.getChatGroupId(), topic.getTitle()));
+
         discussionEngine.execute(topic.getChatGroupId(), "结论生成",
                 () -> generateConclusion(topic, triggeredBy, concluderAgentId));
     }
 
     /** 总结 Agent 生成 STAR 结论；失败回退 IN_PROGRESS */
+    @Event(eventCode = "GENERATE_CONCLUSION", eventName = "生成讨论结论")
     private void generateConclusion(Topic topic, String triggeredBy, Long designatedConcluderId) {
         Long groupId = topic.getChatGroupId();
         Group group = groupRepository.findById(groupId).orElse(null);
@@ -192,6 +195,7 @@ public class ChatOrchestrator {
     }
 
     /** 解析总结 Agent：指定优先；否则按调度评分选最高的成员 Agent */
+    @Event(eventCode = "RESOLVE_CONCLUIDER", eventName = "决策总结Agent")
     private Agent resolveConcluder(Group group, Topic topic, Long designatedId) {
         if (designatedId != null) {
             return agentRepository.findById(designatedId).orElse(null);

@@ -6,6 +6,7 @@ import com.dingring.app.service.MessageAssembler;
 import com.dingring.common.constant.WsConstants;
 import com.dingring.common.exception.BizException;
 import com.dingring.common.exception.ErrorCode;
+import com.dingring.common.util.JsonHelper;
 import com.dingring.common.util.LogHelper;
 import com.dingring.domain.agent.Agent;
 import com.dingring.domain.agent.AgentRepository;
@@ -25,6 +26,7 @@ import com.dingring.domain.group.SenderType;
 import com.dingring.domain.service.DomainEventPublisher;
 import com.dingring.domain.service.LlmService;
 import com.dingring.domain.service.ProfileService;
+import com.dingring.infrastructure.aop.Event;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
@@ -167,6 +169,8 @@ public class DiscussionEngine {
 
     /** 用户消息信号入队并唤醒引擎循环 */
     public void onUserSignal(Long groupId, UserSignal signal) {
+        LogHelper.printLog(DiscussionEngine.class, "DiscussionEngine.onUserSignal", "ON_USER_SIGNAL", "消息信号准备入队",
+                "request={}", JsonHelper.toJsonPretty(signal));
         stateOf(groupId).queue.offer(signal);
         wake(groupId);
     }
@@ -174,6 +178,10 @@ public class DiscussionEngine {
     /** 唤醒群引擎循环（CAS 防重入；TopicAppService 手动建题后也调用） */
     public void wake(Long groupId) {
         GroupState state = stateOf(groupId);
+        LogHelper.printLog(DiscussionEngine.class, "DiscussionEngine.wake",
+                "WAKE",
+                "唤醒群引擎循环",
+                "msg={}", JsonHelper.mapToJsonStr(Map.of("groupId", groupId, "groupState", state)));
         if (state.running.compareAndSet(false, true)) {
             executorOf(groupId).execute(() -> runLoopSafely(groupId, state));
         }
@@ -187,6 +195,9 @@ public class DiscussionEngine {
     /* ==================== 主循环 ==================== */
 
     private void runLoopSafely(Long groupId, GroupState state) {
+        LogHelper.printLog(DiscussionEngine.class, "DiscussionEngine.runLoopSafely",
+                "RUN_LOOP_SAFELY",
+                "主循环启动", "request={}", JsonHelper.mapToJsonStr(Map.of("groupId", groupId, "groupState", state)));
         try {
             runLoop(groupId, state);
         } catch (Exception e) {
@@ -203,16 +214,24 @@ public class DiscussionEngine {
     private void runLoop(Long groupId, GroupState state) throws InterruptedException {
         LogHelper.putTrace(groupId, null);
         try {
-            LogHelper.printLog(DiscussionEngine.class, "DiscussionEngine.runLoop", "RUN_LOOP", "循环启动", "groupId={}", groupId);
+            LogHelper.printLog(DiscussionEngine.class,
+                    "DiscussionEngine.runLoop",
+                    "RUN_LOOP",
+                    "循环启动",
+                    "request={}", JsonHelper.mapToJsonStr(Map.of("groupId", groupId, "groupState", state)));
             while (true) {
+                //业务规则：每个群，某一时刻最多只有一个话题在进行讨论
+                //所以拿去活跃话题
                 Optional<Topic> active = topicRepository.findActiveByGroupId(groupId)
                         .filter(Topic::isInProgress);
-                // 讨论态限时等待（超时即自主推进）；闲聊态不等待，队列空直接退出
+                //讨论态限时等待（超时即自主推进）；闲聊态不等待，队列空直接退出
                 UserSignal head = active.isPresent()
                         ? state.queue.poll(pace(), TimeUnit.MILLISECONDS)
                         : state.queue.poll();
                 if (head != null) {
-                    if (handleSignal(groupId, state, fold(state.queue, head))) {
+                    Folded fold = fold(state.queue, head);
+                    //处理消息
+                    if (handleSignal(groupId, state, fold)) {
                         return;
                     }
                     continue;
@@ -232,6 +251,12 @@ public class DiscussionEngine {
 
     /** 多条连发折叠：取最新语境，@提及取并集 */
     private Folded fold(BlockingQueue<UserSignal> queue, UserSignal head) {
+        LogHelper.printLog(DiscussionEngine.class,
+                "DiscussionEngine.fold",
+                "FOLD",
+                "折叠连发消息",
+                "request={}", JsonHelper.toJsonPretty(Map.of("queue",queue, "head",head)));
+
         UserSignal latest = head;
         Set<Long> mentions = new LinkedHashSet<>(head.mentionedAgentIds());
         int count = 1;
@@ -255,6 +280,7 @@ public class DiscussionEngine {
      *
      * @return true = 已触发收束，循环必须退出让位给结论生成任务
      */
+    @Event(eventCode = "HANDLE_SIGNAL", eventName = "处理用户发的消息")
     private boolean handleSignal(Long groupId, GroupState state, Folded folded) {
         UserSignal signal = folded.signal();
         Group group = groupRepository.findById(groupId).orElse(null);
@@ -263,13 +289,17 @@ public class DiscussionEngine {
         }
         List<Agent> agents = agentRepository.findByIds(group.memberAgentIds());
         if (agents.isEmpty()) {
-            LogHelper.printWarnLog(DiscussionEngine.class, "DiscussionEngine.handleSignal", "HANDLE_SIGNAL", "群内无成员Agent", "groupId={}", groupId);
             return false;
         }
+
+        //拿活跃话题
         Optional<Topic> active = topicRepository.findActiveByGroupId(groupId)
                 .filter(Topic::isInProgress);
-        Agent judge = resolveJudge(agents, signal.mentionedAgentIds());
-        MessageRouter.Route route = messageRouter.route(judge, signal.content(),
+
+        //选举路由判定的Agent
+        Agent judgeRole = resolveJudge(agents, signal.mentionedAgentIds());
+
+        MessageRouter.Route route = messageRouter.route(judgeRole, signal.content(),
                 active.map(Topic::getTitle).orElse(null));
 
         // 讨论中被 @ 的 Agent：下一轮优先发言一次
@@ -280,6 +310,7 @@ public class DiscussionEngine {
 
         switch (route.intent()) {
             case CONCLUDE -> {
+                //如果当前有活跃主题，尝试收束讨论
                 if (active.isPresent()) {
                     Long concluderId = signal.mentionedAgentIds().isEmpty()
                             ? null : signal.mentionedAgentIds().get(0);
@@ -322,6 +353,8 @@ public class DiscussionEngine {
     }
 
     /** 触发收束；乐观锁冲突等失败时返回 false 让循环继续（下一轮重新评估状态） */
+    //TODO：尝试收束逻辑的合理性？
+    @Event(eventCode = "TRY_CONCLUDE", eventName = "尝试收束")
     private boolean tryConclude(Long topicId, Long operatorId, String triggeredBy, Long concluderAgentId) {
         try {
             chatOrchestrator.conclude(topicId, operatorId, triggeredBy, concluderAgentId);
@@ -333,15 +366,20 @@ public class DiscussionEngine {
     }
 
     /* ==================== 闲聊态：轻量应答 + 画像提炼 ==================== */
-
+    @Event(eventCode = "HANDLE_CHAT",eventName = "处理")
     private void handleChat(Group group, GroupState state, UserSignal signal, int messageCount) {
         state.chatBuffer += messageCount;
         if (state.chatBuffer >= profileExtractThreshold) {
             state.chatBuffer = 0;
+            //TODO:这个以事件的形式（发布-订阅）去触发
             triggerProfileExtraction(group);
         }
+
+        //如果用户没有@任何Agent，则自动接话条数为配置值
         boolean mentionRound = !signal.mentionedAgentIds().isEmpty();
         int maxReplies = mentionRound ? 1 : terminator.getAutoReplies();
+
+
         MessageContext ctx = MessageContext.builder()
                 .groupId(group.getId())
                 .topicId(null)
@@ -350,12 +388,15 @@ public class DiscussionEngine {
                 .repliedToAgentId(signal.repliedToAgentId())
                 .speakCounts(Map.of())
                 .build();
+
         for (int i = 0; i < maxReplies; i++) {
             // 用户又说话了：让位给新信号
             if (!state.queue.isEmpty()) {
                 return;
             }
+
             List<Agent> candidates = agentRepository.findByIds(group.memberAgentIds());
+
             SpeakResult result = speakOnce(candidates, ctx);
             if (result.outcome() != SpeakOutcome.SPOKE) {
                 return;
@@ -400,6 +441,7 @@ public class DiscussionEngine {
      *
      * @return 建题成功返回 Topic；未达门槛返回 null
      */
+    @Event(eventCode = "ENSURE_TOPIC", eventName = "建题")
     private Topic ensureTopic(Group group, GroupState state, MessageRouter.Route route) {
         boolean create = route.confidence() == MessageRouter.Confidence.HIGH
                 || ++state.lowDiscussStreak >= LOW_DISCUSS_CREATE_STREAK;
@@ -561,6 +603,7 @@ public class DiscussionEngine {
      * 引导语注入 system prompt 尾部（不入库不广播）。
      * <p>members 为群内全量成员（含已 PASS 者），用于上下文中的成员名单注入。
      */
+    @Event(eventCode = "DiscussionEngine.speakOnce", eventName = "发言")
     private SpeakResult speakOnce(List<Agent> candidates, List<Agent> members, MessageContext ctx,
                                   Long preferredAgentId, String moderatorGuidance) {
         boolean topicMode = ctx.getTopicId() != null;
@@ -792,7 +835,13 @@ public class DiscussionEngine {
         if (hi <= 0) {
             return 0;
         }
-        return ThreadLocalRandom.current().nextLong(lo, hi + 1);
+
+        long delayMs = ThreadLocalRandom.current().nextLong(lo, hi + 1);
+        LogHelper.printLog(DiscussionEngine.class,
+                "DiscussionEngine.pace",
+                "PACE", "随机等待",
+                "lo={} hi={}, 延长时间（单位:m）:{}", lo, hi, delayMs / 1000);
+        return delayMs;
     }
 
     private GroupState stateOf(Long groupId) {
@@ -805,6 +854,7 @@ public class DiscussionEngine {
     }
 
     /** 异步任务兜底：未捕获异常会让虚拟线程任务静默消失，统一捕获并记录 */
+    @Event(eventCode = "SAFE_RUN", eventName = "提交结论总结异步任务")
     private void safeRun(String taskName, Long groupId, Runnable task) {
         try {
             task.run();

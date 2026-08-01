@@ -4,6 +4,7 @@ import com.dingring.common.constant.PromptConstants;
 import com.dingring.common.util.LogHelper;
 import com.dingring.domain.agent.Agent;
 import com.dingring.domain.service.LlmService;
+import com.dingring.infrastructure.aop.Event;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -60,6 +61,7 @@ public class MessageRouter {
      * @param activeTopicTitle 当前活跃主题标题（null = 无活跃主题，此时 CONCLUDE 无从谈起）
      * @return 判定失败降级为 CHAT/LOW
      */
+    @Event(eventCode = "JUDGE_ROUTE", eventName = "判定路由")
     public Route route(Agent judge, String content, String activeTopicTitle) {
         try {
             String userInput = activeTopicTitle == null
@@ -69,9 +71,6 @@ public class MessageRouter {
                     List.of(LlmService.ChatTurn.user(userInput)),
                     new LlmService.CallOptions(ROUTE_TEMPERATURE, ROUTE_MAX_TOKENS, routeTimeoutSeconds));
             Route route = parse(raw, content);
-            LogHelper.printLog(MessageRouter.class, "MessageRouter.route", "ROUTE", "消息路由判定",
-                    "judge={} intent={} confidence={} topicTitle={} 原文={}",
-                    judge.getName(), route.intent(), route.confidence(), route.topicTitle(), content);
             return route;
         } catch (Exception e) {
             // 判定失败降级闲聊：宁可少建题，不可乱建题
@@ -81,6 +80,7 @@ public class MessageRouter {
     }
 
     /** 解析 LLM 输出（容忍 ```json 包裹与前后杂文）；解析失败抛异常由上层降级 */
+    @Event(eventCode = "PARSE_ROUTE", eventName = "解析路由")
     private Route parse(String raw, String originalContent) throws Exception {
         String json = raw.trim();
         int start = json.indexOf('{');

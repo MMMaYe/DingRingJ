@@ -43,7 +43,7 @@ public class WsMessageDispatcher {
             String type = root.path("type").asText("");
             JsonNode data = root.path("data");
             LogHelper.printLog(WsMessageDispatcher.class, "WsMessageDispatcher.dispatch", "DISPATCH", "收到入站消息",
-                    JsonHelper.mapToJson(Map.of("groupId", groupId, "type", type, "payload", payload)));
+                    JsonHelper.mapToJsonStr(Map.of("groupId", groupId, "type", type, "payload", payload)));
             switch (type) {
                 case WsConstants.SEND_MESSAGE -> chatOrchestrator.onUserMessage(
                         groupId, GroupAppService.DEFAULT_USER_ID,

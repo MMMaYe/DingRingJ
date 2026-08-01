@@ -17,6 +17,10 @@
             <groupId>com.dingring</groupId>
             <artifactId>dingRing-domain</artifactId>
         </dependency>
+        <dependency>
+            <groupId>com.dingring</groupId>
+            <artifactId>dingRing-infrastructure</artifactId>
+        </dependency>
         <!-- 事务、事件监听 -->
         <dependency>
             <groupId>org.springframework</groupId>

@@ -1,6 +1,7 @@
 package com.dingring.app.orchestrator;
 
 import com.dingring.domain.agent.Agent;
+import com.dingring.infrastructure.aop.Event;
 import org.springframework.stereotype.Component;
 
 import java.util.Comparator;
@@ -31,6 +32,7 @@ public class SpeakerScheduler {
      * @param candidates 候选 Agent（普通成员，不含专家）
      * @return 评分结果降序列表（首位即发言者；空列表 = 无候选）
      */
+    @Event(eventCode = "RANK_SPEAKERS", eventName = "为候选Agent评分")
     public List<ScoredAgent> rank(List<Agent> candidates, MessageContext ctx) {
         return candidates.stream()
                 .map(agent -> new ScoredAgent(agent, calculateScore(agent, ctx), reasonOf(agent, ctx)))

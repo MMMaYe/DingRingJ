@@ -1,5 +1,6 @@
 package com.dingring.adapter.websocket;
 
+import com.dingring.common.util.JsonHelper;
 import com.dingring.common.util.LogHelper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -38,6 +39,10 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     @Override
     protected void handleTextMessage(WebSocketSession session, TextMessage message) {
         Long groupId = (Long) session.getAttributes().get(ATTR_GROUP_ID);
+        LogHelper.printLog(ChatWebSocketHandler.class,
+                "ChatWebSocketHandler.handleTextMessage",
+                "HANDLE_TEXT_MESSAGE",
+                "处理消息", "message={}", JsonHelper.toJson(message));
         if (groupId != null) {
             dispatcher.dispatch(groupId, session, message.getPayload());
         }
