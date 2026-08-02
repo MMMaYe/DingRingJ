@@ -176,19 +176,30 @@ public final class LogHelper {
     private static void doLog(Logger log, String level, String methodName,
                                String eventCode, String eventName,
                                String msg, Throwable e, Object... args) {
-        Object[] finalArgs;
-        if (e != null) {
-            finalArgs = new Object[args.length + 1];
-            System.arraycopy(args, 0, finalArgs, 0, args.length);
-            finalArgs[args.length] = e;
-        } else {
-            finalArgs = args;
-        }
+        String formatted = formatSlf4j(msg, args);
+        String prefix = "[" + methodName + "][" + eventCode + "] " + eventName + " ";
         switch (level) {
-            case "INFO" -> log.info("[{}][{}] {} " + msg, methodName, eventCode, eventName, finalArgs);
-            case "WARN" -> log.warn("[{}][{}] {} " + msg, methodName, eventCode, eventName, finalArgs);
-            case "ERROR" -> log.error("[{}][{}] {} " + msg, methodName, eventCode, eventName, finalArgs);
+            case "INFO" -> log.info(prefix + formatted, e);
+            case "WARN" -> log.warn(prefix + formatted, e);
+            case "ERROR" -> log.error(prefix + formatted, e);
         }
+    }
+
+    private static String formatSlf4j(String msg, Object... args) {
+        if (args == null || args.length == 0) {
+            return msg;
+        }
+        StringBuilder sb = new StringBuilder();
+        int argIndex = 0;
+        int pos = 0;
+        int placeholder;
+        while ((placeholder = msg.indexOf("{}", pos)) >= 0 && argIndex < args.length) {
+            sb.append(msg, pos, placeholder);
+            sb.append(args[argIndex++]);
+            pos = placeholder + 2;
+        }
+        sb.append(msg.substring(pos));
+        return sb.toString();
     }
 
     /**

@@ -37,7 +37,7 @@ public class WsMessageDispatcher {
     public void dispatch(Long groupId, WebSocketSession session, String payload) {
         LogHelper.putTrace(groupId, null);
         LogHelper.printLog(WsMessageDispatcher.class, "WsMessageDispatcher.dispatch", "DISPATCH", "开始执行dispatch",
-                "groupId={} session={}", groupId, JsonHelper.toJson(session));
+                "groupId={} sessionId={}", groupId, session);
         try {
             JsonNode root = objectMapper.readTree(payload);
             String type = root.path("type").asText("");
