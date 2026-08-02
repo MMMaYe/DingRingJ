@@ -296,8 +296,8 @@ public class DiscussionEngine {
         Optional<Topic> active = topicRepository.findActiveByGroupId(groupId)
                 .filter(Topic::isInProgress);
 
-        //选举路由判定的Agent
-        Agent judgeRole = resolveJudge(agents, signal.mentionedAgentIds());
+        //选举路由判定的Agent：从DB加载专职路由判定器，命中即用；未命中降级为群首成员（WARN 日志告警）
+        Agent judgeRole = loadRouteJudge(agents);
 
         MessageRouter.Route route = messageRouter.route(judgeRole, signal.content(),
                 active.map(Topic::getTitle).orElse(null));
@@ -342,12 +342,28 @@ public class DiscussionEngine {
         return false;
     }
 
-    /** 路由判定用的 Agent：@提及者优先，否则群首个成员 */
-    private Agent resolveJudge(List<Agent> agents, List<Long> mentionedIds) {
-        if (!mentionedIds.isEmpty()) {
-            return agents.stream()
-                    .filter(a -> a.getId().equals(mentionedIds.get(0)))
-                    .findFirst().orElse(agents.get(0));
+    /**
+     * 加载路由判定器 Agent：
+     * <ol>
+     *   <li>优先从 DB 查 feature.routeJudge=true 的专职判定器（独立于群成员配置，不参与讨论）</li>
+     *   <li>未配置则降级为群首个成员，并打 WARN 日志提醒补齐配置</li>
+     * </ol>
+     * 降级目的：主流程不中断，路由判定用群成员模型兜底（可能用大模型做路由浪费成本，但功能可用）。
+     *
+     * @param agents 群成员 Agent 列表（降级候选池）
+     * @return 用于 CHAT/DISCUSS/CONCLUDE 意图分类的 Agent
+     */
+    private Agent loadRouteJudge(List<Agent> agents) {
+        Optional<Agent> judge = agentRepository.findRouteJudge();
+        if (judge.isPresent()) {
+            return judge.get();
+        }
+        LogHelper.printWarnLog(DiscussionEngine.class, "DiscussionEngine.loadRouteJudge",
+                "ROUTE_JUDGE_MISSING",
+                "未配置路由判定器 Agent（feature.routeJudge=true），降级为群首个成员。请在 agent 表补齐专职判定器。",
+                "fallbackAgent={}", agents.isEmpty() ? "null" : agents.get(0).getName());
+        if (agents.isEmpty()) {
+            throw new BizException(ErrorCode.NOT_FOUND, "群内无 Agent 成员，也未配置路由判定器");
         }
         return agents.get(0);
     }

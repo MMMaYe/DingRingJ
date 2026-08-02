@@ -19,6 +19,12 @@ public interface AgentMapper {
 
     List<Agent> findAll();
 
+    /**
+     * 查找 feature.routeJudge=true 的 Agent（feature 列是 TEXT 存 JSON 字符串，
+     * 用 JSON_EXTRACT 提取布尔值）。
+     */
+    Agent findRouteJudge();
+
     int insert(Agent agent);
 
     int update(Agent agent);

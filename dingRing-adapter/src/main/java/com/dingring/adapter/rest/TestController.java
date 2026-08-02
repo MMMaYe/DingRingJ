@@ -46,13 +46,16 @@ public class TestController {
         List<LlmService.ChatTurn> turns = req.getMessages().stream()
                 .map(LlmDebugChatRequest.Turn::toChatTurn)
                 .collect(Collectors.toList());
-        LlmService.CallOptions options = req.getOverride() == null
-                ? null : req.getOverride().toCallOptions();
+        boolean jsonMode = Boolean.TRUE.equals(req.getJsonMode());
+        boolean logReasoning = Boolean.TRUE.equals(req.getLogReasoning());
+        LlmService.CallOptions options = new LlmService.CallOptions(
+                req.getOverride() == null ? null : req.getOverride().getTemperature(),
+                req.getOverride() == null ? null : req.getOverride().getMaxTokens(),
+                req.getOverride() == null ? null : req.getOverride().getReadTimeoutSeconds(),
+                jsonMode, logReasoning);
 
         long start = System.currentTimeMillis();
-        String content = (options == null)
-                ? llmService.chat(agent, systemPrompt, turns)
-                : llmService.chat(agent, systemPrompt, turns, options);
+        String content = llmService.chat(agent, systemPrompt, turns, options);
         long cost = System.currentTimeMillis() - start;
 
         return ApiResponse.ok(LlmDebugChatResponse.builder()

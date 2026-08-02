@@ -40,8 +40,8 @@ public class MessageRouter {
     /** 标题兜底截断长度 */
     private static final int TITLE_FALLBACK_LEN = 20;
 
-    /** 分类输出为小 JSON，限制生成上限控制成本 */
-    private static final int ROUTE_MAX_TOKENS = 256;
+    /** 分类输出为小 JSON，限制生成上限控制成本（小模型 + JSON 模式无需大配额） */
+    private static final int ROUTE_MAX_TOKENS = 1024;
 
     /** 分类要确定性输出，不复用 Agent 会话温度（默认 0.7 会导致判定抖动） */
     private static final double ROUTE_TEMPERATURE = 0.0;
@@ -69,7 +69,8 @@ public class MessageRouter {
                     : "（当前群里正在讨论主题「" + activeTopicTitle + "」）\n用户消息：" + content;
             String raw = llmService.chat(judge, PromptConstants.INTENT_CLASSIFIER,
                     List.of(LlmService.ChatTurn.user(userInput)),
-                    new LlmService.CallOptions(ROUTE_TEMPERATURE, ROUTE_MAX_TOKENS, routeTimeoutSeconds));
+                    new LlmService.CallOptions(ROUTE_TEMPERATURE, ROUTE_MAX_TOKENS, routeTimeoutSeconds,
+                            true, true));  // jsonMode=true, logReasoning=true
             Route route = parse(raw, content);
             return route;
         } catch (Exception e) {

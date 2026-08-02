@@ -79,7 +79,9 @@ public class ModeratorService {
         }
         try {
             String raw = llmService.chat(moderatorAgent(members.get(0)), PromptConstants.HOST_DECISION,
-                    List.of(LlmService.ChatTurn.user(buildInput(topic, members, speakCounts))));
+                    List.of(LlmService.ChatTurn.user(buildInput(topic, members, speakCounts))),
+                    new LlmService.CallOptions(0.0, 1024, 15L,
+                            true, false));  // jsonMode=true, logReasoning=false
             Decision decision = parse(raw, members);
             LogHelper.printLog(ModeratorService.class, "ModeratorService.decide", "DECIDE", "Moderator决策",
                     "topicId={} shouldContinue={} nextSpeakerId={} shouldConclude={} guidance={}",

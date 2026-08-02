@@ -69,6 +69,17 @@ public class SpringAiLlmService implements LlmService {
             ChatResponse response = chatModel.call(new Prompt(aiMessages));
             String text = response.getResult().getOutput().getText();
             long cost = System.currentTimeMillis() - startAt;
+            // 推理过程日志：Spring AI 1.0.0 GA 的 AssistantMessage 未原生暴露 reasoningContent，
+            // 尝试从 metadata 中提取（部分厂商 SDK 可能塞入）；未来版本支持后可直接 getReasoningContent()
+            if (options != null && Boolean.TRUE.equals(options.logReasoning())) {
+                String reasoning = extractReasoning(response);
+                if (reasoning != null && !reasoning.isBlank()) {
+                    LogHelper.printLog(SpringAiLlmService.class, "SpringAiLlmService.chat",
+                            "CHAT_REASONING", "推理过程",
+                            "agent={} model={}\n推理内容:\n{}",
+                            agent.getName(), agent.getModelName(), reasoning);
+                }
+            }
             if (text == null || text.isBlank()) {
                 LogHelper.printWarnLog(SpringAiLlmService.class, "SpringAiLlmService.chat", "CHAT_EMPTY_RESPONSE", "空响应",
                         "agent={} model={} 耗时={}ms", agent.getName(), agent.getModelName(), cost);
@@ -137,6 +148,30 @@ public class SpringAiLlmService implements LlmService {
         }
     }
 
+    /**
+     * 尝试从 ChatResponse 中提取推理过程内容（reasoning_content）。
+     * <p>Spring AI 1.0.0 GA 的 AssistantMessage 未原生暴露此字段，
+     * 先从 metadata 里找常见 key（reasoning_content / reasoning），
+     * 未来版本支持后可直接调用 getReasoningContent()。
+     */
+    private String extractReasoning(ChatResponse response) {
+        if (response == null || response.getResult() == null || response.getResult().getOutput() == null) {
+            return null;
+        }
+        java.util.Map<String, Object> metadata = response.getResult().getOutput().getMetadata();
+        if (metadata == null || metadata.isEmpty()) {
+            return null;
+        }
+        // 常见 key：reasoning_content（火山方舟/智谱）、reasoning（OpenAI o1 系列）
+        for (String key : new String[]{"reasoning_content", "reasoning"}) {
+            Object val = metadata.get(key);
+            if (val instanceof String s && !s.isBlank()) {
+                return s;
+            }
+        }
+        return null;
+    }
+
     private List<Message> toAiMessages(String systemPrompt, List<ChatTurn> messages) {
         List<Message> aiMessages = new ArrayList<>();
         if (systemPrompt != null && !systemPrompt.isBlank()) {
@@ -176,14 +211,21 @@ public class SpringAiLlmService implements LlmService {
                 .restClientBuilder(RestClient.builder().requestFactory(requestFactory))
                 .webClientBuilder(WebClient.builder().clientConnector(new JdkClientHttpConnector(jdkHttpClient)))
                 .build();
-        OpenAiChatOptions chatOptions = OpenAiChatOptions.builder()
+        OpenAiChatOptions.Builder chatOptionsBuilder = OpenAiChatOptions.builder()
                 .model(agent.getModelName())
                 //temperature和topP统称为核采样（nucleus sampling）技术，用于控制生成文本的随机性与确定性
                 //一般只建议调整其中一个参数
                 .temperature(temperature)
 //                .topP(0.95)
-                .maxTokens(maxTokens)
-                .build();
+                .maxTokens(maxTokens);
+        // JSON 模式：API 层面强制输出合法 JSON（意图分类/主持人决策/知识卡片提取等场景）
+        // Spring AI 1.0.0 GA 移除了 ResponseFormat(Type) 单参构造，改用 builder
+        if (options != null && Boolean.TRUE.equals(options.jsonMode())) {
+            chatOptionsBuilder.responseFormat(ResponseFormat.builder()
+                    .type(ResponseFormat.Type.JSON_OBJECT)
+                    .build());
+        }
+        OpenAiChatOptions chatOptions = chatOptionsBuilder.build();
         return OpenAiChatModel.builder()
                 .openAiApi(openAiApi)
                 .defaultOptions(chatOptions)

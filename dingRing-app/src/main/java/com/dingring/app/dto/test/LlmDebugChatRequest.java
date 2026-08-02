@@ -38,6 +38,12 @@ public class LlmDebugChatRequest {
     /** 系统提示词（对应 chat 方法第二个参数） */
     private String systemPrompt;
 
+    /** 是否强制 JSON 输出（response_format=json_object） */
+    private Boolean jsonMode;
+
+    /** 是否打印推理过程（推理模型的 reasoning_content） */
+    private Boolean logReasoning;
+
     /** 对话消息（时间升序，role=USER/ASSISTANT） */
     @NotEmpty(message = "messages 不能为空")
     @Valid
@@ -73,8 +79,8 @@ public class LlmDebugChatRequest {
         /** 覆盖读超时秒数（短任务建议 15） */
         private Long readTimeoutSeconds;
 
-        public LlmService.CallOptions toCallOptions() {
-            return new LlmService.CallOptions(temperature, maxTokens, readTimeoutSeconds);
+        public LlmService.CallOptions toCallOptions(boolean jsonMode, boolean logReasoning) {
+            return new LlmService.CallOptions(temperature, maxTokens, readTimeoutSeconds, jsonMode, logReasoning);
         }
     }
 }

@@ -64,7 +64,15 @@ public interface LlmService {
      * @param temperature        采样温度（分类任务建议 0）
      * @param maxTokens          生成上限（分类输出为小 JSON，建议限小）
      * @param readTimeoutSeconds 读超时秒数（短超时避免卡死调用方线程）
+     * @param jsonMode           是否强制 JSON 输出（API 层 response_format=json_object）
+     * @param logReasoning       是否打印推理过程（推理模型的 reasoning_content，非推理模型无效果）
      */
-    record CallOptions(Double temperature, Integer maxTokens, Long readTimeoutSeconds) {
+    record CallOptions(Double temperature, Integer maxTokens, Long readTimeoutSeconds,
+                       Boolean jsonMode, Boolean logReasoning) {
+
+        /** 向后兼容：3 参构造器，jsonMode=false, logReasoning=false */
+        public CallOptions(Double temperature, Integer maxTokens, Long readTimeoutSeconds) {
+            this(temperature, maxTokens, readTimeoutSeconds, false, false);
+        }
     }
 }

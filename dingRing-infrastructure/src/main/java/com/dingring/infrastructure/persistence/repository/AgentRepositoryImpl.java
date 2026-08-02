@@ -38,6 +38,11 @@ public class AgentRepositoryImpl implements AgentRepository {
     }
 
     @Override
+    public Optional<Agent> findRouteJudge() {
+        return Optional.ofNullable(agentMapper.findRouteJudge());
+    }
+
+    @Override
     public Long save(Agent agent) {
         LocalDateTime now = LocalDateTime.now();
         agent.setCreateTime(now);

@@ -37,6 +37,20 @@
         ORDER BY id ASC
     </select>
 
+    <!--
+        路由判定器：feature.routeJudge=true。
+        feature 列是 TEXT 存储 JSON 字符串，用 CAST 转 JSON 类型后 JSON_EXTRACT。
+        JSON_EXTRACT 返回的布尔在 MySQL 里是 1/0，所以用 = true（= 1 也等价）。
+        按 id 升序取第一个，避免配置多份时产生歧义。
+    -->
+    <select id="findRouteJudge" resultMap="agentMap">
+        SELECT <include refid="columns"/>
+        FROM agent
+        WHERE JSON_EXTRACT(CAST(feature AS JSON), '$.routeJudge') = true
+        ORDER BY id ASC
+        LIMIT 1
+    </select>
+
     <insert id="insert" parameterType="com.dingring.domain.agent.Agent"
             useGeneratedKeys="true" keyProperty="id">
         INSERT INTO agent (name, profile_picture, description, base_url, api_key, model_name, call_type,

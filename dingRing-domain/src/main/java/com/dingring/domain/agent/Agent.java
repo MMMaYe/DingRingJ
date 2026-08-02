@@ -49,4 +49,12 @@ public class Agent {
         }
         return DEFAULT_MAX_TOKENS;
     }
+
+    /**
+     * 是否路由判定器（不参与群讨论，仅专职做 CHAT/DISCUSS/CONCLUDE 意图分类）。
+     * <p>来源：feature.routeJudge 标记。Agent 管理列表/加群选择器均会过滤掉此类 Agent。
+     */
+    public boolean isRouteJudge() {
+        return feature != null && Boolean.TRUE.equals(feature.get("routeJudge"));
+    }
 }

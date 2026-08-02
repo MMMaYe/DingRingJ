@@ -63,7 +63,9 @@ public class CardEventHandler {
             try {
                 String raw = llmService.chat(concluder, PromptConstants.KNOWLEDGE_EXTRACT,
                         List.of(LlmService.ChatTurn.user("讨论主题：" + event.getTitle()
-                                + "\n\n讨论结论：\n" + event.getConclusion())));
+                                + "\n\n讨论结论：\n" + event.getConclusion())),
+                        new LlmService.CallOptions(0.0, 2048, null,
+                                true, false));  // jsonMode=true, logReasoning=false
                 List<KnowledgeCard> cards = parseCards(raw, event.getTopicId());
                 if (cards.isEmpty()) {
                     throw new IllegalStateException("LLM 未提取到有效卡片");

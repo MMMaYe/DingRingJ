@@ -54,8 +54,17 @@ public class AgentAppService {
         return toDto(agent);
     }
 
+    /**
+     * Agent 列表（群加群选择器 / Agent 管理页均用此接口）。
+     * <p>过滤掉路由判定器（feature.routeJudge=true）：
+     * 判定器不参与群讨论，不应出现在加群成员选择器中；
+     * 如需维护判定器配置，通过 {@link #findById(Long)} 详情接口按 id 获取。
+     */
     public List<AgentDTO> list() {
-        return agentRepository.findAll().stream().map(this::toDto).toList();
+        return agentRepository.findAll().stream()
+                .filter(a -> !a.isRouteJudge())
+                .map(this::toDto)
+                .toList();
     }
 
     /**
