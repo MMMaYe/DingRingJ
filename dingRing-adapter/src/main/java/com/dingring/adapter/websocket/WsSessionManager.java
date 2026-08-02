@@ -81,7 +81,7 @@ public class WsSessionManager implements ChatPusher {
     }
 
     @Event(eventCode = "SEND_MESSAGE_TO_GROUP", eventName = "向群发送消息")
-    private void sendSafely(WebSocketSession session, TextMessage message) {
+    public void sendSafely(WebSocketSession session, TextMessage message) {
         try {
             if (session.isOpen()) {
                 // 同一 session 上的并发写需要串行化

@@ -281,7 +281,7 @@ public class DiscussionEngine {
      * @return true = 已触发收束，循环必须退出让位给结论生成任务
      */
     @Event(eventCode = "HANDLE_SIGNAL", eventName = "处理用户发的消息")
-    private boolean handleSignal(Long groupId, GroupState state, Folded folded) {
+    public boolean handleSignal(Long groupId, GroupState state, Folded folded) {
         UserSignal signal = folded.signal();
         Group group = groupRepository.findById(groupId).orElse(null);
         if (group == null) {
@@ -355,7 +355,7 @@ public class DiscussionEngine {
     /** 触发收束；乐观锁冲突等失败时返回 false 让循环继续（下一轮重新评估状态） */
     //TODO：尝试收束逻辑的合理性？
     @Event(eventCode = "TRY_CONCLUDE", eventName = "尝试收束")
-    private boolean tryConclude(Long topicId, Long operatorId, String triggeredBy, Long concluderAgentId) {
+    public boolean tryConclude(Long topicId, Long operatorId, String triggeredBy, Long concluderAgentId) {
         try {
             chatOrchestrator.conclude(topicId, operatorId, triggeredBy, concluderAgentId);
             return true;
@@ -367,7 +367,7 @@ public class DiscussionEngine {
 
     /* ==================== 闲聊态：轻量应答 + 画像提炼 ==================== */
     @Event(eventCode = "HANDLE_CHAT",eventName = "处理")
-    private void handleChat(Group group, GroupState state, UserSignal signal, int messageCount) {
+    public void handleChat(Group group, GroupState state, UserSignal signal, int messageCount) {
         state.chatBuffer += messageCount;
         if (state.chatBuffer >= profileExtractThreshold) {
             state.chatBuffer = 0;
@@ -442,7 +442,7 @@ public class DiscussionEngine {
      * @return 建题成功返回 Topic；未达门槛返回 null
      */
     @Event(eventCode = "ENSURE_TOPIC", eventName = "建题")
-    private Topic ensureTopic(Group group, GroupState state, MessageRouter.Route route) {
+    public Topic ensureTopic(Group group, GroupState state, MessageRouter.Route route) {
         boolean create = route.confidence() == MessageRouter.Confidence.HIGH
                 || ++state.lowDiscussStreak >= LOW_DISCUSS_CREATE_STREAK;
         if (!create) {
@@ -604,7 +604,7 @@ public class DiscussionEngine {
      * <p>members 为群内全量成员（含已 PASS 者），用于上下文中的成员名单注入。
      */
     @Event(eventCode = "DiscussionEngine.speakOnce", eventName = "发言")
-    private SpeakResult speakOnce(List<Agent> candidates, List<Agent> members, MessageContext ctx,
+    public SpeakResult speakOnce(List<Agent> candidates, List<Agent> members, MessageContext ctx,
                                   Long preferredAgentId, String moderatorGuidance) {
         boolean topicMode = ctx.getTopicId() != null;
         if (candidates.isEmpty()) {
@@ -718,7 +718,7 @@ public class DiscussionEngine {
 
     /** LLM 调用（失败重试 1 次）；流式模式下重试前废弃旧流、换新 streamId 重开 */
     @Event(eventCode = "CHAT", eventName = "调用LLM")
-    private String chatWithRetry(Agent agent, ContextBuilder.LlmContext ctx, StreamEmitter emitter) {
+    public String chatWithRetry(Agent agent, ContextBuilder.LlmContext ctx, StreamEmitter emitter) {
         try {
             return emitter != null
                     ? llmService.chatStream(agent, ctx.systemPrompt(), ctx.turns(), emitter::onDelta)
@@ -781,7 +781,7 @@ public class DiscussionEngine {
 
     /** Moderator 指定的发言者提到降级链首位（不在候选内则忽略，其余顺序不变） */
     @Event(eventCode = "PROMOTE_PREFERRED", eventName = "Moderator指定发言者提前")
-    private List<SpeakerScheduler.ScoredAgent> promotePreferred(
+    public List<SpeakerScheduler.ScoredAgent> promotePreferred(
             List<SpeakerScheduler.ScoredAgent> ranked, Long preferredAgentId) {
         if (preferredAgentId == null) {
             return ranked;
@@ -857,7 +857,7 @@ public class DiscussionEngine {
 
     /** 异步任务兜底：未捕获异常会让虚拟线程任务静默消失，统一捕获并记录 */
     @Event(eventCode = "SAFE_RUN", eventName = "提交结论总结异步任务")
-    private void safeRun(String taskName, Long groupId, Runnable task) {
+    public void safeRun(String taskName, Long groupId, Runnable task) {
         try {
             task.run();
         } catch (Exception e) {

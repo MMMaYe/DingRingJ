@@ -1,4 +1,6 @@
 spring:
+  profiles:
+    active: dev
   application:
     name: dingring
   # MySQL 生产库

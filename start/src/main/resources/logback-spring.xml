@@ -35,7 +35,7 @@
             <appender-ref ref="CONSOLE"/>
             <appender-ref ref="FILE"/>
         </root>
-        <logger name="com.dingring" level="DEBUG"/>
+        <logger name="com.dingring" level="INFO"/>
         <logger name="com.dingring.infrastructure.persistence" level="INFO"/>
     </springProfile>
 

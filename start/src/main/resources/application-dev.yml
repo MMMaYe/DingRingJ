@@ -1,0 +1,8 @@
+# 开发环境覆盖配置
+dingring:
+  llm:
+    # 开发环境可开启 Mock LLM 快速调试完整闭环（无需 API Key）
+    mock: false
+  logging:
+    # 开发环境打印完整 LLM prompt 便于调试
+    llm-prompt-enabled: true

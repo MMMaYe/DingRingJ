@@ -1,0 +1,10 @@
+# 生产环境覆盖配置
+server:
+  port: 8080
+
+dingring:
+  llm:
+    mock: false
+  logging:
+    # 生产环境关闭 LLM prompt 日志，减少日志量与敏感信息泄露
+    llm-prompt-enabled: false

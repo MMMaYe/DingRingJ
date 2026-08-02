@@ -194,7 +194,7 @@ public class ChatOrchestrator {
 
     /** 解析总结 Agent：指定优先；否则按调度评分选最高的成员 Agent */
     @Event(eventCode = "RESOLVE_CONCLUIDER", eventName = "决策总结Agent")
-    private Agent resolveConcluder(Group group, Topic topic, Long designatedId) {
+    public Agent resolveConcluder(Group group, Topic topic, Long designatedId) {
         if (designatedId != null) {
             return agentRepository.findById(designatedId).orElse(null);
         }

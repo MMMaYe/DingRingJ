@@ -81,7 +81,7 @@ public class MessageRouter {
 
     /** 解析 LLM 输出（容忍 ```json 包裹与前后杂文）；解析失败抛异常由上层降级 */
     @Event(eventCode = "PARSE_ROUTE", eventName = "解析路由")
-    private Route parse(String raw, String originalContent) throws Exception {
+    public Route parse(String raw, String originalContent) throws Exception {
         String json = raw.trim();
         int start = json.indexOf('{');
         int end = json.lastIndexOf('}');
