@@ -70,3 +70,7 @@ dingring:
   logging:
     # 是否完整打印 LLM prompt（生产可关闭以减少日志量）
     llm-prompt-enabled: true
+  debug:
+    llm:
+      # dev 环境开启调试接口；prod 务必在 application-prod.yml 中关闭
+      enabled: true

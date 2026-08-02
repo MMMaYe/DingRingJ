@@ -8,3 +8,6 @@ dingring:
   logging:
     # 生产环境关闭 LLM prompt 日志，减少日志量与敏感信息泄露
     llm-prompt-enabled: false
+  debug:
+    llm:
+      enabled: false
