@@ -10,8 +10,12 @@ import org.apache.ibatis.annotations.Mapper;
 @Mapper
 public interface UserProfileMapper {
 
+    /** 查询当前生效的画像（status = 1） */
     UserProfile findByUserId(Long userId);
 
-    /** 按 user_id 唯一键插入或覆盖更新（ON DUPLICATE KEY UPDATE） */
-    int upsert(UserProfile profile);
+    /** 将指定用户当前生效的画像置为失效（status = 0） */
+    int expireByUserId(Long userId);
+
+    /** 插入新记录 */
+    int insert(UserProfile profile);
 }

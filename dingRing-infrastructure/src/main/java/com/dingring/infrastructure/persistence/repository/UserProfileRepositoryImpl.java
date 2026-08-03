@@ -5,6 +5,7 @@ import com.dingring.domain.user.UserProfileRepository;
 import com.dingring.infrastructure.persistence.mapper.UserProfileMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
@@ -24,12 +25,13 @@ public class UserProfileRepositoryImpl implements UserProfileRepository {
     }
 
     @Override
-    public void upsert(UserProfile profile) {
+    @Transactional
+    public void saveNewVersion(UserProfile profile) {
+        userProfileMapper.expireByUserId(profile.getUserId());
         LocalDateTime now = LocalDateTime.now();
-        if (profile.getCreateTime() == null) {
-            profile.setCreateTime(now);
-        }
+        profile.setStatus(UserProfile.STATUS_ACTIVE);
+        profile.setCreateTime(now);
         profile.setUpdateTime(now);
-        userProfileMapper.upsert(profile);
+        userProfileMapper.insert(profile);
     }
 }

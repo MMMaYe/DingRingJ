@@ -63,7 +63,7 @@ public class SpringAiLlmService implements LlmService {
             OpenAiChatModel chatModel = buildChatModel(agent, options);
             List<Message> aiMessages = toAiMessages(systemPrompt, messages);
             LogHelper.printLog(SpringAiLlmService.class, "SpringAiLlmService.chat", "CHAT_PROMPT", "Prompt",
-                    "agent={} model={}\nsystemPrompt:\n%s\nturns({}轮):\n{}",
+                    "agent={} model={}\nsystemPrompt:\n{}\nturns({}轮):\n{}",
                     agent.getName(), agent.getModelName(), systemPrompt,
                     aiMessages.size(), LogHelper.formatTurns(aiMessages));
             ChatResponse response = chatModel.call(new Prompt(aiMessages));
@@ -94,8 +94,8 @@ public class SpringAiLlmService implements LlmService {
         } catch (Exception e) {
             LogHelper.printWarnLog(SpringAiLlmService.class, "SpringAiLlmService.chat", "CHAT_ERROR", "异常",
                     "agent={} model={} 耗时={}ms error={}",
-                    agent.getName(), agent.getModelName(),
-                    System.currentTimeMillis() - startAt, e.getMessage(), e);
+                    e, agent.getName(), agent.getModelName(),
+                    System.currentTimeMillis() - startAt, e.getMessage());
             throw new BizException(ErrorCode.LLM_API_ERROR,
                     "LLM 调用失败: " + agent.getName() + " - " + e.getMessage());
         }
@@ -109,7 +109,7 @@ public class SpringAiLlmService implements LlmService {
             OpenAiChatModel chatModel = buildChatModel(agent, null);
             List<Message> aiMessages = toAiMessages(systemPrompt, messages);
             LogHelper.printLog(SpringAiLlmService.class, "SpringAiLlmService.chatStream", "STREAM_PROMPT", "Prompt",
-                    "agent={} model={}\nsystemPrompt:\n%s\nturns({}轮):\n{}",
+                    "agent={} model={}\nsystemPrompt:\n{}\nturns({}轮):\n{}",
                     agent.getName(), agent.getModelName(), systemPrompt,
                     aiMessages.size(), LogHelper.formatTurns(aiMessages));
             StringBuilder full = new StringBuilder();
@@ -141,8 +141,8 @@ public class SpringAiLlmService implements LlmService {
         } catch (Exception e) {
             LogHelper.printWarnLog(SpringAiLlmService.class, "SpringAiLlmService.chatStream", "STREAM_ERROR", "异常",
                     "agent={} model={} 耗时={}ms (流式) error={}",
-                    agent.getName(), agent.getModelName(),
-                    System.currentTimeMillis() - startAt, e.getMessage(), e);
+                    e, agent.getName(), agent.getModelName(),
+                    System.currentTimeMillis() - startAt, e.getMessage());
             throw new BizException(ErrorCode.LLM_API_ERROR,
                     "LLM 流式调用失败: " + agent.getName() + " - " + e.getMessage());
         }
@@ -220,6 +220,7 @@ public class SpringAiLlmService implements LlmService {
                 .maxTokens(maxTokens);
         // JSON 模式：API 层面强制输出合法 JSON（意图分类/主持人决策/知识卡片提取等场景）
         // Spring AI 1.0.0 GA 移除了 ResponseFormat(Type) 单参构造，改用 builder
+        //TODO: 后续若输出不稳定，需要强规定JSON的jsonSchema
         if (options != null && Boolean.TRUE.equals(options.jsonMode())) {
             chatOptionsBuilder.responseFormat(ResponseFormat.builder()
                     .type(ResponseFormat.Type.JSON_OBJECT)

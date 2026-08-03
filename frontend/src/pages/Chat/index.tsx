@@ -64,6 +64,16 @@ export default function ChatPage() {
   const wsCtx = useWebSocketContext();
   const connected = groupId !== null && wsCtx.isConnected(groupId);
 
+  // 连接断开时清理正在进行的流式消息和输入状态
+  const prevConnectedRef = useRef(connected);
+  useEffect(() => {
+    if (prevConnectedRef.current && !connected) {
+      setTyping(new Map());
+      setStreams(new Map());
+    }
+    prevConnectedRef.current = connected;
+  }, [connected]);
+
   // ---- 稳定派生数据（供 memo 化的 MessageItem 使用） ----
   const agentNames = useMemo(
     () => group ? group.members.filter(m => m.type === 'AGENT').map(m => m.name) : [],

@@ -60,7 +60,7 @@ public class SimpleProfileService implements ProfileService {
                             return p;
                         });
                 profile.setProfileText(merged.trim());
-                userProfileRepository.upsert(profile);
+                userProfileRepository.saveNewVersion(profile);
                 LogHelper.printLog(SimpleProfileService.class, "SimpleProfileService.extractProfile", "PROFILE_WRITE_OK", "画像提炼写回成功", "userId={} length={}", userId, merged.trim().length());
             } catch (Exception e) {
                 // 提炼失败仅日志留痕，不影响主流程

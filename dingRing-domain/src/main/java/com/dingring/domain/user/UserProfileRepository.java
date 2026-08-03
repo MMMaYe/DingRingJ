@@ -7,8 +7,9 @@ import java.util.Optional;
  */
 public interface UserProfileRepository {
 
+    /** 查询当前生效的画像（status = 1） */
     Optional<UserProfile> findByUserId(Long userId);
 
-    /** 按 user_id 唯一键插入或覆盖更新画像文本 */
-    void upsert(UserProfile profile);
+    /** 保存为新版本：将旧 status 置为 0，再插入 status=1 的新记录 */
+    void saveNewVersion(UserProfile profile);
 }

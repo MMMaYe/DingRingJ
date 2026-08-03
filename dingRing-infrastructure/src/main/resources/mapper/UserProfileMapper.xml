@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<!-- 用户画像表 Mapper：user_id 唯一键 upsert -->
+<!-- 用户画像表 Mapper：版本化写回，每次提炼后标记旧记录失效，插入新记录 -->
 <mapper namespace="com.dingring.infrastructure.persistence.mapper.UserProfileMapper">
 
     <resultMap id="profileMap" type="com.dingring.domain.user.UserProfile">
@@ -11,23 +11,27 @@
     </resultMap>
 
     <sql id="columns">
-        id, user_id, profile_text, feature, create_time, update_time
+        id, user_id, profile_text, feature, status, create_time, update_time
     </sql>
 
     <select id="findByUserId" resultMap="profileMap">
         SELECT <include refid="columns"/>
         FROM user_profile
-        WHERE user_id = #{userId}
+        WHERE user_id = #{userId} AND status = 1
     </select>
 
-    <insert id="upsert" parameterType="com.dingring.domain.user.UserProfile"
+    <update id="expireByUserId">
+        UPDATE user_profile
+        SET status = 0, update_time = NOW()
+        WHERE user_id = #{userId} AND status = 1
+    </update>
+
+    <insert id="insert" parameterType="com.dingring.domain.user.UserProfile"
             useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO user_profile (user_id, profile_text, feature, create_time, update_time)
+        INSERT INTO user_profile (user_id, profile_text, feature, status, create_time, update_time)
         VALUES (#{userId}, #{profileText},
                 #{feature, typeHandler=com.dingring.infrastructure.persistence.typehandler.JsonMapTypeHandler},
-                #{createTime}, #{updateTime})
-        ON DUPLICATE KEY UPDATE profile_text = VALUES(profile_text),
-                                update_time  = VALUES(update_time)
+                #{status}, #{createTime}, #{updateTime})
     </insert>
 
 </mapper>
