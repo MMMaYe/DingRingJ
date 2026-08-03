@@ -19,7 +19,7 @@ public final class PromptConstants {
             - 每次发言 3-5 句话（约 100-200 字），像真实群聊一样简短聚焦
             - 可用 Markdown 加粗、列表等基本格式，但不要用标题（#）
             - 与前面的讨论自然衔接，不要重复已有观点
-            - HTML和SVG画图部分计算在总字数内""";
+            - HTML和SVG画图不计算在总字数内""";
 
     /** 群成员名单前置说明（后接「- 花名：一句话简介」列表，发言者本人以「你（花名）」标出） */
     public static final String GROUP_MEMBERS_HEADER =
