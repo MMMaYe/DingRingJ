@@ -13,6 +13,7 @@ import com.dingring.domain.discussion.Topic;
 import com.dingring.domain.discussion.TopicRepository;
 import com.dingring.domain.discussion.TopicStatus;
 import com.dingring.domain.group.GroupMessage;
+import com.dingring.domain.group.GroupRepository;
 import com.dingring.domain.group.MessageRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -39,6 +40,7 @@ class TopicAppServiceTest {
     private TopicRepository topicRepository;
     private MessageRepository messageRepository;
     private AgentRepository agentRepository;
+    private GroupRepository groupRepository;
     private MessageAssembler messageAssembler;
     private ChatOrchestrator chatOrchestrator;
     private Terminator terminator;
@@ -49,11 +51,12 @@ class TopicAppServiceTest {
         topicRepository = mock(TopicRepository.class);
         messageRepository = mock(MessageRepository.class);
         agentRepository = mock(AgentRepository.class);
+        groupRepository = mock(GroupRepository.class);
         messageAssembler = mock(MessageAssembler.class);
         chatOrchestrator = mock(ChatOrchestrator.class);
         terminator = mock(Terminator.class);
         service = new TopicAppService(topicRepository, messageRepository,
-                agentRepository, messageAssembler, chatOrchestrator, terminator);
+                agentRepository, groupRepository, messageAssembler, chatOrchestrator, terminator);
     }
 
     @Nested

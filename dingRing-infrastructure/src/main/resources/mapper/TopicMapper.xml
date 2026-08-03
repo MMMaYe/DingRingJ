@@ -58,6 +58,14 @@
         ORDER BY closed_at ASC, id ASC
     </select>
 
+    <!-- 主题沉淀区：全部已关闭主题（按关闭时间倒序） -->
+    <select id="findAllClosed" resultMap="topicMap">
+        SELECT <include refid="columns"/>
+        FROM topic
+        WHERE status = 'CLOSED'
+        ORDER BY closed_at DESC, id DESC
+    </select>
+
     <insert id="insert" parameterType="com.dingring.domain.discussion.Topic"
             useGeneratedKeys="true" keyProperty="id">
         INSERT INTO topic (chat_group_id, title, status, conclusion, closed_at, version, feature, create_time, update_time)

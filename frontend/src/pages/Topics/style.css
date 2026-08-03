@@ -1,0 +1,195 @@
+/* Topics page - master-detail layout */
+
+.topics-body {
+  display: flex;
+  gap: 0;
+  padding: 0;
+  height: calc(100vh - 220px);
+  min-height: 400px;
+}
+
+/* ---- 左侧主题列表 ---- */
+.topics-list {
+  width: 340px;
+  flex-shrink: 0;
+  overflow-y: auto;
+  border-right: 1px solid var(--border-neutral-l1);
+  padding: 12px 8px;
+}
+
+.topics-list__empty {
+  padding: 48px 16px;
+}
+
+.topic-item {
+  padding: 12px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+  margin-bottom: 4px;
+  border: 1px solid transparent;
+  transition: background .15s, border-color .15s;
+  animation: topic-item-in .35s cubic-bezier(.16, 1, .3, 1) backwards;
+}
+
+@keyframes topic-item-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.topic-item:hover { background: var(--bg-overlay-l1); }
+.topic-item--active {
+  background: var(--bg-brand-popup);
+  border-color: rgba(50, 240, 140, .25);
+}
+
+.topic-item__title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-default-hover);
+  line-height: 20px;
+  margin-bottom: 6px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.topic-item--active .topic-item__title { color: var(--text-brand); }
+
+.topic-item__meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.topic-item__count {
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
+.topic-item__time {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 骨架屏 */
+.topic-item-skeleton {
+  padding: 14px;
+  margin-bottom: 4px;
+  border-radius: 10px;
+  background: var(--bg-overlay-l1);
+  animation: topic-item-in .35s cubic-bezier(.16, 1, .3, 1) backwards;
+}
+.topic-item-skeleton__title {
+  height: 14px;
+  width: 80%;
+  border-radius: 4px;
+  background: var(--bg-overlay-l2);
+  margin-bottom: 8px;
+}
+.topic-item-skeleton__meta {
+  height: 10px;
+  width: 50%;
+  border-radius: 4px;
+  background: var(--bg-overlay-l2);
+}
+
+/* ---- 右侧详情 ---- */
+.topics-detail {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  padding: 24px 32px 40px;
+}
+
+.topics-detail__empty {
+  padding: 80px 24px;
+}
+
+.topics-detail__loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  height: 100%;
+  color: var(--text-tertiary);
+  font-size: 13px;
+}
+
+.topics-detail__head {
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border-neutral-l1);
+}
+
+.topics-detail__title {
+  font-family: "New York", "Songti SC", "STSong", Georgia, serif;
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--text-default-hover);
+  letter-spacing: -0.01em;
+  line-height: 30px;
+  margin: 0 0 10px;
+}
+
+.topics-detail__meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.topics-detail__count {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.topics-detail__date {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+
+.topics-detail__section {
+  margin-bottom: 28px;
+}
+
+.topics-detail__section--empty {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  padding: 16px 0;
+}
+
+.topics-detail__label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .04em;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+
+.topics-detail__conclusion {
+  max-height: none;
+}
+
+/* 知识卡片列表 */
+.topics-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.topics-card {
+  position: relative;
+  margin-bottom: 0;
+}
+
+.topics-card__cat {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+}

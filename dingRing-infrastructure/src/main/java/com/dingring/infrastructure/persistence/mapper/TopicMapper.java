@@ -26,6 +26,8 @@ public interface TopicMapper {
 
     List<Topic> findClosedSince(@Param("since") LocalDateTime since);
 
+    List<Topic> findAllClosed();
+
     int insert(Topic topic);
 
     /** 乐观锁更新：version 匹配才生效，成功后 version + 1 */

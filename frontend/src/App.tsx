@@ -8,6 +8,7 @@ import ChatPage from './pages/Chat';
 const AgentsPage = lazy(() => import('./pages/Agents'));
 const CardsPage = lazy(() => import('./pages/Cards'));
 const KBPage = lazy(() => import('./pages/KB'));
+const TopicsPage = lazy(() => import('./pages/Topics'));
 
 /**
  * 页面切换过渡容器
@@ -27,6 +28,7 @@ function PageTransition() {
       <Suspense fallback={<div className="route-loading"><span className="route-loading__spinner" /></div>}>
         <Routes location={location}>
           <Route path="/" element={<ChatPage />} />
+          <Route path="/topics" element={<TopicsPage />} />
           <Route path="/agents" element={<AgentsPage />} />
           <Route path="/cards" element={<CardsPage />} />
           <Route path="/kb" element={<KBPage />} />

@@ -41,6 +41,17 @@ export interface GroupDetail {
   createTime: string;
 }
 
+// ---- 主题沉淀区 ----
+export interface TopicDigest {
+  id: number;
+  title: string;
+  groupId: number;
+  groupName: string;
+  messageCount: number;
+  closedAt: string;
+  createTime: string;
+}
+
 // ---- 消息 ----
 export interface MessageDTO {
   id: number;

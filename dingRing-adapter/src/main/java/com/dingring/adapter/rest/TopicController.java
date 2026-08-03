@@ -3,6 +3,7 @@ package com.dingring.adapter.rest;
 import com.dingring.app.dto.response.ConclusionDTO;
 import com.dingring.app.dto.response.KnowledgeCardDTO;
 import com.dingring.app.dto.response.MessageDTO;
+import com.dingring.app.dto.response.TopicDigest;
 import com.dingring.app.dto.response.TopicSummary;
 import com.dingring.app.service.CardAppService;
 import com.dingring.app.service.TopicAppService;
@@ -33,6 +34,12 @@ public class TopicController {
     @GetMapping("/groups/{groupId}/topics")
     public ApiResponse<List<TopicSummary>> listTopics(@PathVariable Long groupId) {
         return ApiResponse.ok(topicAppService.listByGroup(groupId));
+    }
+
+    /** 全部已关闭主题（主题沉淀区，跨群） */
+    @GetMapping("/topics/closed")
+    public ApiResponse<List<TopicDigest>> listClosedTopics() {
+        return ApiResponse.ok(topicAppService.listAllClosed());
     }
 
     /** 群消息分页（含闲聊，群聊主窗口用） */

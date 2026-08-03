@@ -3,6 +3,7 @@ package com.dingring.adapter.rest;
 import com.dingring.app.dto.response.ConclusionDTO;
 import com.dingring.app.dto.response.KnowledgeCardDTO;
 import com.dingring.app.dto.response.MessageDTO;
+import com.dingring.app.dto.response.TopicDigest;
 import com.dingring.app.dto.response.TopicSummary;
 import com.dingring.app.service.CardAppService;
 import com.dingring.app.service.TopicAppService;
@@ -72,6 +73,26 @@ class TopicControllerTest {
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.data.length()").value(2))
                     .andExpect(jsonPath("$.data[0].title").value("主题1"));
+        }
+    }
+
+    @Nested
+    @DisplayName("GET /api/topics/closed 主题沉淀区")
+    class ClosedTopics {
+
+        @Test
+        @DisplayName("返回全部已关闭主题（跨群，含群名）")
+        void shouldReturnAllClosedTopics() throws Exception {
+            when(topicAppService.listAllClosed()).thenReturn(List.of(
+                    TopicDigest.builder().id(1L).title("JMM").groupId(10L).groupName("Java群").build(),
+                    TopicDigest.builder().id(2L).title("Redis").groupId(20L).groupName("中间件群").build()
+            ));
+
+            mockMvc.perform(get("/api/topics/closed"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.data.length()").value(2))
+                    .andExpect(jsonPath("$.data[0].title").value("JMM"))
+                    .andExpect(jsonPath("$.data[0].groupName").value("Java群"));
         }
     }
 

@@ -26,6 +26,9 @@ public interface TopicRepository {
     /** 某时刻之后关闭的 CLOSED 主题（卡片对账用） */
     List<Topic> findClosedSince(LocalDateTime since);
 
+    /** 全部已关闭主题（主题沉淀区用，按关闭时间倒序） */
+    List<Topic> findAllClosed();
+
     Long save(Topic topic);
 
     /**
