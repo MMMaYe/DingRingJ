@@ -22,6 +22,15 @@
         WHERE id = #{id}
     </select>
 
+    <select id="findByIds" resultMap="messageMap">
+        SELECT <include refid="columns"/>
+        FROM message
+        WHERE id IN
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </select>
+
     <insert id="insert" parameterType="com.dingring.domain.group.GroupMessage"
             useGeneratedKeys="true" keyProperty="id">
         INSERT INTO message (chat_group_id, topic_id, sender_id, sender_type, message_type, content,

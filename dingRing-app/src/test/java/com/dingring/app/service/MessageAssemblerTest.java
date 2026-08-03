@@ -14,10 +14,15 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -197,6 +202,134 @@ class MessageAssemblerTest {
             GroupMessage m = msg(1L, 0L, SenderType.SYSTEM, "通知");
 
             assertThat(assembler.resolveSenderName(m)).isEqualTo("系统");
+        }
+    }
+
+    @Nested
+    @DisplayName("toBatchDtos 批量装配")
+    class ToBatchDtos {
+
+        @Test
+        @DisplayName("空列表返回空列表且不触发任何查询")
+        void emptyListShouldReturnEmptyWithoutQueries() {
+            List<MessageDTO> result = assembler.toBatchDtos(List.of());
+
+            assertThat(result).isEmpty();
+            verify(agentRepository, never()).findByIds(any());
+            verify(userRepository, never()).findByIds(any());
+            verify(messageRepository, never()).findByIds(any());
+        }
+
+        @Test
+        @DisplayName("混合 Agent/User/System 消息批量装配，验证 findByIds 各调用一次")
+        void mixedMessagesShouldBatchLookup() {
+            GroupMessage agentMsg = msg(1L, 10L, SenderType.AGENT, "agent hi");
+            GroupMessage userMsg = msg(2L, 1L, SenderType.USER, "user hello");
+            GroupMessage sysMsg = msg(3L, 0L, SenderType.SYSTEM, "系统通知");
+
+            Agent agent = new Agent();
+            agent.setId(10L);
+            agent.setName("老王");
+            agent.setProfilePicture("http://x/a.png");
+            User user = new User();
+            user.setId(1L);
+            user.setName("张三");
+            user.setProfilePicture("http://x/u.png");
+
+            when(agentRepository.findByIds(any())).thenReturn(List.of(agent));
+            when(userRepository.findByIds(any())).thenReturn(List.of(user));
+
+            List<MessageDTO> dtos = assembler.toBatchDtos(List.of(agentMsg, userMsg, sysMsg));
+
+            assertThat(dtos).hasSize(3);
+            assertThat(dtos.get(0).getSenderName()).isEqualTo("老王");
+            assertThat(dtos.get(0).getSenderAvatar()).isEqualTo("http://x/a.png");
+            assertThat(dtos.get(1).getSenderName()).isEqualTo("张三");
+            assertThat(dtos.get(1).getSenderAvatar()).isEqualTo("http://x/u.png");
+            assertThat(dtos.get(2).getSenderName()).isEqualTo("系统");
+
+            // 关键：每个 Repository 批量查询只调用一次，而非逐条 N 次
+            verify(agentRepository, times(1)).findByIds(any());
+            verify(userRepository, times(1)).findByIds(any());
+            verify(messageRepository, never()).findByIds(any());
+        }
+
+        @Test
+        @DisplayName("有引用回复时批量查被引用消息，且 replyToSenderName 正确填充")
+        void shouldBatchLookupRepliedMessages() {
+            GroupMessage replied = msg(1L, 10L, SenderType.AGENT, "被引用的内容");
+            GroupMessage m = msg(2L, 1L, SenderType.USER, "同问");
+            m.setReplyToMessageId(1L);
+
+            Agent agent = new Agent();
+            agent.setId(10L);
+            agent.setName("老王");
+            User user = new User();
+            user.setId(1L);
+            user.setName("张三");
+
+            when(agentRepository.findByIds(any())).thenReturn(List.of(agent));
+            when(userRepository.findByIds(any())).thenReturn(List.of(user));
+            when(messageRepository.findByIds(any())).thenReturn(List.of(replied));
+
+            List<MessageDTO> dtos = assembler.toBatchDtos(List.of(m));
+
+            assertThat(dtos).hasSize(1);
+            assertThat(dtos.get(0).getReplyToMessageId()).isEqualTo(1L);
+            assertThat(dtos.get(0).getReplyToSenderName()).isEqualTo("老王");
+            assertThat(dtos.get(0).getReplyToContent()).isEqualTo("被引用的内容");
+            verify(messageRepository, times(1)).findByIds(any());
+        }
+
+        @Test
+        @DisplayName("被引用消息不存在时不报错，replyTo 字段保持 null")
+        void missingRepliedShouldNotThrowInBatch() {
+            GroupMessage m = msg(2L, 1L, SenderType.USER, "回复");
+            m.setReplyToMessageId(999L);
+
+            User user = new User();
+            user.setId(1L);
+            user.setName("张三");
+            when(userRepository.findByIds(any())).thenReturn(List.of(user));
+            when(messageRepository.findByIds(any())).thenReturn(List.of());
+
+            List<MessageDTO> dtos = assembler.toBatchDtos(List.of(m));
+
+            assertThat(dtos).hasSize(1);
+            assertThat(dtos.get(0).getReplyToSenderName()).isNull();
+            assertThat(dtos.get(0).getReplyToContent()).isNull();
+        }
+
+        @Test
+        @DisplayName("被引用消息内容超过 50 字符时截断并加省略号")
+        void longReplyContentShouldBeTruncatedInBatch() {
+            String longContent = "a".repeat(80);
+            GroupMessage replied = msg(1L, 1L, SenderType.USER, longContent);
+            GroupMessage m = msg(2L, 1L, SenderType.USER, "回复");
+            m.setReplyToMessageId(1L);
+
+            User user = new User();
+            user.setId(1L);
+            user.setName("张三");
+            when(userRepository.findByIds(any())).thenReturn(List.of(user));
+            when(messageRepository.findByIds(any())).thenReturn(List.of(replied));
+
+            List<MessageDTO> dtos = assembler.toBatchDtos(List.of(m));
+
+            assertThat(dtos.get(0).getReplyToContent()).hasSize(51);
+            assertThat(dtos.get(0).getReplyToContent()).endsWith("…");
+        }
+
+        @Test
+        @DisplayName("Agent 不存在时 name/avatar 保持 null")
+        void missingAgentShouldNotThrowInBatch() {
+            GroupMessage m = msg(1L, 99L, SenderType.AGENT, "hi");
+            when(agentRepository.findByIds(any())).thenReturn(List.of());
+
+            List<MessageDTO> dtos = assembler.toBatchDtos(List.of(m));
+
+            assertThat(dtos.get(0).getSenderName()).isNull();
+            assertThat(dtos.get(0).getSenderAvatar()).isNull();
         }
     }
 }

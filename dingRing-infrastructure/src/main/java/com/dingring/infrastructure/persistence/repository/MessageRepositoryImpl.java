@@ -26,6 +26,14 @@ public class MessageRepositoryImpl implements MessageRepository {
     }
 
     @Override
+    public List<GroupMessage> findByIds(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return List.of();
+        }
+        return messageMapper.findByIds(ids);
+    }
+
+    @Override
     public Long save(GroupMessage message) {
         LocalDateTime now = LocalDateTime.now();
         message.setCreateTime(now);

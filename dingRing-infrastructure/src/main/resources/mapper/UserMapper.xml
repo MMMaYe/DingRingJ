@@ -19,6 +19,15 @@
         WHERE id = #{id}
     </select>
 
+    <select id="findByIds" resultMap="userMap">
+        SELECT <include refid="columns"/>
+        FROM `user`
+        WHERE id IN
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </select>
+
     <insert id="insert" parameterType="com.dingring.domain.user.User"
             useGeneratedKeys="true" keyProperty="id">
         INSERT INTO `user` (name, profile_picture, feature, create_time, update_time)

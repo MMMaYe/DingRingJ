@@ -10,6 +10,8 @@ public interface MessageRepository {
 
     Optional<GroupMessage> findById(Long id);
 
+    List<GroupMessage> findByIds(List<Long> ids);
+
     Long save(GroupMessage message);
 
     /** 按主题分页查询（时间升序） */

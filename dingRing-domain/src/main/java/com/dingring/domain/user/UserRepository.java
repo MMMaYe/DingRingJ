@@ -1,5 +1,6 @@
 package com.dingring.domain.user;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -8,6 +9,8 @@ import java.util.Optional;
 public interface UserRepository {
 
     Optional<User> findById(Long id);
+
+    List<User> findByIds(List<Long> ids);
 
     Long save(User user);
 }

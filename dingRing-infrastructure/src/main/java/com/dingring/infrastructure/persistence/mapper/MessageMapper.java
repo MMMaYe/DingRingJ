@@ -15,6 +15,8 @@ public interface MessageMapper {
 
     GroupMessage findById(Long id);
 
+    List<GroupMessage> findByIds(@Param("ids") List<Long> ids);
+
     int insert(GroupMessage message);
 
     List<GroupMessage> findByTopicId(@Param("topicId") Long topicId,

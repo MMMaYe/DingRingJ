@@ -81,7 +81,7 @@ class TopicAppServiceTest {
             m.setId(1L);
             when(messageRepository.findByTopicId(100L, 50, 50)).thenReturn(List.of(m));
             MessageDTO dto = MessageDTO.builder().id(1L).build();
-            when(messageAssembler.toDtos(any())).thenReturn(List.of(dto));
+            when(messageAssembler.toBatchDtos(any())).thenReturn(List.of(dto));
 
             PageResult<MessageDTO> result = service.messages(100L, 2, 50);
 
