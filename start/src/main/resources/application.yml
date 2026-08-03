@@ -3,12 +3,34 @@ spring:
     active: dev
   application:
     name: dingring
-  # MySQL 生产库
+  # MySQL 生产库（公网地址，必须配置连接保活/探活防止 NAT/防火墙静默断连）
   datasource:
     url: jdbc:mysql://101.33.227.80:3306/ring_chat?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=false
     driver-class-name: com.mysql.cj.jdbc.Driver
     username: root
     password: "MySQL@123456"
+    # HikariCP 连接池（公网数据库专属配置，核心是：短寿命 + 借前探活 + 空闲保活 + 泄露检测）
+    hikari:
+      # 连接池容量（默认10，峰值并发写多可以调大；单群串行引擎 + 多HTTP接口，20足够）
+      maximum-pool-size: 20
+      # 最小空闲连接（默认=max，这里设 5，避免冷启动时 HTTP 请求排队等建连）
+      minimum-idle: 5
+      # 拿不到连接多久报错（默认30s太长，8s快速失败，前端友好）
+      connection-timeout: 8000
+      # 连接最大存活时间（核心！默认30min太长；公网 NAT/防火墙一般 3-5min 就悄悄掐连接，
+      # 所以设为 2min，HikariCP 会在连接满 2min 时主动报废换新，从根源避免"借到死连接"）
+      max-lifetime: 120000
+      # 空闲超过 1min 的连接回收（避免长期占着茅坑不拉屎）
+      idle-timeout: 60000
+      # 空闲连接保活心跳（每 1min 发一次 SELECT 1，防止 NAT 会话表老化被清）
+      keepalive-time: 60000
+      # 借出连接前的探活 SQL（关键！确保不会把已经死了的连接给业务代码用；
+      # 没有这行，Hikari 以为连接活着，代码一用就爆 "No operations allowed after connection closed"）
+      connection-test-query: SELECT 1
+      # 连接泄露检测：借出去 10s 不归还，就打印 WARN 堆栈（定位谁忘记关 ResultSet/Statement/事务不提交）
+      leak-detection-threshold: 10000
+      # 给连接池起个名字，看日志一目了然
+      pool-name: DingRingHikariPool
   # 表结构与种子数据通过 MySQL MCP 手动管理，不在启动时自动执行
   sql:
     init:
