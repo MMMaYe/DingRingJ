@@ -283,6 +283,13 @@
 }
 .md-body th { background: var(--bg-overlay-l2); font-weight: 600; }
 .md-body img { max-width: 100%; border-radius: 8px; }
+/* ```svg 代码块渲染为自适应图形，宽度不溢出容器 */
+.md-body svg {
+  max-width: 100%; height: auto; display: block;
+  margin: 8px 0; border-radius: 6px;
+  background: var(--bg-overlay-l1);
+}
+.md-body svg + svg { margin-top: 4px; }
 
 /* 正在输入 */
 .typing-bar { min-height: 22px; padding: 0 20px 4px; font-size: 12px; color: var(--text-brand); }

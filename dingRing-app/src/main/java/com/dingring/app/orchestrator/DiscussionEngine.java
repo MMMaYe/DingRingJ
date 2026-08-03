@@ -684,6 +684,23 @@ public class DiscussionEngine {
                 boolean wantsConclude = topicMode && content.contains(ContextBuilder.CONCLUDE_MARKER);
                 content = ContextBuilder.stripMarkers(content);
                 if (!content.isBlank()) {
+                    // 重复内容检查：handleChat 的 maxReplies 循环或讨论推进连续选中同一 Agent 时，
+                    // LLM 在上下文几乎不变下可能返回相同内容，此处拦截避免重复入库
+                    Optional<GroupMessage> lastOpt = messageRepository.findLastByGroupId(ctx.getGroupId());
+                    if (lastOpt.isPresent()) {
+                        GroupMessage last = lastOpt.get();
+                        if (last.getSenderId() != null && last.getSenderId().equals(agent.getId())
+                                && last.getSenderType() == SenderType.AGENT
+                                && content.equals(last.getContent())) {
+                            LogHelper.printLog(DiscussionEngine.class, "DiscussionEngine.speakOnce", "SPEAK_ONCE",
+                                    "跳过重复内容不入库",
+                                    "agent={} groupId={}", agent.getName(), ctx.getGroupId());
+                            if (emitter != null) {
+                                emitter.abort();
+                            }
+                            return new SpeakResult(SpeakOutcome.SILENT, agent);
+                        }
+                    }
                     GroupMessage reply = saveAgentMessage(ctx, agent, content);
                     LogHelper.printLog(DiscussionEngine.class, "DiscussionEngine.speakOnce", "SPEAK_ONCE", "Agent发言已入库广播",
                             "agent={} messageId={} 长度={} 流式={}",

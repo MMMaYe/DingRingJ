@@ -13,7 +13,13 @@ public final class PromptConstants {
 
     /** 通用对话 system prompt（%s = agentName） */
     public static final String CHAT_BASE = """
-            你正在参与一个多人群聊讨论，你的花名是「%s」。历史消息以「花名: 内容」形式给出。请直接输出你的发言内容，不要重复花名前缀，保持简洁聚焦，与前面的讨论衔接。""";
+            你正在参与一个多人群聊讨论，你的花名是「%s」。历史消息以「花名: 内容」形式给出。
+            发言要求：
+            - 直接输出你的发言内容，不要重复花名前缀
+            - 每次发言 3-5 句话（约 100-200 字），像真实群聊一样简短聚焦
+            - 可用 Markdown 加粗、列表等基本格式，但不要用标题（#）
+            - 与前面的讨论自然衔接，不要重复已有观点
+            - HTML和SVG画图部分计算在总字数内""";
 
     /** 群成员名单前置说明（后接「- 花名：一句话简介」列表，发言者本人以「你（花名）」标出） */
     public static final String GROUP_MEMBERS_HEADER =
@@ -21,13 +27,38 @@ public final class PromptConstants {
 
     /** 协作协议：自主收束 + 跳过本轮 */
     public static final String COLLABORATION_PROTOCOL = """
-            协作协议：
-            1. 如果你认为当前主题已经讨论充分、可以收尾总结，请在本次发言的末尾另起一行输出标记 [[CONCLUDE]]（仅在确实认为可以结束时输出，其他情况绝不要提及或输出该标记）。
-            2. 如果你对当前讨论没有新的观点或补充，请只输出 [[PASS]]（不要输出其他任何内容）；有实质内容时绝不要输出该标记。不要为了发言而发言，重复已有观点不如 [[PASS]]。""";
+            协作协议（严格遵守）：
+
+            1. 认为讨论已充分、可以总结时，在发言末尾另起一行，精确输出标记 [[CONCLUDE]]
+               示例：
+               我觉得可以收尾了，大家的观点基本对齐。
+               [[CONCLUDE]]
+               其他情况绝不要输出或提及该标记。
+
+            2. 对当前讨论没有新观点时，只输出 [[PASS]]，不输出任何其他内容
+               示例：[[PASS]]
+               有实质内容时绝不要输出该标记。不要为了发言而发言。""";
 
     /** STAR 总结（%s = topicTitle） */
     public static final String CONCLUSION_STAR = """
-            你被推选为本次群讨论的总结者。请针对主题「%s」，基于完整讨论记录，用 STAR 框架（Situation/Task/Action/Result）输出 Markdown 格式的讨论结论，并对各成员观点做简要点评。""";
+            你被推选为本次群讨论的总结者。请针对主题「%s」，基于完整讨论记录，用 STAR 框架输出 Markdown 格式的讨论结论。
+
+            格式要求：
+            ## Situation（背景）
+            一段话概述讨论的起因和背景。
+
+            ## Task（任务）
+            讨论要解决的核心问题。
+
+            ## Action（行动）
+            用列表归纳各方观点（标注发言人花名）：
+            - **花名**：观点摘要
+            - **花名**：观点摘要
+
+            ## Result（结论）
+            达成的共识、未解决的分歧、后续建议。
+
+            全文控制在 500 字以内。""";
 
     /* ==================== router ==================== */
 
@@ -48,7 +79,9 @@ public final class PromptConstants {
             - \"哈哈哈是的\" → {"intent":"CHAT","topicTitle":"","confidence":"HIGH"}
             - \"我们项目该用 Redis 还是本地缓存？\" → {"intent":"DISCUSS","topicTitle":"缓存方案选型","confidence":"HIGH"}
             - \"最近总睡不好，大家有什么改善睡眠的办法吗\" → {"intent":"DISCUSS","topicTitle":"睡眠质量改善方法","confidence":"HIGH"}
-            - \"那就先这样吧，帮我总结下结论\" → {"intent":"CONCLUDE","topicTitle":"","confidence":"HIGH"}
+            - "那就先这样吧，帮我总结下结论" → {"intent":"CONCLUDE","topicTitle":"","confidence":"HIGH"}
+            - "这个方案有什么问题吗" → {"intent":"DISCUSS","topicTitle":"方案问题分析","confidence":"LOW"}
+            - "我最近在学 Go，感觉挺有意思的" → {"intent":"CHAT","topicTitle":"","confidence":"LOW"}
             严格输出一行 JSON，不要输出任何其他内容，格式：
             {"intent": "CHAT|DISCUSS|CONCLUDE", "topicTitle": "按上述规则拟定的话题标题，非 DISCUSS 为空字符串", "confidence": "HIGH|LOW"}""";
 
@@ -68,5 +101,12 @@ public final class PromptConstants {
 
     /** 用户画像提炼 */
     public static final String USER_PROFILE_EXTRACT = """
-            你是用户画像分析师。请基于「已有画像」与「最近一段群聊对话」，输出更新后的用户画像。关注用户的表达习惯、情绪基调、决策偏好、思考方式等长期稳定特征，输出 3-6 条简短要点（纯文本，每行一条，以 - 开头），不要输出任何其他内容。注意：画像是跨群的全局特征，对话来自某一个群，不要把该群特定的讨论话题当作用户的长期特征。""";
+            你是用户画像分析师。请基于「已有画像」与「最近一段群聊对话」，输出更新后的用户画像。
+            关注用户的表达习惯、情绪基调、决策偏好、思考方式等长期稳定特征。
+            画像是跨群的全局特征，不要把特定群的讨论话题当作用户的长期特征。
+
+            严格按以下格式输出 3-6 条，不要输出任何其他内容：
+            - 第一条特征描述
+            - 第二条特征描述
+            - ...""";
 }
