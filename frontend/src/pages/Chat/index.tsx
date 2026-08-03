@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import Sidebar, { IconPlus } from '../../components/Sidebar';
 import Avatar from '../../components/Avatar';
 import MessageItem from './MessageItem';
-import { formatTime } from './utils';
+import { formatTime, renderMarkdown } from './utils';
 import Modal from '../../components/Modal';
 import GroupSettings from '../../components/GroupSettings';
 import { toast } from '../../components/Toast';
@@ -916,7 +916,10 @@ export default function ChatPage() {
       {/* 弹窗：主题结论 */}
       <Modal open={!!showConclusion} onClose={() => setShowConclusion(null)} title={`📌 ${showConclusion?.title ?? ''}`} width={560}
         footer={<button className="btn btn--ghost" onClick={() => setShowConclusion(null)}>关闭</button>}>
-        <div className="conclusion-box">{showConclusion?.conclusion}</div>
+        <div
+          className="conclusion-box md-body"
+          dangerouslySetInnerHTML={{ __html: showConclusion ? renderMarkdown(showConclusion.conclusion) : '' }}
+        />
         <div className="conclusion-cards">
           {conclusionCards.length > 0 && (
             <>
