@@ -10,6 +10,7 @@ import com.dingring.domain.service.MemoryService;
 import com.dingring.common.constant.PromptConstants;
 import com.dingring.common.util.LogHelper;
 import com.dingring.domain.service.ProfileService;
+import com.dingring.infrastructure.aop.Event;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -73,6 +74,7 @@ public class ContextBuilder {
      * @param senderNameOf    发送者名称解析函数
      * @return system prompt + 对话轮次
      */
+    @Event(eventCode = "BUILD_ALL_CONTEXT",eventName = "构建 Agent 发言的完整上下文。")
     public LlmContext build(Agent agent, List<Agent> members, Long groupId, Long topicId,
                             Function<GroupMessage, String> senderNameOf) {
         String roster = buildMemberRoster(agent, members);
@@ -81,9 +83,12 @@ public class ContextBuilder {
             // 协作协议：自主收束 + 跳过本轮
             systemPrompt.append("\n\n").append(PromptConstants.COLLABORATION_PROTOCOL);
         }
+
+        // 滑动窗口最近 N 条消息
         List<GroupMessage> window = topicId != null
                 ? mergeChatContext(groupId, messageRepository.findRecentByTopicId(topicId, contextWindow))
                 : messageRepository.findRecentByGroupId(groupId, contextWindow);
+
         List<ChatTurn> turns = toTurns(agent, window, senderNameOf);
         String sp = systemPrompt.toString();
         int baseLen = (agent.getSystemPrompt() != null ? agent.getSystemPrompt().length() : 0)
@@ -134,6 +139,8 @@ public class ContextBuilder {
         return new LlmContext(spFinal, toTurns(concluder, all, senderNameOf));
     }
 
+    /** 构建系统提示：包含成员名单、历史记忆、跨群画像（长期观察） */
+    @Event(eventCode = "BUILD_SYSTEM_PROMPT",eventName = "构建系统提示。")
     private String buildSystemPrompt(Agent agent, String memberRoster, Long groupId) {
         StringBuilder sp = new StringBuilder();
         if (agent.getSystemPrompt() != null && !agent.getSystemPrompt().isBlank()) {
@@ -189,6 +196,7 @@ public class ContextBuilder {
      * 消息 → 对话轮次：Agent 自己的发言为 ASSISTANT，其余合并为带花名前缀的 USER 轮次；
      * 连续 USER 轮次合并为一条，避免部分厂商拒绝连续同角色消息。
      */
+    @Event(eventCode = "BUILD_CHAT_TURNSNS",eventName = "构建对话轮次。")
     private List<ChatTurn> toTurns(Agent self, List<GroupMessage> messages,
                                    Function<GroupMessage, String> senderNameOf) {
         List<ChatTurn> turns = new ArrayList<>();
