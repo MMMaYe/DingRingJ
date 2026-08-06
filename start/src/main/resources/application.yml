@@ -19,7 +19,7 @@ spring:
       connection-timeout: 8000
       # 连接最大存活时间（核心！默认30min太长；公网 NAT/防火墙一般 3-5min 就悄悄掐连接，
       # 所以设为 2min，HikariCP 会在连接满 2min 时主动报废换新，从根源避免"借到死连接"）
-      max-lifetime: 120000
+      max-lifetime: 60000
       # 空闲超过 1min 的连接回收（避免长期占着茅坑不拉屎）
       idle-timeout: 60000
       # 空闲连接保活心跳（每 1min 发一次 SELECT 1，防止 NAT 会话表老化被清）
