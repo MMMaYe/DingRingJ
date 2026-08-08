@@ -1,7 +1,6 @@
 package com.dingring.app.orchestrator;
 
 import com.dingring.app.dto.response.MessageDTO;
-import com.dingring.app.service.ChatPusher;
 import com.dingring.app.service.MessageAssembler;
 import com.dingring.common.constant.WsConstants;
 import com.dingring.common.exception.BizException;
@@ -22,6 +21,7 @@ import com.dingring.domain.group.SenderType;
 import com.dingring.domain.discussion.Topic;
 import com.dingring.domain.discussion.TopicRepository;
 import com.dingring.domain.service.DomainEventPublisher;
+import com.dingring.domain.service.GroupBroadcastService;
 import com.dingring.domain.service.LlmService;
 import com.dingring.infrastructure.aop.Event;
 import lombok.RequiredArgsConstructor;
@@ -52,7 +52,7 @@ public class ChatOrchestrator {
     private final MessageAssembler messageAssembler;
     private final LlmService llmService;
     private final DomainEventPublisher eventPublisher;
-    private final ChatPusher chatPusher;
+    private final GroupBroadcastService groupBroadcastService;
     private final DiscussionEngine discussionEngine;
 
     /* ==================== 接收域 ==================== */
@@ -84,7 +84,7 @@ public class ChatOrchestrator {
             messageRepository.save(message);
 
             MessageDTO dto = messageAssembler.toDto(message);
-            chatPusher.pushToGroup(groupId, WsConstants.NEW_MESSAGE, dto);
+            groupBroadcastService.broadcast(groupId, WsConstants.NEW_MESSAGE, dto);
 
             List<Agent> groupAgents = agentRepository.findByIds(group.memberAgentIds());
             List<Long> mentionedIds = parseMentions(content, groupAgents);
@@ -155,7 +155,7 @@ public class ChatOrchestrator {
         }
         LogHelper.printLog(ChatOrchestrator.class, "ChatOrchestrator.generateConclusion", "GENERATE_CONCLUSION", "开始生成结论",
                 "topicId={} 总结Agent={} triggeredBy={}", topic.getId(), concluder.getName(), triggeredBy);
-        chatPusher.pushToGroup(groupId, WsConstants.AGENT_TYPING,
+        groupBroadcastService.broadcast(groupId, WsConstants.AGENT_TYPING,
                 Map.of("groupId", groupId, "agentId", concluder.getId(), "agentName", concluder.getName(), "isTyping", true));
         try {
             ContextBuilder.LlmContext ctx = contextBuilder.buildForConclusion(
@@ -174,7 +174,7 @@ public class ChatOrchestrator {
             long messageCount = messageRepository.countByTopicId(topic.getId());
             saveSystemNotice(groupId, topic.getId(),
                     "讨论「" + topic.getTitle() + "」已结束，结论由「" + concluder.getName() + "」生成");
-            chatPusher.pushToGroup(groupId, WsConstants.TOPIC_CLOSED, Map.of(
+            groupBroadcastService.broadcast(groupId, WsConstants.TOPIC_CLOSED, Map.of(
                     "groupId", groupId,
                     "topicId", topic.getId(),
                     "title", topic.getTitle(),
@@ -187,7 +187,7 @@ public class ChatOrchestrator {
             LogHelper.printWarnLog(ChatOrchestrator.class, "ChatOrchestrator.generateConclusion", "GENERATE_CONCLUSION", "结论生成失败", "topicId={}", topic.getId(), e);
             rollbackConclusion(topic, e.getMessage());
         } finally {
-            chatPusher.pushToGroup(groupId, WsConstants.AGENT_TYPING,
+            groupBroadcastService.broadcast(groupId, WsConstants.AGENT_TYPING,
                     Map.of("groupId", groupId, "agentId", concluder.getId(), "agentName", concluder.getName(), "isTyping", false));
         }
     }
@@ -224,7 +224,7 @@ public class ChatOrchestrator {
         } catch (Exception ex) {
             LogHelper.printWarnLog(ChatOrchestrator.class, "ChatOrchestrator.rollbackConclusion", "ROLLBACK_CONCLUSION", "回退异常", "topicId={}", topic.getId(), ex);
         }
-        chatPusher.pushToGroup(topic.getChatGroupId(), WsConstants.ERROR, Map.of(
+        groupBroadcastService.broadcast(topic.getChatGroupId(), WsConstants.ERROR, Map.of(
                 "success", false,
                 "errorCode", ErrorCode.TOPIC_CONCLUSION_FAILED.name(),
                 "message", "结论生成失败，讨论已恢复：" + reason));
@@ -252,11 +252,11 @@ public class ChatOrchestrator {
         notice.setMessageType(MessageType.SYSTEM_NOTICE);
         notice.setContent(content);
         messageRepository.save(notice);
-        chatPusher.pushToGroup(groupId, WsConstants.NEW_MESSAGE, messageAssembler.toDto(notice));
+        groupBroadcastService.broadcast(groupId, WsConstants.NEW_MESSAGE, messageAssembler.toDto(notice));
     }
 
     private void pushTopicStatus(Topic topic, String previousStatus) {
-        chatPusher.pushToGroup(topic.getChatGroupId(), WsConstants.TOPIC_STATUS_CHANGED, Map.of(
+        groupBroadcastService.broadcast(topic.getChatGroupId(), WsConstants.TOPIC_STATUS_CHANGED, Map.of(
                 "groupId", topic.getChatGroupId(),
                 "topicId", topic.getId(),
                 "title", topic.getTitle(),

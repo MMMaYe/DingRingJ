@@ -1,6 +1,5 @@
 package com.dingring.app.orchestrator;
 
-import com.dingring.app.service.ChatPusher;
 import com.dingring.app.service.GroupAppService;
 import com.dingring.app.service.MessageAssembler;
 import com.dingring.common.constant.WsConstants;
@@ -24,6 +23,7 @@ import com.dingring.domain.group.MessageRepository;
 import com.dingring.domain.group.MessageType;
 import com.dingring.domain.group.SenderType;
 import com.dingring.domain.service.DomainEventPublisher;
+import com.dingring.domain.service.GroupBroadcastService;
 import com.dingring.domain.service.LlmService;
 import com.dingring.domain.service.ProfileService;
 import com.dingring.infrastructure.aop.Event;
@@ -102,7 +102,7 @@ public class DiscussionEngine {
     private final MessageAssembler messageAssembler;
     private final LlmService llmService;
     private final DomainEventPublisher eventPublisher;
-    private final ChatPusher chatPusher;
+    private final GroupBroadcastService groupBroadcastService;
     private final MessageRouter messageRouter;
     private final ProfileService profileService;
     private final ModeratorService moderatorService;
@@ -143,7 +143,7 @@ public class DiscussionEngine {
                             MessageAssembler messageAssembler,
                             LlmService llmService,
                             DomainEventPublisher eventPublisher,
-                            ChatPusher chatPusher,
+                            GroupBroadcastService groupBroadcastService,
                             MessageRouter messageRouter,
                             ProfileService profileService,
                             ModeratorService moderatorService,
@@ -158,7 +158,7 @@ public class DiscussionEngine {
         this.messageAssembler = messageAssembler;
         this.llmService = llmService;
         this.eventPublisher = eventPublisher;
-        this.chatPusher = chatPusher;
+        this.groupBroadcastService = groupBroadcastService;
         this.messageRouter = messageRouter;
         this.profileService = profileService;
         this.moderatorService = moderatorService;
@@ -492,7 +492,7 @@ public class DiscussionEngine {
         }
         backfillChatMessages(group.getId(), topic.getId());
         eventPublisher.publish(new TopicCreated(topic.getId(), group.getId(), topic.getTitle()));
-        chatPusher.pushToGroup(group.getId(), WsConstants.TOPIC_CREATED, Map.of(
+        groupBroadcastService.broadcast(group.getId(), WsConstants.TOPIC_CREATED, Map.of(
                 "groupId", group.getId(),
                 "topicId", topic.getId(),
                 "title", topic.getTitle(),
@@ -708,11 +708,11 @@ public class DiscussionEngine {
                             emitter != null && emitter.emitted);
                     if (emitter != null && emitter.emitted) {
                         // 流式路径：COMPLETE 携带正式消息体替换前端半成品气泡（不再推 NEW_MESSAGE，避免重复）
-                        chatPusher.pushToGroup(ctx.getGroupId(), WsConstants.MESSAGE_COMPLETE, Map.of(
+                        groupBroadcastService.broadcast(ctx.getGroupId(), WsConstants.MESSAGE_COMPLETE, Map.of(
                                 "streamId", emitter.streamId,
                                 "message", messageAssembler.toDto(reply)));
                     } else {
-                        chatPusher.pushToGroup(ctx.getGroupId(), WsConstants.NEW_MESSAGE, messageAssembler.toDto(reply));
+                        groupBroadcastService.broadcast(ctx.getGroupId(), WsConstants.NEW_MESSAGE, messageAssembler.toDto(reply));
                     }
                     eventPublisher.publish(new MessageSent(reply.getId(), ctx.getGroupId(), ctx.getTopicId(),
                             agent.getId(), SenderType.AGENT.name(), content, null, List.of()));
@@ -742,7 +742,7 @@ public class DiscussionEngine {
         // 所有 Agent 都失败
         LogHelper.printWarnLog(DiscussionEngine.class, "DiscussionEngine.speakOnce", "SPEAK_ONCE", "所有Agent均失败无人发言",
                 "groupId={} topicId={} 候选数={}", ctx.getGroupId(), ctx.getTopicId(), ranked.size());
-        chatPusher.pushToGroup(ctx.getGroupId(), WsConstants.ERROR, Map.of(
+        groupBroadcastService.broadcast(ctx.getGroupId(), WsConstants.ERROR, Map.of(
                 "success", false,
                 "errorCode", ErrorCode.ALL_AGENTS_FAILED.name(),
                 "message", ErrorCode.ALL_AGENTS_FAILED.getDefaultMessage()));
@@ -789,7 +789,7 @@ public class DiscussionEngine {
                 return;
             }
             emitted = true;
-            chatPusher.pushToGroup(groupId, WsConstants.MESSAGE_DELTA, Map.of(
+            groupBroadcastService.broadcast(groupId, WsConstants.MESSAGE_DELTA, Map.of(
                     "streamId", streamId,
                     "agentId", agent.getId(),
                     "agentName", agent.getName(),
@@ -799,7 +799,7 @@ public class DiscussionEngine {
         /** 废弃当前流（前端丢弃半成品气泡）；未发过 delta 则无需通知 */
         void abort() {
             if (emitted) {
-                chatPusher.pushToGroup(groupId, WsConstants.MESSAGE_ABORT, Map.of("streamId", streamId));
+                groupBroadcastService.broadcast(groupId, WsConstants.MESSAGE_ABORT, Map.of("streamId", streamId));
             }
         }
 
@@ -847,7 +847,7 @@ public class DiscussionEngine {
     }
 
     private void pushTyping(Long groupId, Agent agent, boolean typing) {
-        chatPusher.pushToGroup(groupId, WsConstants.AGENT_TYPING, Map.of(
+        groupBroadcastService.broadcast(groupId, WsConstants.AGENT_TYPING, Map.of(
                 "groupId", groupId,
                 "agentId", agent.getId(),
                 "agentName", agent.getName(),

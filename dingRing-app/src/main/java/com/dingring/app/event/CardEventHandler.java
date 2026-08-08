@@ -1,6 +1,5 @@
 package com.dingring.app.event;
 
-import com.dingring.app.service.ChatPusher;
 import com.dingring.common.constant.WsConstants;
 import com.dingring.common.constant.PromptConstants;
 import com.dingring.common.util.LogHelper;
@@ -11,6 +10,7 @@ import com.dingring.domain.discussion.KnowledgeCard;
 import com.dingring.domain.event.KnowledgeCardGenerated;
 import com.dingring.domain.event.TopicClosed;
 import com.dingring.domain.service.DomainEventPublisher;
+import com.dingring.domain.service.GroupBroadcastService;
 import com.dingring.domain.service.LlmService;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -37,7 +37,7 @@ public class CardEventHandler {
     private final CardRepository cardRepository;
     private final LlmService llmService;
     private final DomainEventPublisher eventPublisher;
-    private final ChatPusher chatPusher;
+    private final GroupBroadcastService groupBroadcastService;
     private final ObjectMapper objectMapper;
 
     @EventListener
@@ -72,7 +72,7 @@ public class CardEventHandler {
                 }
                 cardRepository.saveBatch(cards);
                 eventPublisher.publish(new KnowledgeCardGenerated(event.getTopicId(), event.getGroupId(), cards));
-                chatPusher.pushToGroup(event.getGroupId(), WsConstants.CARD_GENERATED, Map.of(
+                groupBroadcastService.broadcast(event.getGroupId(), WsConstants.CARD_GENERATED, Map.of(
                         "topicId", event.getTopicId(),
                         "cardCount", cards.size(),
                         "cards", cards.stream().map(c -> Map.of(

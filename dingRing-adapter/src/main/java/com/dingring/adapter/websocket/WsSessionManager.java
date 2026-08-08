@@ -1,7 +1,7 @@
 package com.dingring.adapter.websocket;
 
-import com.dingring.app.service.ChatPusher;
 import com.dingring.common.util.LogHelper;
+import com.dingring.domain.service.GroupBroadcastService;
 import com.dingring.infrastructure.aop.Event;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -16,13 +16,13 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
 
 /**
- * WebSocket 会话管理器：维护 groupId -> 在线连接集合，实现 app 层 ChatPusher 出站端口。
+ * WebSocket 会话管理器：维护 groupId -> 在线连接集合，实现 domain 层 GroupBroadcastService 出站端口。
  * <p>消息统一序列化为 {"type": ..., "data": ...}。
  */
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class WsSessionManager implements ChatPusher {
+public class WsSessionManager implements GroupBroadcastService {
 
     private final ObjectMapper objectMapper;
 
@@ -49,7 +49,7 @@ public class WsSessionManager implements ChatPusher {
     }
 
     @Override
-    public void pushToGroup(Long groupId, String type, Object data) {
+    public void broadcast(Long groupId, String type, Object data) {
         Set<WebSocketSession> sessions = groupSessions.get(groupId);
         if (sessions == null || sessions.isEmpty()) {
             return;

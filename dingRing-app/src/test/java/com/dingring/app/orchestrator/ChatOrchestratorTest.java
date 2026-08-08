@@ -1,7 +1,7 @@
 package com.dingring.app.orchestrator;
 
 import com.dingring.app.dto.response.MessageDTO;
-import com.dingring.app.service.ChatPusher;
+import com.dingring.domain.service.GroupBroadcastService;
 import com.dingring.app.service.MessageAssembler;
 import com.dingring.common.constant.WsConstants;
 import com.dingring.common.exception.BizException;
@@ -62,7 +62,7 @@ class ChatOrchestratorTest {
     private MessageAssembler messageAssembler;
     private LlmService llmService;
     private DomainEventPublisher eventPublisher;
-    private ChatPusher chatPusher;
+    private GroupBroadcastService groupBroadcastService;
     private DiscussionEngine discussionEngine;
     private ChatOrchestrator orchestrator;
 
@@ -77,11 +77,11 @@ class ChatOrchestratorTest {
         messageAssembler = mock(MessageAssembler.class);
         llmService = mock(LlmService.class);
         eventPublisher = mock(DomainEventPublisher.class);
-        chatPusher = mock(ChatPusher.class);
+        groupBroadcastService = mock(GroupBroadcastService.class);
         discussionEngine = mock(DiscussionEngine.class);
         orchestrator = new ChatOrchestrator(groupRepository, messageRepository, topicRepository,
                 agentRepository, speakerScheduler, contextBuilder, messageAssembler,
-                llmService, eventPublisher, chatPusher, discussionEngine);
+                llmService, eventPublisher, groupBroadcastService, discussionEngine);
 
         // execute 同步执行任务：收束流程确定性验证
         doAnswer(inv -> {
@@ -157,7 +157,7 @@ class ChatOrchestratorTest {
             orchestrator.onUserMessage(1L, 1L, "hello", null);
 
             verify(messageRepository).save(any(GroupMessage.class));
-            verify(chatPusher).pushToGroup(eq(1L), eq(WsConstants.NEW_MESSAGE), any());
+            verify(groupBroadcastService).broadcast(eq(1L), eq(WsConstants.NEW_MESSAGE), any());
         }
 
         @Test
@@ -272,9 +272,9 @@ class ChatOrchestratorTest {
 
             orchestrator.conclude(1L, 1L, "USER");
 
-            verify(chatPusher).pushToGroup(eq(10L), eq(WsConstants.TOPIC_STATUS_CHANGED), any());
+            verify(groupBroadcastService).broadcast(eq(10L), eq(WsConstants.TOPIC_STATUS_CHANGED), any());
             // execute 同步执行：最终状态 CLOSED
-            verify(chatPusher).pushToGroup(eq(10L), eq(WsConstants.TOPIC_CLOSED), any());
+            verify(groupBroadcastService).broadcast(eq(10L), eq(WsConstants.TOPIC_CLOSED), any());
             assertThat(t.getStatus()).isEqualTo(TopicStatus.CLOSED);
         }
 
@@ -301,9 +301,9 @@ class ChatOrchestratorTest {
 
             orchestrator.conclude(1L, 1L, "USER");
 
-            verify(chatPusher).pushToGroup(eq(10L), eq(WsConstants.TOPIC_CLOSED), any());
+            verify(groupBroadcastService).broadcast(eq(10L), eq(WsConstants.TOPIC_CLOSED), any());
             verify(eventPublisher).publish(any(TopicClosed.class));
-            verify(chatPusher, atLeastOnce()).pushToGroup(eq(10L), eq(WsConstants.AGENT_TYPING), any());
+            verify(groupBroadcastService, atLeastOnce()).broadcast(eq(10L), eq(WsConstants.AGENT_TYPING), any());
             assertThat(t.getStatus()).isEqualTo(TopicStatus.CLOSED);
             assertThat(t.getConclusion()).isEqualTo("## STAR 结论");
         }
@@ -329,7 +329,7 @@ class ChatOrchestratorTest {
 
             orchestrator.conclude(1L, 1L, "USER", 77L);
 
-            verify(chatPusher).pushToGroup(eq(10L), eq(WsConstants.TOPIC_CLOSED), any());
+            verify(groupBroadcastService).broadcast(eq(10L), eq(WsConstants.TOPIC_CLOSED), any());
             assertThat(t.concludedByAgentId()).contains(77L);
             org.mockito.Mockito.verifyNoInteractions(speakerScheduler);
         }
@@ -356,7 +356,7 @@ class ChatOrchestratorTest {
 
             orchestrator.conclude(1L, 1L, "USER");
 
-            verify(chatPusher).pushToGroup(eq(10L), eq(WsConstants.ERROR), any());
+            verify(groupBroadcastService).broadcast(eq(10L), eq(WsConstants.ERROR), any());
             assertThat(t.getStatus()).isEqualTo(TopicStatus.IN_PROGRESS);
         }
 
@@ -377,7 +377,7 @@ class ChatOrchestratorTest {
 
             orchestrator.conclude(1L, 1L, "USER");
 
-            verify(chatPusher).pushToGroup(eq(10L), eq(WsConstants.ERROR), any());
+            verify(groupBroadcastService).broadcast(eq(10L), eq(WsConstants.ERROR), any());
             assertThat(t.getStatus()).isEqualTo(TopicStatus.IN_PROGRESS);
         }
 
@@ -406,7 +406,7 @@ class ChatOrchestratorTest {
 
             orchestrator.conclude(1L, 1L, "USER");
 
-            verify(chatPusher).pushToGroup(eq(10L), eq(WsConstants.TOPIC_CLOSED), any());
+            verify(groupBroadcastService).broadcast(eq(10L), eq(WsConstants.TOPIC_CLOSED), any());
             verify(llmService, atLeastOnce()).chat(any(), anyString(), any());
             assertThat(t.getStatus()).isEqualTo(TopicStatus.CLOSED);
         }

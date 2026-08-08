@@ -1,11 +1,11 @@
 package com.dingring.app.task;
 
 import com.dingring.app.orchestrator.DiscussionEngine;
-import com.dingring.app.service.ChatPusher;
 import com.dingring.common.constant.WsConstants;
 import com.dingring.common.util.LogHelper;
 import com.dingring.domain.discussion.Topic;
 import com.dingring.domain.discussion.TopicRepository;
+import com.dingring.domain.service.GroupBroadcastService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -26,7 +26,7 @@ import java.util.Map;
 public class ConclusionWatchdog {
 
     private final TopicRepository topicRepository;
-    private final ChatPusher chatPusher;
+    private final GroupBroadcastService groupBroadcastService;
     private final DiscussionEngine discussionEngine;
 
     /** CONCLUDING 状态超过该分钟数视为卡死 */
@@ -46,7 +46,7 @@ public class ConclusionWatchdog {
                     // 乐观锁冲突：状态已被别处流转，无需处理
                     continue;
                 }
-                chatPusher.pushToGroup(topic.getChatGroupId(), WsConstants.TOPIC_STATUS_CHANGED, Map.of(
+                groupBroadcastService.broadcast(topic.getChatGroupId(), WsConstants.TOPIC_STATUS_CHANGED, Map.of(
                         "groupId", topic.getChatGroupId(),
                         "topicId", topic.getId(),
                         "title", topic.getTitle(),

@@ -1,6 +1,6 @@
 package com.dingring.app.orchestrator;
 
-import com.dingring.app.service.ChatPusher;
+import com.dingring.domain.service.GroupBroadcastService;
 import com.dingring.app.service.MessageAssembler;
 import com.dingring.common.constant.WsConstants;
 import com.dingring.common.exception.BizException;
@@ -71,7 +71,7 @@ class DiscussionEngineTest {
     private MessageAssembler messageAssembler;
     private LlmService llmService;
     private DomainEventPublisher eventPublisher;
-    private ChatPusher chatPusher;
+    private GroupBroadcastService groupBroadcastService;
     private MessageRouter messageRouter;
     private ProfileService profileService;
     private ModeratorService moderatorService;
@@ -90,14 +90,14 @@ class DiscussionEngineTest {
         messageAssembler = mock(MessageAssembler.class);
         llmService = mock(LlmService.class);
         eventPublisher = mock(DomainEventPublisher.class);
-        chatPusher = mock(ChatPusher.class);
+        groupBroadcastService = mock(GroupBroadcastService.class);
         messageRouter = mock(MessageRouter.class);
         profileService = mock(ProfileService.class);
         moderatorService = mock(ModeratorService.class);
         chatOrchestrator = mock(ChatOrchestrator.class);
         engine = new DiscussionEngine(groupRepository, messageRepository, topicRepository,
                 agentRepository, speakerScheduler, contextBuilder, terminator, messageAssembler,
-                llmService, eventPublisher, chatPusher, messageRouter, profileService,
+                llmService, eventPublisher, groupBroadcastService, messageRouter, profileService,
                 moderatorService, chatOrchestrator);
         // 测试无等待：pace 0；两个不同 Agent PASS 即收敛
         setField("paceMinMs", 0L);
@@ -191,7 +191,7 @@ class DiscussionEngineTest {
             assertThat(captor.getValue().getSenderType()).isEqualTo(SenderType.AGENT);
             assertThat(captor.getValue().getContent()).isEqualTo("你好呀");
             assertThat(captor.getValue().getTopicId()).isNull();
-            verify(chatPusher, timeout(WAIT)).pushToGroup(eq(1L), eq(WsConstants.NEW_MESSAGE), any());
+            verify(groupBroadcastService, timeout(WAIT)).broadcast(eq(1L), eq(WsConstants.NEW_MESSAGE), any());
         }
 
         @Test
@@ -246,7 +246,7 @@ class DiscussionEngineTest {
             assertThat(captor.getValue().getStatus()).isEqualTo(TopicStatus.IN_PROGRESS);
             verify(messageRepository, timeout(WAIT)).updateTopicId(eq(List.of(80L)), eq(500L));
             verify(eventPublisher, timeout(WAIT)).publish(any(TopicCreated.class));
-            verify(chatPusher, timeout(WAIT)).pushToGroup(eq(1L), eq(WsConstants.TOPIC_CREATED), any());
+            verify(groupBroadcastService, timeout(WAIT)).broadcast(eq(1L), eq(WsConstants.TOPIC_CREATED), any());
         }
 
         @Test
@@ -523,12 +523,12 @@ class DiscussionEngineTest {
 
             engine.onUserSignal(1L, signal("哈喽"));
 
-            verify(chatPusher, timeout(WAIT).times(2)).pushToGroup(eq(1L), eq(WsConstants.MESSAGE_DELTA), any());
-            verify(chatPusher, timeout(WAIT)).pushToGroup(eq(1L), eq(WsConstants.MESSAGE_COMPLETE), any());
+            verify(groupBroadcastService, timeout(WAIT).times(2)).broadcast(eq(1L), eq(WsConstants.MESSAGE_DELTA), any());
+            verify(groupBroadcastService, timeout(WAIT)).broadcast(eq(1L), eq(WsConstants.MESSAGE_COMPLETE), any());
             ArgumentCaptor<GroupMessage> captor = ArgumentCaptor.forClass(GroupMessage.class);
             verify(messageRepository, timeout(WAIT)).save(captor.capture());
             assertThat(captor.getValue().getContent()).isEqualTo("你好呀");
-            verify(chatPusher, never()).pushToGroup(eq(1L), eq(WsConstants.NEW_MESSAGE), any());
+            verify(groupBroadcastService, never()).broadcast(eq(1L), eq(WsConstants.NEW_MESSAGE), any());
         }
 
         @Test
@@ -544,9 +544,9 @@ class DiscussionEngineTest {
 
             engine.wake(1L);
 
-            verify(chatPusher, timeout(WAIT).atLeastOnce()).pushToGroup(eq(1L), eq(WsConstants.MESSAGE_ABORT), any());
+            verify(groupBroadcastService, timeout(WAIT).atLeastOnce()).broadcast(eq(1L), eq(WsConstants.MESSAGE_ABORT), any());
             verify(messageRepository, never()).save(any(GroupMessage.class));
-            verify(chatPusher, never()).pushToGroup(eq(1L), eq(WsConstants.MESSAGE_COMPLETE), any());
+            verify(groupBroadcastService, never()).broadcast(eq(1L), eq(WsConstants.MESSAGE_COMPLETE), any());
         }
 
         @Test
@@ -561,9 +561,9 @@ class DiscussionEngineTest {
 
             engine.onUserSignal(1L, signal("哈喽"));
 
-            verify(chatPusher, timeout(WAIT)).pushToGroup(eq(1L), eq(WsConstants.NEW_MESSAGE), any());
-            verify(chatPusher, never()).pushToGroup(eq(1L), eq(WsConstants.MESSAGE_COMPLETE), any());
-            verify(chatPusher, never()).pushToGroup(eq(1L), eq(WsConstants.MESSAGE_DELTA), any());
+            verify(groupBroadcastService, timeout(WAIT)).broadcast(eq(1L), eq(WsConstants.NEW_MESSAGE), any());
+            verify(groupBroadcastService, never()).broadcast(eq(1L), eq(WsConstants.MESSAGE_COMPLETE), any());
+            verify(groupBroadcastService, never()).broadcast(eq(1L), eq(WsConstants.MESSAGE_DELTA), any());
         }
 
         @Test
@@ -577,7 +577,7 @@ class DiscussionEngineTest {
 
             engine.onUserSignal(1L, signal("哈喽"));
 
-            verify(chatPusher, timeout(WAIT)).pushToGroup(eq(1L), eq(WsConstants.NEW_MESSAGE), any());
+            verify(groupBroadcastService, timeout(WAIT)).broadcast(eq(1L), eq(WsConstants.NEW_MESSAGE), any());
             verify(llmService, never()).chatStream(any(), any(), anyList(), any());
         }
     }

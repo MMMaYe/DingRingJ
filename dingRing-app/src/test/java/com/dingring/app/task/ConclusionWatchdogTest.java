@@ -1,7 +1,7 @@
 package com.dingring.app.task;
 
 import com.dingring.app.orchestrator.DiscussionEngine;
-import com.dingring.app.service.ChatPusher;
+import com.dingring.domain.service.GroupBroadcastService;
 import com.dingring.common.constant.WsConstants;
 import com.dingring.domain.discussion.Topic;
 import com.dingring.domain.discussion.TopicRepository;
@@ -31,16 +31,16 @@ import static org.mockito.Mockito.when;
 class ConclusionWatchdogTest {
 
     private TopicRepository topicRepository;
-    private ChatPusher chatPusher;
+    private GroupBroadcastService groupBroadcastService;
     private DiscussionEngine discussionEngine;
     private ConclusionWatchdog watchdog;
 
     @BeforeEach
     void setUp() throws Exception {
         topicRepository = mock(TopicRepository.class);
-        chatPusher = mock(ChatPusher.class);
+        groupBroadcastService = mock(GroupBroadcastService.class);
         discussionEngine = mock(DiscussionEngine.class);
-        watchdog = new ConclusionWatchdog(topicRepository, chatPusher, discussionEngine);
+        watchdog = new ConclusionWatchdog(topicRepository, groupBroadcastService, discussionEngine);
         Field f = ConclusionWatchdog.class.getDeclaredField("concludingTimeoutMinutes");
         f.setAccessible(true);
         f.set(watchdog, 5);
@@ -68,7 +68,7 @@ class ConclusionWatchdogTest {
         ArgumentCaptor<Topic> captor = ArgumentCaptor.forClass(Topic.class);
         verify(topicRepository).update(captor.capture());
         assertThat(captor.getValue().getStatus()).isEqualTo(TopicStatus.IN_PROGRESS);
-        verify(chatPusher).pushToGroup(eq(1L), eq(WsConstants.TOPIC_STATUS_CHANGED), any());
+        verify(groupBroadcastService).broadcast(eq(1L), eq(WsConstants.TOPIC_STATUS_CHANGED), any());
         verify(discussionEngine).wake(1L);
     }
 
@@ -81,7 +81,7 @@ class ConclusionWatchdogTest {
 
         watchdog.rescueStuckTopics();
 
-        verify(chatPusher, never()).pushToGroup(any(), any(), any());
+        verify(groupBroadcastService, never()).broadcast(any(), any(), any());
         verify(discussionEngine, never()).wake(any());
     }
 

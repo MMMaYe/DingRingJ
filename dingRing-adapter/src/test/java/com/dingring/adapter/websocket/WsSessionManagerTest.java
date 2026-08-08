@@ -52,8 +52,8 @@ class WsSessionManagerTest {
 
             sessionManager.register(1L, session);
 
-            // 通过 pushToGroup 验证 session 被注册
-            sessionManager.pushToGroup(1L, "TEST", Map.of("msg", "hi"));
+            // 通过 broadcast 验证 session 被注册
+            sessionManager.broadcast(1L, "TEST", Map.of("msg", "hi"));
             verify(session, atLeastOnce()).sendMessage(any(TextMessage.class));
         }
 
@@ -66,7 +66,7 @@ class WsSessionManagerTest {
             sessionManager.register(1L, s1);
             sessionManager.register(1L, s2);
 
-            sessionManager.pushToGroup(1L, "TEST", Map.of("msg", "hi"));
+            sessionManager.broadcast(1L, "TEST", Map.of("msg", "hi"));
             verify(s1, atLeastOnce()).sendMessage(any(TextMessage.class));
             verify(s2, atLeastOnce()).sendMessage(any(TextMessage.class));
         }
@@ -83,7 +83,7 @@ class WsSessionManagerTest {
             sessionManager.register(1L, session);
 
             sessionManager.unregister(1L, session);
-            sessionManager.pushToGroup(1L, "TEST", Map.of("msg", "hi"));
+            sessionManager.broadcast(1L, "TEST", Map.of("msg", "hi"));
 
             verify(session, never()).sendMessage(any());
         }
@@ -98,7 +98,7 @@ class WsSessionManagerTest {
             // 群条目被清理后，再次注册不报错
             WebSocketSession newSession = mockSession("s2");
             sessionManager.register(1L, newSession);
-            sessionManager.pushToGroup(1L, "TEST", Map.of());
+            sessionManager.broadcast(1L, "TEST", Map.of());
             verify(newSession, atLeastOnce()).sendMessage(any(TextMessage.class));
         }
 
@@ -113,14 +113,14 @@ class WsSessionManagerTest {
     }
 
     @Nested
-    @DisplayName("pushToGroup 群广播")
+    @DisplayName("broadcast 群广播")
     class PushToGroup {
 
         @Test
         @DisplayName("群无在线连接时静默返回（不抛异常）")
         void noSessionsShouldReturnSilently() {
             // 不注册任何 session，直接推送
-            sessionManager.pushToGroup(999L, "TEST", Map.of("msg", "hi"));
+            sessionManager.broadcast(999L, "TEST", Map.of("msg", "hi"));
             // 不抛异常即通过
         }
 
@@ -130,7 +130,7 @@ class WsSessionManagerTest {
             WebSocketSession session = mockSession("s1");
             sessionManager.register(1L, session);
 
-            sessionManager.pushToGroup(1L, "NEW_MESSAGE", Map.of("content", "hello"));
+            sessionManager.broadcast(1L, "NEW_MESSAGE", Map.of("content", "hello"));
 
             org.mockito.ArgumentCaptor<TextMessage> captor =
                     org.mockito.ArgumentCaptor.forClass(TextMessage.class);
@@ -152,7 +152,7 @@ class WsSessionManagerTest {
             sessionManager.register(1L, s2);
 
             // s1 发送失败，s2 仍应收到
-            sessionManager.pushToGroup(1L, "TEST", Map.of("msg", "hi"));
+            sessionManager.broadcast(1L, "TEST", Map.of("msg", "hi"));
             verify(s2, atLeastOnce()).sendMessage(any(TextMessage.class));
         }
 
@@ -164,7 +164,7 @@ class WsSessionManagerTest {
             when(session.isOpen()).thenReturn(false);  // session 已关闭
 
             sessionManager.register(1L, session);
-            sessionManager.pushToGroup(1L, "TEST", Map.of("msg", "hi"));
+            sessionManager.broadcast(1L, "TEST", Map.of("msg", "hi"));
 
             verify(session, never()).sendMessage(any());
         }

@@ -1,6 +1,6 @@
 package com.dingring.app.event;
 
-import com.dingring.app.service.ChatPusher;
+import com.dingring.domain.service.GroupBroadcastService;
 import com.dingring.common.constant.WsConstants;
 import com.dingring.domain.agent.Agent;
 import com.dingring.domain.agent.AgentRepository;
@@ -40,7 +40,7 @@ class CardEventHandlerTest {
     private CardRepository cardRepository;
     private LlmService llmService;
     private DomainEventPublisher eventPublisher;
-    private ChatPusher chatPusher;
+    private GroupBroadcastService groupBroadcastService;
     private ObjectMapper objectMapper;
     private CardEventHandler handler;
 
@@ -50,10 +50,10 @@ class CardEventHandlerTest {
         cardRepository = mock(CardRepository.class);
         llmService = mock(LlmService.class);
         eventPublisher = mock(DomainEventPublisher.class);
-        chatPusher = mock(ChatPusher.class);
+        groupBroadcastService = mock(GroupBroadcastService.class);
         objectMapper = new ObjectMapper();
         handler = new CardEventHandler(agentRepository, cardRepository, llmService,
-                eventPublisher, chatPusher, objectMapper);
+                eventPublisher, groupBroadcastService, objectMapper);
     }
 
     private Agent agent(Long id, String name) {
@@ -119,8 +119,8 @@ class CardEventHandlerTest {
 
             // 异步等待卡片保存与广播
             verify(cardRepository, timeout(2000)).saveBatch(any());
-            verify(chatPusher, timeout(2000))
-                    .pushToGroup(eq(10L), eq(WsConstants.CARD_GENERATED), any());
+            verify(groupBroadcastService, timeout(2000))
+                    .broadcast(eq(10L), eq(WsConstants.CARD_GENERATED), any());
             verify(eventPublisher, timeout(2000)).publish(any(KnowledgeCardGenerated.class));
         }
 
