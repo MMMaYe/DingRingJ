@@ -22,9 +22,9 @@ import com.dingring.domain.group.GroupRepository;
 import com.dingring.domain.group.MessageRepository;
 import com.dingring.domain.group.MessageType;
 import com.dingring.domain.group.SenderType;
+import com.dingring.domain.service.AgentSpeakerService;
 import com.dingring.domain.service.DomainEventPublisher;
 import com.dingring.domain.service.GroupBroadcastService;
-import com.dingring.domain.service.LlmService;
 import com.dingring.domain.workflow.StateKeys;
 import com.dingring.infrastructure.aop.Event;
 import lombok.RequiredArgsConstructor;
@@ -62,7 +62,7 @@ public class ChatNode implements NodeAction {
     private final SpeakerScheduler speakerScheduler;
     private final ContextBuilder contextBuilder;
     private final MessageAssembler messageAssembler;
-    private final LlmService llmService;
+    private final AgentSpeakerService agentSpeakerService;
     private final DomainEventPublisher eventPublisher;
     private final GroupBroadcastService groupBroadcastService;
 
@@ -183,10 +183,35 @@ public class ChatNode implements NodeAction {
         try {
             // 构建闲聊上下文（topicId=null）
             ContextBuilder.LlmContext llmCtx = contextBuilder.build(
-                    agent, members, groupId, null, messageAssembler::resolveSenderName);
+                    agent, groupId, null, messageAssembler::resolveSenderName);
 
-            // LLM 调用（失败重试 1 次）
-            String content = chatWithRetry(agent, llmCtx, emitter);
+            // 构建 ReactAgent 上下文（群记忆/用户画像由 Hook 动态注入）
+            Map<String, Object> context = new HashMap<>();
+            context.put("groupId", groupId);
+            context.put("userId", 1L);  // 当前单用户系统默认 ID
+            context.put("speakerAgentId", agent.getId());
+
+            // Agent 发言（失败重试 1 次）；流式模式下重试前废弃旧流、换新 streamId 重开
+            AgentSpeakerService.AgentResult result;
+            try {
+                result = streamingEnabled
+                        ? agentSpeakerService.callStream(agent, llmCtx.systemPrompt(), llmCtx.turns(),
+                                AgentSpeakerService.ToolSet.CHAT, context, emitter::onDelta)
+                        : agentSpeakerService.call(agent, llmCtx.systemPrompt(), llmCtx.turns(),
+                                AgentSpeakerService.ToolSet.CHAT, context);
+            } catch (Exception first) {
+                LogHelper.printWarnLog(ChatNode.class, "ChatNode.speakOnce", "CHAT_NODE", "Agent首次失败重试",
+                        "agent={} 失败原因: {}", agent.getName(), first.getMessage());
+                if (emitter != null) {
+                    emitter.reset();
+                }
+                result = streamingEnabled
+                        ? agentSpeakerService.callStream(agent, llmCtx.systemPrompt(), llmCtx.turns(),
+                                AgentSpeakerService.ToolSet.CHAT, context, emitter::onDelta)
+                        : agentSpeakerService.call(agent, llmCtx.systemPrompt(), llmCtx.turns(),
+                                AgentSpeakerService.ToolSet.CHAT, context);
+            }
+            String content = result.content();
 
             // 闲聊态：空内容视为不发言
             if (content == null || content.isBlank()) {
@@ -250,23 +275,6 @@ public class ChatNode implements NodeAction {
             return new SpeakResult(false);
         } finally {
             pushTyping(groupId, agent, false);
-        }
-    }
-
-    /** LLM 调用（失败重试 1 次）；流式模式下重试前废弃旧流、换新 streamId 重开 */
-    private String chatWithRetry(Agent agent, ContextBuilder.LlmContext ctx, StreamEmitter emitter) {
-        try {
-            return emitter != null
-                    ? llmService.chatStream(agent, ctx.systemPrompt(), ctx.turns(), emitter::onDelta)
-                    : llmService.chat(agent, ctx.systemPrompt(), ctx.turns());
-        } catch (Exception first) {
-            LogHelper.printWarnLog(ChatNode.class, "ChatNode.chatWithRetry", "CHAT_NODE", "LLM首次失败重试",
-                    "agent={} 失败原因: {}", agent.getName(), first.getMessage());
-            if (emitter != null) {
-                emitter.reset();
-                return llmService.chatStream(agent, ctx.systemPrompt(), ctx.turns(), emitter::onDelta);
-            }
-            return llmService.chat(agent, ctx.systemPrompt(), ctx.turns());
         }
     }
 

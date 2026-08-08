@@ -5,8 +5,6 @@ import com.dingring.domain.group.GroupMessage;
 import com.dingring.domain.group.MessageRepository;
 import com.dingring.domain.group.SenderType;
 import com.dingring.domain.service.LlmService.ChatTurn;
-import com.dingring.domain.service.MemoryService;
-import com.dingring.domain.service.ProfileService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -16,12 +14,14 @@ import java.lang.reflect.Field;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 /**
  * {@link ContextBuilder} 上下文构建单元测试。
+ * <p>Phase D 改造：群记忆/用户画像/群成员名单已迁移到 Hook（MemoryInjectionHook /
+ * ProfileInjectionHook / GroupRosterHook），ContextBuilder 只负责"静态系统提示词 + 消息历史"，
+ * 故本测试不再覆盖记忆/画像/名单的拼接断言（由各 Hook 的单测覆盖）。
  * <p>核心：消息序列 → ChatTurn 转换规则
  * <ul>
  *   <li>Agent 自己的历史发言 → ASSISTANT 轮次</li>
@@ -33,18 +33,12 @@ import static org.mockito.Mockito.when;
 class ContextBuilderTest {
 
     private MessageRepository messageRepository;
-    private MemoryService memoryService;
-    private ProfileService profileService;
     private ContextBuilder contextBuilder;
 
     @BeforeEach
     void setUp() throws Exception {
         messageRepository = mock(MessageRepository.class);
-        memoryService = mock(MemoryService.class);
-        profileService = mock(ProfileService.class);
-        contextBuilder = new ContextBuilder(messageRepository, memoryService, profileService);
-        when(memoryService.retrieveMemory(1L)).thenReturn("");
-        when(profileService.getProfile(anyLong())).thenReturn("");
+        contextBuilder = new ContextBuilder(messageRepository);
         setField(contextBuilder, "contextWindow", 200);
     }
 
@@ -90,7 +84,7 @@ class ContextBuilderTest {
             Agent self = agent(10L, "老王", "你是后端专家");
             when(messageRepository.findRecentByTopicId(100L, 200)).thenReturn(List.of());
 
-            ContextBuilder.LlmContext ctx = contextBuilder.build(self, List.of(self), 1L, 100L, m -> "用户");
+            ContextBuilder.LlmContext ctx = contextBuilder.build(self, 1L, 100L, m -> "用户");
 
             assertThat(ctx.turns()).hasSize(1);
             assertThat(ctx.turns().get(0).role()).isEqualTo("USER");
@@ -106,7 +100,7 @@ class ContextBuilderTest {
                     agentMsg(2L, 10L, "补充一下：可以用 ZSET 排序")
             ));
 
-            ContextBuilder.LlmContext ctx = contextBuilder.build(self, List.of(self), 1L, 100L, m -> "老王");
+            ContextBuilder.LlmContext ctx = contextBuilder.build(self, 1L, 100L, m -> "老王");
 
             assertThat(ctx.turns()).extracting(ChatTurn::role)
                     .containsExactly("ASSISTANT", "ASSISTANT");
@@ -123,7 +117,7 @@ class ContextBuilderTest {
                     userMsg(2L, 1L, "用户A", "怎么避免？")
             ));
 
-            ContextBuilder.LlmContext ctx = contextBuilder.build(self, List.of(self), 1L, 100L, m -> "用户A");
+            ContextBuilder.LlmContext ctx = contextBuilder.build(self, 1L, 100L, m -> "用户A");
 
             assertThat(ctx.turns()).hasSize(1);
             ChatTurn turn = ctx.turns().get(0);
@@ -141,7 +135,7 @@ class ContextBuilderTest {
                     userMsg(3L, 1L, "用户", "继续说说")
             ));
 
-            ContextBuilder.LlmContext ctx = contextBuilder.build(self, List.of(self), 1L, 100L, m -> "用户");
+            ContextBuilder.LlmContext ctx = contextBuilder.build(self, 1L, 100L, m -> "用户");
 
             assertThat(ctx.turns()).extracting(ChatTurn::role)
                     .containsExactly("USER", "ASSISTANT", "USER");
@@ -150,45 +144,16 @@ class ContextBuilderTest {
         }
 
         @Test
-        @DisplayName("systemPrompt 含 Agent 人设 + 群聊语境 + 历史记忆")
-        void systemPromptShouldContainPersonaContextAndMemory() {
+        @DisplayName("systemPrompt 含 Agent 人设与群聊语境")
+        void systemPromptShouldContainPersonaAndGroupContext() {
             Agent self = agent(10L, "老王", "你是后端架构师");
-            when(memoryService.retrieveMemory(1L)).thenReturn("历史结论：Redis 用 ZSET");
             when(messageRepository.findRecentByTopicId(100L, 200)).thenReturn(List.of());
 
-            ContextBuilder.LlmContext ctx = contextBuilder.build(self, List.of(self), 1L, 100L, m -> "用户");
+            ContextBuilder.LlmContext ctx = contextBuilder.build(self, 1L, 100L, m -> "用户");
 
             assertThat(ctx.systemPrompt())
-                    .contains("你是后端架构师")              // 人设
-                    .contains("你的花名是「老王」")          // 群聊语境
-                    .contains("历史结论：Redis 用 ZSET");    // 历史记忆
-        }
-
-        @Test
-        @DisplayName("systemPrompt 含群成员名单：本人标「你」，他人带简介")
-        void systemPromptShouldContainMemberRoster() {
-            Agent self = agent(10L, "老王", "你是后端架构师。擅长分布式系统");
-            Agent other = agent(11L, "小李", null);
-            other.setDescription("产品经理，关注用户价值");
-            when(messageRepository.findRecentByTopicId(100L, 200)).thenReturn(List.of());
-
-            ContextBuilder.LlmContext ctx = contextBuilder.build(self, List.of(self, other), 1L, 100L, m -> "用户");
-
-            assertThat(ctx.systemPrompt())
-                    .contains("群成员名单")                        // 名单段存在
-                    .contains("- 你（老王）：你是后端架构师")     // 本人标「你」+ 人设首句
-                    .contains("- 小李：产品经理，关注用户价值"); // 他人用 description
-        }
-
-        @Test
-        @DisplayName("成员列表为空时不注入名单段")
-        void emptyMembersShouldSkipRoster() {
-            Agent self = agent(10L, "老王", null);
-            when(messageRepository.findRecentByTopicId(100L, 200)).thenReturn(List.of());
-
-            ContextBuilder.LlmContext ctx = contextBuilder.build(self, List.of(), 1L, 100L, m -> "用户");
-
-            assertThat(ctx.systemPrompt()).doesNotContain("群成员名单");
+                    .contains("你是后端架构师")        // 人设
+                    .contains("你的花名是「老王」");   // 群聊语境
         }
 
         @Test
@@ -199,7 +164,7 @@ class ContextBuilderTest {
                     userMsg(1L, 1L, "用户", "hi")
             ));
 
-            ContextBuilder.LlmContext ctx = contextBuilder.build(self, List.of(self), 1L, null, m -> "用户");
+            ContextBuilder.LlmContext ctx = contextBuilder.build(self, 1L, null, m -> "用户");
 
             assertThat(ctx.turns()).hasSize(1);
             assertThat(ctx.turns().get(0).content()).isEqualTo("用户: hi");

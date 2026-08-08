@@ -23,9 +23,9 @@ import com.dingring.domain.group.GroupRepository;
 import com.dingring.domain.group.MessageRepository;
 import com.dingring.domain.group.MessageType;
 import com.dingring.domain.group.SenderType;
+import com.dingring.domain.service.AgentSpeakerService;
 import com.dingring.domain.service.DomainEventPublisher;
 import com.dingring.domain.service.GroupBroadcastService;
-import com.dingring.domain.service.LlmService;
 import com.dingring.domain.workflow.StateKeys;
 import com.dingring.infrastructure.aop.Event;
 import lombok.RequiredArgsConstructor;
@@ -68,7 +68,7 @@ public class DiscussNode implements NodeAction {
     private final SpeakerScheduler speakerScheduler;
     private final ContextBuilder contextBuilder;
     private final MessageAssembler messageAssembler;
-    private final LlmService llmService;
+    private final AgentSpeakerService agentSpeakerService;
     private final DomainEventPublisher eventPublisher;
     private final GroupBroadcastService groupBroadcastService;
     private final Terminator terminator;
@@ -222,20 +222,40 @@ public class DiscussNode implements NodeAction {
             StreamEmitter emitter = streamingEnabled ? new StreamEmitter(ctx.getGroupId(), agent) : null;
             try {
                 ContextBuilder.LlmContext llmCtx = contextBuilder.build(
-                        agent, members, ctx.getGroupId(), ctx.getTopicId(), messageAssembler::resolveSenderName);
-                String content;
+                        agent, ctx.getGroupId(), ctx.getTopicId(), messageAssembler::resolveSenderName);
+
+                // 构建 ReactAgent 上下文（群记忆/用户画像由 Hook 动态注入）
+                Map<String, Object> context = new HashMap<>();
+                context.put("groupId", ctx.getGroupId());
+                context.put("topicId", ctx.getTopicId());
+                context.put("userId", 1L);  // 当前单用户系统默认 ID
+                context.put("speakerAgentId", agent.getId());
+
+                // Agent 发言（失败重试 1 次）；流式模式下重试前废弃旧流、换新 streamId 重开
+                AgentSpeakerService.AgentResult result;
+                long llmStart = System.currentTimeMillis();
                 try {
-                    long llmStart = System.currentTimeMillis();
-                    content = chatWithRetry(agent, llmCtx, emitter);
-                    LogHelper.printLog(DiscussNode.class, "DiscussNode.speakOnce", "DISCUSS_NODE", "LLM调用完成",
-                            "agent={} topicId={} 耗时={}ms",
-                            agent.getName(), ctx.getTopicId(), System.currentTimeMillis() - llmStart);
-                } catch (Exception e) {
+                    result = streamingEnabled
+                            ? agentSpeakerService.callStream(agent, llmCtx.systemPrompt(), llmCtx.turns(),
+                                    AgentSpeakerService.ToolSet.DISCUSS, context, emitter::onDelta)
+                            : agentSpeakerService.call(agent, llmCtx.systemPrompt(), llmCtx.turns(),
+                                    AgentSpeakerService.ToolSet.DISCUSS, context);
+                } catch (Exception first) {
+                    LogHelper.printWarnLog(DiscussNode.class, "DiscussNode.speakOnce", "DISCUSS_NODE", "Agent首次失败重试",
+                            "agent={} 失败原因: {}", agent.getName(), first.getMessage());
                     if (emitter != null) {
-                        emitter.abort();
+                        emitter.reset();
                     }
-                    throw e;
+                    result = streamingEnabled
+                            ? agentSpeakerService.callStream(agent, llmCtx.systemPrompt(), llmCtx.turns(),
+                                    AgentSpeakerService.ToolSet.DISCUSS, context, emitter::onDelta)
+                            : agentSpeakerService.call(agent, llmCtx.systemPrompt(), llmCtx.turns(),
+                                    AgentSpeakerService.ToolSet.DISCUSS, context);
                 }
+                String content = result.content();
+                LogHelper.printLog(DiscussNode.class, "DiscussNode.speakOnce", "DISCUSS_NODE", "LLM调用完成",
+                        "agent={} topicId={} 耗时={}ms",
+                        agent.getName(), ctx.getTopicId(), System.currentTimeMillis() - llmStart);
 
                 boolean blank = content == null || content.isBlank();
                 // 空内容或 [[PASS]]：视为跳过本轮
@@ -290,6 +310,9 @@ public class DiscussNode implements NodeAction {
                 }
                 return new SpeakResult(SpeakOutcome.SPOKE, agent);
             } catch (Exception e) {
+                if (emitter != null) {
+                    emitter.abort();
+                }
                 Agent fallback = i + 1 < ranked.size() ? ranked.get(i + 1).agent() : null;
                 LogHelper.printWarnLog(DiscussNode.class, "DiscussNode.speakOnce", "DISCUSS_NODE", "Agent调用失败降级",
                         "agent={} fallback={}", agent.getName(),
@@ -311,23 +334,6 @@ public class DiscussNode implements NodeAction {
                 "errorCode", ErrorCode.ALL_AGENTS_FAILED.name(),
                 "message", ErrorCode.ALL_AGENTS_FAILED.getDefaultMessage()));
         return new SpeakResult(SpeakOutcome.FAILED, null);
-    }
-
-    /** LLM 调用（失败重试 1 次）；流式模式下重试前废弃旧流、换新 streamId 重开 */
-    private String chatWithRetry(Agent agent, ContextBuilder.LlmContext ctx, StreamEmitter emitter) {
-        try {
-            return emitter != null
-                    ? llmService.chatStream(agent, ctx.systemPrompt(), ctx.turns(), emitter::onDelta)
-                    : llmService.chat(agent, ctx.systemPrompt(), ctx.turns());
-        } catch (Exception first) {
-            LogHelper.printWarnLog(DiscussNode.class, "DiscussNode.chatWithRetry", "DISCUSS_NODE", "LLM首次失败重试",
-                    "agent={} 失败原因: {}", agent.getName(), first.getMessage());
-            if (emitter != null) {
-                emitter.reset();
-                return llmService.chatStream(agent, ctx.systemPrompt(), ctx.turns(), emitter::onDelta);
-            }
-            return llmService.chat(agent, ctx.systemPrompt(), ctx.turns());
-        }
     }
 
     /** 构造收束结果（discussMode=CONCLUDE, concluded=true） */

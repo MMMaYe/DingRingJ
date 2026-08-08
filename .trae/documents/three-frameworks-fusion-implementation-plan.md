@@ -2418,6 +2418,38 @@ public class WorkNode implements NodeAction {
 - 不引入 PermissionEngine
 - 不引入完整 HITL(只做自动拦截)
 
+### 7.7 实施记录(2026-08-08 完成)
+
+**落地范围**:基础设施 + 节点改造 + Hook + 工具,一步到位全做。
+
+| 项 | 方案设计 | 实际落地 | 差异说明 |
+|---|---|---|---|
+| 依赖 | `spring-ai-alibaba-agent-framework` + `spring-ai-alibaba-starter-agentscope` | 仅 `spring-ai-alibaba-agent-framework` | AgentScope starter 未引入,SAA 自有 ReactAgent 已满足需求(见 7.4 决策1) |
+| ReAct 循环上限 | `maxIters` | `CompileConfig.recursionLimit` | SAA 1.1.2.3 API 实际为 recursionLimit,讨论=3/工作=15 不变 |
+| AgentSpeakerService 签名 | `call(agent, systemPrompt, messages, List<String> tools)` | `call(agent, systemPrompt, messages, ToolSet toolSet, Map<String,Object> context)` | 用 ToolSet 枚举替代 List<String>,避免魔法字符串;新增 context 供 Hook 读取 groupId/userId/speakerAgentId |
+| ContextBuilder 动态拼接 | 迁移到 Hook(7.3.4 节) | 已迁移:MemoryInjectionHook/ProfileInjectionHook/GroupRosterHook | ContextBuilder 构造函数移除 memoryService/profileService 依赖,只保留 messageRepository |
+| 工具实现 | 3 个 @Tool | UserProfileQueryTool/TopicHistoryTool/KnowledgeSearchTool(占位) | KnowledgeSearchTool 待 Phase E RagService 实现后激活 |
+
+**新增文件**:
+- domain: `AgentSpeakerService.java`(端口 + ToolSet 枚举 + AgentResult record)
+- infrastructure/runtime: `SaaReactAgentFactory.java`、`AgentSpeakerServiceImpl.java`
+- infrastructure/agent/hook: `MemoryInjectionHook.java`、`ProfileInjectionHook.java`、`GroupRosterHook.java`
+- infrastructure/agent/tool: `UserProfileQueryTool.java`、`TopicHistoryTool.java`、`KnowledgeSearchTool.java`
+
+**改造文件**:
+- app: `ContextBuilder.java`(移除动态拼接)、`ChatNode.java`/`DiscussNode.java`/`ConcludeNode.java`(迁移到 AgentSpeakerService)、`WorkNode.java`(完善深度 ReAct)
+- infrastructure: `pom.xml`(引入 agent-framework)
+
+**测试**:
+- `ContextBuilderTest` 重写:移除 members 参数 + 删除迁移到 Hook 的 roster/memory 断言,保留 7 tests
+- 新增 3 个 Hook 测试:MemoryInjectionHookTest(3)、ProfileInjectionHookTest(3)、GroupRosterHookTest(4) = 10 tests
+- 全量验证:`mvn clean test` 7 模块 SUCCESS,Tests run: 302, Failures: 0, Errors: 0, Skipped: 0
+
+**关键技术点**:
+- Hook 注入方式:`beforeModel` 返回 `Map.of("messages", new SystemMessage(...))`,SAA 图引擎按 AppendStrategy 追加到 state 的 messages 列表
+- OverAllState 虽为 final 类,但 `OverAllState(Map)` 构造可用真实实例,Hook 测试无需 mock 框架类
+- CompileConfig.recursionLimit 替代 maxIters(SAA 1.1.2.3 API 变更)
+
 ---
 
 ## 八、Phase E:RAG 用 SAA VectorStore

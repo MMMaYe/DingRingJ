@@ -22,9 +22,9 @@ import com.dingring.domain.group.GroupRepository;
 import com.dingring.domain.group.MessageRepository;
 import com.dingring.domain.group.MessageType;
 import com.dingring.domain.group.SenderType;
+import com.dingring.domain.service.AgentSpeakerService;
 import com.dingring.domain.service.DomainEventPublisher;
 import com.dingring.domain.service.GroupBroadcastService;
-import com.dingring.domain.service.LlmService;
 import com.dingring.domain.workflow.StateKeys;
 import com.dingring.infrastructure.aop.Event;
 import lombok.RequiredArgsConstructor;
@@ -56,7 +56,7 @@ public class ConcludeNode implements NodeAction {
     private final SpeakerScheduler speakerScheduler;
     private final ContextBuilder contextBuilder;
     private final MessageAssembler messageAssembler;
-    private final LlmService llmService;
+    private final AgentSpeakerService agentSpeakerService;
     private final DomainEventPublisher eventPublisher;
     private final GroupBroadcastService groupBroadcastService;
 
@@ -119,7 +119,24 @@ public class ConcludeNode implements NodeAction {
             ContextBuilder.LlmContext ctx = contextBuilder.buildForConclusion(
                     concluder, topic.getChatGroupId(), topic.getId(), topic.getTitle(),
                     messageAssembler::resolveSenderName);
-            String conclusion = chatWithRetry(concluder, ctx);
+            // 构建 ReactAgent 上下文（群记忆/用户画像由 Hook 动态注入）
+            Map<String, Object> context = new HashMap<>();
+            context.put("groupId", topic.getChatGroupId());
+            context.put("topicId", topic.getId());
+            context.put("userId", 1L);  // 当前单用户系统默认 ID
+            context.put("speakerAgentId", concluder.getId());
+            // 收束节点用非流式 call（不需要流式输出，失败重试 1 次）
+            AgentSpeakerService.AgentResult agentResult;
+            try {
+                agentResult = agentSpeakerService.call(concluder, ctx.systemPrompt(), ctx.turns(),
+                        AgentSpeakerService.ToolSet.CONCLUDE, context);
+            } catch (Exception first) {
+                LogHelper.printWarnLog(ConcludeNode.class, "ConcludeNode.apply", "CONCLUDE_NODE",
+                        "LLM首次失败重试", "agent={} 失败原因: {}", concluder.getName(), first.getMessage());
+                agentResult = agentSpeakerService.call(concluder, ctx.systemPrompt(), ctx.turns(),
+                        AgentSpeakerService.ToolSet.CONCLUDE, context);
+            }
+            String conclusion = agentResult.content();
             if (conclusion == null || conclusion.isBlank()) {
                 throw new BizException(ErrorCode.TOPIC_CONCLUSION_FAILED, "总结 Agent 返回空结论");
             }
@@ -192,17 +209,6 @@ public class ConcludeNode implements NodeAction {
                 .build();
         List<SpeakerScheduler.ScoredAgent> ranked = speakerScheduler.rank(candidates, ctx);
         return ranked.isEmpty() ? null : ranked.get(0).agent();
-    }
-
-    /** LLM 调用（失败重试 1 次） */
-    private String chatWithRetry(Agent agent, ContextBuilder.LlmContext ctx) {
-        try {
-            return llmService.chat(agent, ctx.systemPrompt(), ctx.turns());
-        } catch (Exception first) {
-            LogHelper.printWarnLog(ConcludeNode.class, "ConcludeNode.chatWithRetry", "CONCLUDE_NODE",
-                    "LLM首次失败重试", "agent={} 失败原因: {}", agent.getName(), first.getMessage());
-            return llmService.chat(agent, ctx.systemPrompt(), ctx.turns());
-        }
     }
 
     private void rollbackConclusion(Topic topic, String reason) {

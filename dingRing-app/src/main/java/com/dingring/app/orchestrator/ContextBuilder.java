@@ -6,10 +6,8 @@ import com.dingring.domain.group.GroupMessage;
 import com.dingring.domain.group.MessageRepository;
 import com.dingring.domain.group.SenderType;
 import com.dingring.domain.service.LlmService.ChatTurn;
-import com.dingring.domain.service.MemoryService;
 import com.dingring.common.constant.PromptConstants;
 import com.dingring.common.util.LogHelper;
-import com.dingring.domain.service.ProfileService;
 import com.dingring.infrastructure.aop.Event;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,7 +22,9 @@ import java.util.Map;
 import java.util.function.Function;
 
 /**
- * 上下文构建：Agent 人设 + 滑动窗口最近 N 条消息 + 历史 Topic 结论记忆（见技术方案 6.3）。
+ * 上下文构建：Agent 人设 + 滑动窗口最近 N 条消息（见技术方案 6.3）。
+ * <p>Phase D 改造：群记忆/用户画像/群成员名单的动态拼接迁移到 Hook（MemoryInjectionHook /
+ * ProfileInjectionHook / GroupRosterHook），本类只负责"静态系统提示词 + 消息历史"。
  * <p>群聊语境：所有消息拼上发送者花名前缀合成 USER 轮次，Agent 自己的历史发言为 ASSISTANT 轮次。
  */
 @Slf4j
@@ -50,8 +50,6 @@ public class ContextBuilder {
     }
 
     private final MessageRepository messageRepository;
-    private final MemoryService memoryService;
-    private final ProfileService profileService;
 
     /** 滑动窗口大小（可配置，默认 200 条） */
     @Value("${dingring.orchestrator.context-window:200}")
@@ -61,28 +59,20 @@ public class ContextBuilder {
     @Value("${dingring.orchestrator.chat-context-window:20}")
     private int chatContextWindow;
 
-    /** 成员一句话简介最大长度（防名单撑爆 token） */
-    private static final int MEMBER_INTRO_MAX_LEN = 30;
-
     /**
-     * 构建 Agent 发言的完整上下文。
+     * 构建 Agent 发言的完整上下文（Phase D：只含静态系统提示词 + 消息历史）。
+     * <p>动态部分（群记忆/用户画像/群成员名单）由 Hook 在 ReactAgent 调用 LLM 前注入。
      *
      * @param agent           发言 Agent
-     * @param members         群内全部成员 Agent（含发言者自己，用于拼接成员名单）
      * @param groupId         群 ID
      * @param topicId         主题 ID（null = 闲聊，取群窗口）
      * @param senderNameOf    发送者名称解析函数
-     * @return system prompt + 对话轮次
+     * @return 基础 system prompt + 对话轮次
      */
-    @Event(eventCode = "BUILD_ALL_CONTEXT",eventName = "构建 Agent 发言的完整上下文。")
-    public LlmContext build(Agent agent, List<Agent> members, Long groupId, Long topicId,
+    @Event(eventCode = "BUILD_ALL_CONTEXT", eventName = "构建 Agent 发言的完整上下文")
+    public LlmContext build(Agent agent, Long groupId, Long topicId,
                             Function<GroupMessage, String> senderNameOf) {
-        String roster = buildMemberRoster(agent, members);
-        StringBuilder systemPrompt = new StringBuilder(buildSystemPrompt(agent, roster, groupId));
-        if (topicId != null) {
-            // 协作协议：自主收束 + 跳过本轮
-            systemPrompt.append("\n\n").append(PromptConstants.COLLABORATION_PROTOCOL);
-        }
+        String systemPrompt = buildBaseSystemPrompt(agent, topicId != null);
 
         // 滑动窗口最近 N 条消息
         List<GroupMessage> window = topicId != null
@@ -90,15 +80,10 @@ public class ContextBuilder {
                 : messageRepository.findRecentByGroupId(groupId, contextWindow);
 
         List<ChatTurn> turns = toTurns(agent, window, senderNameOf);
-        String sp = systemPrompt.toString();
-        int baseLen = (agent.getSystemPrompt() != null ? agent.getSystemPrompt().length() : 0)
-                + PromptConstants.CHAT_BASE.length() + roster.length() + 20;
-        boolean hasMemory = sp.length() > baseLen + 50;
-        boolean hasProfile = sp.contains("画像");
         LogHelper.printLog(ContextBuilder.class, "ContextBuilder.build", "BUILD", "构建完成",
-                "groupId={} topicId={} 消息条数={} systemPrompt长度={} 含记忆={} 含画像={}",
-                groupId, topicId, turns.size(), sp.length(), hasMemory, hasProfile);
-        return new LlmContext(sp, turns);
+                "groupId={} topicId={} 消息条数={} systemPrompt长度={}",
+                groupId, topicId, turns.size(), systemPrompt.length());
+        return new LlmContext(systemPrompt, turns);
     }
 
     /** 讨论态附带少量闲聊：主题窗口前合并最近 N 条未归属主题的消息（近期群氛围） */
@@ -120,7 +105,9 @@ public class ContextBuilder {
         return merged;
     }
 
-    /** 结论生成上下文：当前 Topic 全部消息 + 历史记忆（不走滑动窗口截断的 system 部分） */
+    /**
+     * 结论生成上下文（Phase D：只含静态系统提示词 + 消息历史，群记忆由 Hook 注入）。
+     */
     public LlmContext buildForConclusion(Agent concluder, Long groupId, Long topicId, String topicTitle,
                                          Function<GroupMessage, String> senderNameOf) {
         StringBuilder sp = new StringBuilder();
@@ -128,10 +115,7 @@ public class ContextBuilder {
             sp.append(concluder.getSystemPrompt()).append("\n\n");
         }
         sp.append(String.format(PromptConstants.CONCLUSION_STAR, topicTitle));
-        String memory = memoryService.retrieveMemory(groupId);
-        if (!memory.isBlank()) {
-            sp.append("\n\n").append(memory);
-        }
+
         List<GroupMessage> all = messageRepository.findRecentByTopicId(topicId, contextWindow);
         String spFinal = sp.toString();
         LogHelper.printLog(ContextBuilder.class, "ContextBuilder.buildForConclusion", "BUILD_FOR_CONCLUSION", "结论上下文",
@@ -139,64 +123,29 @@ public class ContextBuilder {
         return new LlmContext(spFinal, toTurns(concluder, all, senderNameOf));
     }
 
-    /** 构建系统提示：包含成员名单、历史记忆、跨群画像（长期观察） */
-    @Event(eventCode = "BUILD_SYSTEM_PROMPT",eventName = "构建系统提示。")
-    private String buildSystemPrompt(Agent agent, String memberRoster, Long groupId) {
+    /**
+     * 构建基础系统提示词（Phase D：只含 Agent 人设 + CHAT_BASE + 协作协议）。
+     * <p>群记忆/用户画像/群成员名单由 Hook 动态注入，不再在此拼接。
+     */
+    @Event(eventCode = "BUILD_SYSTEM_PROMPT", eventName = "构建基础系统提示词")
+    private String buildBaseSystemPrompt(Agent agent, boolean withCollaboration) {
         StringBuilder sp = new StringBuilder();
         if (agent.getSystemPrompt() != null && !agent.getSystemPrompt().isBlank()) {
             sp.append(agent.getSystemPrompt());
         }
         sp.append("\n\n").append(String.format(PromptConstants.CHAT_BASE, agent.getName()));
-        if (!memberRoster.isBlank()) {
-            sp.append("\n\n").append(memberRoster);
-        }
-        String memory = memoryService.retrieveMemory(groupId);
-        if (!memory.isBlank()) {
-            sp.append("\n\n").append(memory);
-        }
-        // 跨群用户画像：让 Agent 更懂用户的表达习惯/情绪基调/思考方式
-        String profile = profileService.getProfile(GroupAppService.DEFAULT_USER_ID);
-        if (!profile.isBlank()) {
-            sp.append("\n\n关于群里用户的画像记忆（长期观察所得，供你更懂他/她，不要直接复述）：\n")
-                    .append(profile);
+        if (withCollaboration) {
+            // 协作协议：自主收束 + 跳过本轮
+            sp.append("\n\n").append(PromptConstants.COLLABORATION_PROTOCOL);
         }
         return sp.toString();
-    }
-
-    /** 群成员名单段：花名 + 一句话简介，发言者本人标「你」强化自我认知（抑制冒充他人发言） */
-    private String buildMemberRoster(Agent self, List<Agent> members) {
-        if (members == null || members.isEmpty()) {
-            return "";
-        }
-        StringBuilder roster = new StringBuilder(PromptConstants.GROUP_MEMBERS_HEADER);
-        for (Agent m : members) {
-            boolean isSelf = self.getId() != null && self.getId().equals(m.getId());
-            roster.append("\n- ").append(isSelf ? "你（" + m.getName() + "）" : m.getName());
-            String intro = memberIntro(m);
-            if (!intro.isBlank()) {
-                roster.append("：").append(intro);
-            }
-        }
-        return roster.toString();
-    }
-
-    /** 成员一句话简介：优先性格描述，否则取人设首句（不重复注入完整 systemPrompt） */
-    private String memberIntro(Agent m) {
-        String source = m.getDescription() != null && !m.getDescription().isBlank()
-                ? m.getDescription()
-                : m.getSystemPrompt();
-        if (source == null || source.isBlank()) {
-            return "";
-        }
-        String first = source.strip().split("[。\n！？!?]", 2)[0].strip();
-        return first.length() > MEMBER_INTRO_MAX_LEN ? first.substring(0, MEMBER_INTRO_MAX_LEN) : first;
     }
 
     /**
      * 消息 → 对话轮次：Agent 自己的发言为 ASSISTANT，其余合并为带花名前缀的 USER 轮次；
      * 连续 USER 轮次合并为一条，避免部分厂商拒绝连续同角色消息。
      */
-    @Event(eventCode = "BUILD_CHAT_TURNSNS",eventName = "构建对话轮次。")
+    @Event(eventCode = "BUILD_CHAT_TURNS", eventName = "构建对话轮次")
     private List<ChatTurn> toTurns(Agent self, List<GroupMessage> messages,
                                    Function<GroupMessage, String> senderNameOf) {
         List<ChatTurn> turns = new ArrayList<>();
@@ -229,7 +178,6 @@ public class ContextBuilder {
     }
 
     private Long cacheKey(GroupMessage m) {
-        // senderType 与 senderId 组合防止 USER/AGENT id 冲突
         long typeBit = m.getSenderType() == SenderType.AGENT ? 1_000_000_000L : 0L;
         return typeBit + (m.getSenderId() == null ? 0 : m.getSenderId());
     }

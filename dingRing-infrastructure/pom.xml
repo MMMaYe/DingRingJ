@@ -39,6 +39,11 @@
             <groupId>com.alibaba.cloud.ai</groupId>
             <artifactId>spring-ai-alibaba-graph-core</artifactId>
         </dependency>
+        <!-- SAA Agent Framework（Phase D：ReactAgent + Hook + Interceptor，提供 ReAct 循环 + 工具调用能力） -->
+        <dependency>
+            <groupId>com.alibaba.cloud.ai</groupId>
+            <artifactId>spring-ai-alibaba-agent-framework</artifactId>
+        </dependency>
         <!-- Spring AOP -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
