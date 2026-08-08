@@ -2,6 +2,7 @@ package com.dingring.app.workflow.node;
 
 import com.alibaba.cloud.ai.graph.OverAllState;
 import com.alibaba.cloud.ai.graph.action.NodeAction;
+import com.alibaba.cloud.ai.graph.agent.ReactAgent;
 import com.dingring.app.service.MessageAssembler;
 import com.dingring.common.constant.WsConstants;
 import com.dingring.common.util.JsonHelper;
@@ -19,8 +20,12 @@ import com.dingring.domain.service.GroupBroadcastService;
 import com.dingring.domain.service.LlmService.ChatTurn;
 import com.dingring.domain.workflow.StateKeys;
 import com.dingring.infrastructure.aop.Event;
+import com.dingring.infrastructure.agent.runtime.SupervisorAgentFactory;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.ai.chat.messages.AssistantMessage;
+import org.springframework.ai.chat.messages.UserMessage;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
@@ -29,13 +34,15 @@ import java.util.Map;
 
 /**
  * 工作流节点：处理 WORK 意图（用户要求执行具体任务，如生成文档/查询信息等）。
- * <p>Phase D 完善：用 ReactAgent（recursionLimit=15）+ 通用工具集执行深度 ReAct 任务。
+ * <p>Phase F 增强：Supervisor 编排模式——将群成员 Agent 包装为子 Agent 工具，
+ * 由 Supervisor 拆解任务并委派执行；通过 {@code dingring.supervisor.enabled} 开关控制，
+ * 关闭时降级为 Phase D 的单 Agent 深度 ReAct（方案十一回退策略）。
  * <p>注意：当前 MessageRouter 尚未支持 WORK 意图（仅 CHAT/DISCUSS/CONCLUDE），
  * 本节点在 StateGraph 中保留占位路径，WORK 意图启用后可直接执行。
  * <p>设计要点：
  * <ul>
- *   <li>选群首成员作为工作 Agent（后续可配置专职工作 Agent）</li>
- *   <li>构建工作任务 systemPrompt（Agent 人设 + 任务指令）</li>
+ *   <li>单 Agent 模式：选群首成员作为工作 Agent（后续可配置专职工作 Agent）</li>
+ *   <li>Supervisor 模式：选群首成员作为编排者（模型配置来源），其余成员作为执行者</li>
  *   <li>调用 agentSpeakerService.call() with ToolSet.WORK（recursionLimit=15，深度 ReAct）</li>
  *   <li>工作产出入库广播</li>
  * </ul>
@@ -51,6 +58,11 @@ public class WorkNode implements NodeAction {
     private final MessageAssembler messageAssembler;
     private final AgentSpeakerService agentSpeakerService;
     private final GroupBroadcastService groupBroadcastService;
+    private final SupervisorAgentFactory supervisorAgentFactory;
+
+    /** Supervisor 编排模式开关（false = 降级单 Agent，方案十一回退策略） */
+    @Value("${dingring.supervisor.enabled:false}")
+    private boolean supervisorEnabled;
 
     /**
      * WORK 意图处理：选 Agent → 构建 systemPrompt → ReAct 执行 → 入库广播。
@@ -88,7 +100,20 @@ public class WorkNode implements NodeAction {
                     "群内无 Agent 成员", "groupId={}", groupId);
             return Map.of();
         }
-        Agent workAgent = members.get(0);
+
+        // Supervisor 模式需要至少 2 名成员（1 编排者 + 1 执行者），否则自动降级单 Agent
+        if (supervisorEnabled && members.size() >= 2) {
+            return executeWithSupervisor(state, groupId, input, group, members);
+        }
+        return executeWithSingleAgent(state, groupId, input, group, members.get(0));
+    }
+
+    /**
+     * 单 Agent 模式（Phase D 原实现）：选群首成员深度 ReAct 执行。
+     * <p>保留为 Supervisor 模式的降级链（开关关闭 / 成员不足 / Supervisor 异常时兜底）。
+     */
+    private Map<String, Object> executeWithSingleAgent(OverAllState state, Long groupId, String input,
+                                                       Group group, Agent workAgent) {
 
         // 通知群聊：任务开始
         groupBroadcastService.broadcast(groupId, WsConstants.AGENT_TYPING, Map.of(
@@ -167,5 +192,97 @@ public class WorkNode implements NodeAction {
         sp.append("请根据用户的需求，主动调用可用的工具来完成任务。");
         sp.append("如果工具不足以完成任务，请基于你的知识给出最佳方案。");
         return sp.toString();
+    }
+
+    /**
+     * Supervisor 编排模式：群首成员为编排者，其余成员为执行者（子 Agent 工具）。
+     * <p>执行流程：构建 Supervisor → 注入群上下文 → 委派执行 → 结果入库广播。
+     * <p>降级策略：Supervisor 构建或执行失败时，记录 WARN 并回退单 Agent 模式，
+     * 保证 WORK 意图不因编排故障而完全不可用（方案十一：WorkNode 降级为单 Agent）。
+     */
+    private Map<String, Object> executeWithSupervisor(OverAllState state, Long groupId, String input,
+                                                      Group group, List<Agent> members) {
+        // 群首成员作为编排者（模型配置来源），其余成员作为执行者
+        Agent supervisorAgent = members.get(0);
+        List<Agent> workers = members.subList(1, members.size());
+
+        groupBroadcastService.broadcast(groupId, WsConstants.AGENT_TYPING, Map.of(
+                "groupId", groupId,
+                "agentId", supervisorAgent.getId(),
+                "agentName", supervisorAgent.getName(),
+                "isTyping", true));
+
+        try {
+            // 构建 Supervisor：worker 成员名清单注入提示词，供其按名委派
+            String supervisorPrompt = buildSupervisorPrompt(supervisorAgent, workers);
+            ReactAgent supervisor = supervisorAgentFactory.buildSupervisor(supervisorAgent, supervisorPrompt, workers);
+
+            // 注入群上下文：Supervisor 的 state 依赖 Hook（记忆/画像/名单/RAG）靠这些 key 工作
+            Map<String, Object> inputs = new HashMap<>();
+            inputs.put("messages", List.of(new UserMessage(input)));
+            inputs.put("groupId", groupId);
+            inputs.put("userId", 1L);
+            inputs.put("speakerAgentId", supervisorAgent.getId());
+            inputs.put("ragQuery", input);
+
+            LogHelper.printLog(WorkNode.class, "executeWithSupervisor", "WORK_NODE",
+                    "Supervisor 委派执行开始", "groupId={} supervisor={} workers={}",
+                    groupId, supervisorAgent.getName(), workers.stream().map(Agent::getName).toList());
+
+            AssistantMessage response = supervisor.call(inputs);
+            String workResult = response.getText() != null ? response.getText() : "";
+            if (workResult.isBlank()) {
+                LogHelper.printWarnLog(WorkNode.class, "executeWithSupervisor", "WORK_NODE",
+                        "Supervisor 返回空结果，降级单 Agent", "groupId={}", groupId);
+                return executeWithSingleAgent(state, groupId, input, group, supervisorAgent);
+            }
+
+            broadcastWorkResult(groupId, supervisorAgent, workResult);
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("workResult", workResult);
+            return resultMap;
+        } catch (Exception e) {
+            LogHelper.printWarnLog(WorkNode.class, "executeWithSupervisor", "WORK_NODE",
+                    "Supervisor 执行失败，降级单 Agent", "groupId={} 错误: {}", groupId, e.getMessage());
+            return executeWithSingleAgent(state, groupId, input, group, supervisorAgent);
+        } finally {
+            groupBroadcastService.broadcast(groupId, WsConstants.AGENT_TYPING, Map.of(
+                    "groupId", groupId,
+                    "agentId", supervisorAgent.getId(),
+                    "agentName", supervisorAgent.getName(),
+                    "isTyping", false));
+        }
+    }
+
+    /** 构建 Supervisor systemPrompt（编排者人设 + 拆解/委派/汇总协议 + 可委派成员清单） */
+    private String buildSupervisorPrompt(Agent supervisorAgent, List<Agent> workers) {
+        StringBuilder sp = new StringBuilder();
+        if (supervisorAgent.getSystemPrompt() != null && !supervisorAgent.getSystemPrompt().isBlank()) {
+            sp.append(supervisorAgent.getSystemPrompt()).append("\n\n");
+        }
+        sp.append("你是工作流编排者。收到用户任务后，请按以下步骤执行：\n");
+        sp.append("1. 将任务拆解为可并行/串行的子任务；\n");
+        sp.append("2. 按子任务性质选择最合适的执行者（工具名即成员花名），通过工具委派；\n");
+        sp.append("3. 委派时在参数中携带必要上下文（群 ID、任务背景），保证执行者理解任务；\n");
+        sp.append("4. 收集所有子任务结果后，汇总为完整的最终答案输出。\n");
+        sp.append("可委派的执行者：" + workers.stream().map(Agent::getName).reduce((a, b) -> a + "、" + b).orElse("无") + "\n");
+        sp.append("群成员之间各有专长，请让合适的成员处理合适的问题。");
+        return sp.toString();
+    }
+
+    /** 工作结果入库广播（Supervisor 产出以编排者身份发言） */
+    private void broadcastWorkResult(Long groupId, Agent supervisorAgent, String workResult) {
+        GroupMessage msg = new GroupMessage();
+        msg.setChatGroupId(groupId);
+        msg.setTopicId(null);
+        msg.setSenderId(supervisorAgent.getId());
+        msg.setSenderType(SenderType.AGENT);
+        msg.setMessageType(MessageType.TEXT);
+        msg.setContent(workResult);
+        messageRepository.save(msg);
+        groupBroadcastService.broadcast(groupId, WsConstants.NEW_MESSAGE, messageAssembler.toDto(msg));
+        LogHelper.printLog(WorkNode.class, "broadcastWorkResult", "WORK_NODE",
+                "WORK 任务完成", "groupId={} supervisor={} 结果长度={}",
+                groupId, supervisorAgent.getName(), workResult.length());
     }
 }

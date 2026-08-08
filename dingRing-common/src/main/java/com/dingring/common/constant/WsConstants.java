@@ -26,5 +26,11 @@ public final class WsConstants {
     public static final String TOPIC_CREATED = "TOPIC_CREATED";
     public static final String TOPIC_CLOSED = "TOPIC_CLOSED";
     public static final String CARD_GENERATED = "CARD_GENERATED";
+    /** WORK 任务进度 {groupId, step, agentName, progress}，Supervisor 委派子 Agent 时推送 */
+    public static final String WORK_PROGRESS = "WORK_PROGRESS";
+    /** WORK 子任务结果 {groupId, step, agentName, result}，子 Agent 执行完成时推送 */
+    public static final String WORK_RESULT = "WORK_RESULT";
+    /** WORK 确认请求 {groupId, step, question}，子 Agent 需要用户确认/补充信息时推送 */
+    public static final String WORK_CONFIRM_REQUEST = "WORK_CONFIRM_REQUEST";
     public static final String ERROR = "ERROR";
 }

@@ -93,6 +93,13 @@ dingring:
     # LLM 重排使用的轻量 Agent ID（默认 routeJudge，DeepSeek-V4-Flash）
     reranker:
       agent-id: 6
+  skill:
+    # Phase F：SKILL 配置模块总开关。true 时启动加载 classpath:skill-config.json 种子技能（幂等写入 skill 表）
+    enabled: true
+  supervisor:
+    # Phase F：WORK 任务 Supervisor 编排模式。true 时由编排 Agent 拆解任务并委派子 Agent；
+    # false 或成员不足 2 人时自动降级为单 Agent 深度 ReAct（方案十一回退策略）
+    enabled: false
   moderator:
     # Moderator 主持人（Phase 2）：true 时由 LLM 接管选人/继续判断/收束判断；失败自动回退评分调度
     enabled: false

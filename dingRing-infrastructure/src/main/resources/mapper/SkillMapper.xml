@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- SKILL 表 Mapper：字段由下划线转驼峰自动映射（agent_id→agentId 等） -->
+<mapper namespace="com.dingring.infrastructure.persistence.mapper.SkillMapper">
+
+    <sql id="columns">
+        id, name, description, tool_names, system_prompt, scope, agent_id, status, create_time, update_time
+    </sql>
+
+    <select id="findById" resultType="com.dingring.domain.skill.Skill">
+        SELECT <include refid="columns"/>
+        FROM skill
+        WHERE id = #{id}
+    </select>
+
+    <select id="findByName" resultType="com.dingring.domain.skill.Skill">
+        SELECT <include refid="columns"/>
+        FROM skill
+        WHERE name = #{name}
+    </select>
+
+    <select id="findAll" resultType="com.dingring.domain.skill.Skill">
+        SELECT <include refid="columns"/>
+        FROM skill
+        ORDER BY update_time DESC
+    </select>
+
+    <!-- 绑定 Agent 的技能：scope=AGENT 且 agent_id 匹配 -->
+    <select id="findByAgentId" resultType="com.dingring.domain.skill.Skill">
+        SELECT <include refid="columns"/>
+        FROM skill
+        WHERE scope = 'AGENT' AND agent_id = #{agentId}
+        ORDER BY update_time DESC
+    </select>
+
+    <!-- 全局技能：scope=GLOBAL 且启用 -->
+    <select id="findActiveGlobal" resultType="com.dingring.domain.skill.Skill">
+        SELECT <include refid="columns"/>
+        FROM skill
+        WHERE scope = 'GLOBAL' AND status = 'ACTIVE'
+        ORDER BY update_time DESC
+    </select>
+
+    <insert id="insert" parameterType="com.dingring.domain.skill.Skill"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO skill (name, description, tool_names, system_prompt, scope, agent_id, status, create_time, update_time)
+        VALUES (#{name}, #{description}, #{toolNames}, #{systemPrompt}, #{scope}, #{agentId}, #{status},
+                #{createTime}, #{updateTime})
+    </insert>
+
+    <update id="update" parameterType="com.dingring.domain.skill.Skill">
+        UPDATE skill
+        SET name          = #{name},
+            description   = #{description},
+            tool_names    = #{toolNames},
+            system_prompt = #{systemPrompt},
+            scope         = #{scope},
+            agent_id      = #{agentId},
+            status        = #{status},
+            update_time   = #{updateTime}
+        WHERE id = #{id}
+    </update>
+
+    <!-- 物理删除：技能删除即落库清除 -->
+    <delete id="deleteById">
+        DELETE FROM skill WHERE id = #{id}
+    </delete>
+
+</mapper>

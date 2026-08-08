@@ -1,0 +1,19 @@
+[
+  {
+    "name": "test-seed-skill-a",
+    "description": "测试种子技能 A",
+    "toolNames": "searchKnowledge",
+    "systemPrompt": "测试用附加提示词 A",
+    "scope": "GLOBAL",
+    "status": "ACTIVE"
+  },
+  {
+    "name": "test-seed-skill-b",
+    "description": "测试种子技能 B",
+    "toolNames": "queryUserProfile,queryTopicHistory",
+    "systemPrompt": "测试用附加提示词 B",
+    "scope": "AGENT",
+    "agentId": 2,
+    "status": "INACTIVE"
+  }
+]

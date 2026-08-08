@@ -2573,6 +2573,37 @@ ReactAgent supervisor = ReactAgent.builder()
     .build();
 ```
 
+### 9.4 实施记录（Phase F 已完成）
+
+#### SKILL 配置模块（已交付）
+- `dingRing-domain`: `Skill` 实体（含 `toolNameList()` 解析、`SCOPE_*`/`STATUS_*` 常量）、`SkillRepository` 端口、`SkillLoaderService` 端口
+- `dingRing-infrastructure`:
+  - `SkillMapper` + `SkillRepositoryImpl` + `SkillMapper.xml`（MySQL `skill` 表，`uk_name` 唯一索引保证种子幂等）
+  - `SkillToolkitFactory`：`@PostConstruct init()` 按 `@Tool` 方法名注册工具到 `LinkedHashMap`（`queryUserProfile`/`queryTopicHistory`/`searchKnowledge`），`resolveTools(Skill)` 按 toolNames 精确匹配，未知工具名 WARN 跳过
+  - `SkillHotReloader`：`classpath:skill-config.json` 种子加载（按 name 幂等），`reload()` 为 Nacos 监听回调扩展点（当前项目无 Nacos Config client 依赖，降级 classpath 模式，参考 PromptTemplateLoader）
+  - `SkillLoaderServiceImpl`：全局启用技能 + 绑定 Agent 的启用技能（状态过滤在服务层，管理列表与加载接口共用查询）
+- `dingRing-app`: `SkillAppService`（create/update/delete/get/list，scope=AGENT 必填 agentId 联动校验）
+- `dingRing-adapter`: `SkillController`（`/api/skills` CRUD）
+- 配置：`dingring.skill.enabled` 开关；`start/src/main/resources/skill-config.json` 含 3 条种子技能
+
+#### WorkNode Supervisor 增强（已交付）
+- `common`: `WsConstants` 新增 `WORK_PROGRESS` / `WORK_RESULT` / `WORK_CONFIRM_REQUEST`
+- `WorkProgressBroadcastHook extends ModelHook`：通过 `getToolInterceptors()` 提供 ToolInterceptor——**为什么不用 afterModel**：afterModel 每次模型调用后触发（含最终回答），无法精确区分「委派子 Agent」；ToolInterceptor 只在工具执行路径触发，且能经 `ToolCallExecutionContext.state()` 拿到 groupId。调用前推 WORK_PROGRESS（step=DELEGATE），完成后推 WORK_RESULT（step=DELEGATE_DONE，结果截断 200 字），异常推 DELEGATE_FAILED
+- `SupervisorAgentFactory`：`AgentTool.getFunctionToolCallback(worker)` 将子 Agent 包装为工具注册给 Supervisor（Supervisor 只注册子 Agent 工具，强制走委派）；worker 工具集 = 通用工作工具 + SKILL 声明工具（SkillToolkitFactory 解析）
+- `WorkNode`：`dingring.supervisor.enabled` 开关，true 且成员 ≥2 时走 Supervisor 编排，否则降级单 Agent 深度 ReAct（方案十一回退策略）；Supervisor 异常时自动回退单 Agent
+- 配置：`dingring.supervisor.enabled=false`（默认关闭，先跑稳定再开）
+
+#### 关键技术发现（影响后续实现）
+1. **SAA `AgentTool` 委派时 `config.clearContext()` 且初始 state 仅含 `messages`**：子 Agent 读不到 groupId 等上下文，state 依赖 Hook 静默跳过；群上下文需 Supervisor 在委派参数中携带
+2. **ReactAgent 装配 ToolInterceptor 走 `Hook.getToolInterceptors()`**（构造时 `collectAndMergeToolInterceptors()` 合并），Builder 的 `interceptors(...)` 不流向 AgentToolNode
+3. **多数据源 @Primary 回归修复**：`VectorDataSourceConfig` 自定义 DataSource 后，Spring Boot `DataSourceAutoConfiguration` 整体回退，主 MySQL 数据源不再自动创建，MyBatis 全量绑定到 Postgres（`relation "xxx" does not exist`）。修复：`PrimaryDataSourceConfig` 显式 `@Primary` 主数据源（复用 `DataSourceProperties`，Hikari 池配置行为与自动配置一致）
+4. **Mockito 5 对 interface default 方法不转发真实实现**（Phase E 已记）：stub 实际调用的重载
+
+#### 验收
+- 全量测试 333 个通过（Phase F 新增 17：SkillLoader 3 / SkillToolkit 3 / SkillHotReloader 3 / WorkProgress 3 / WorkNode 4）
+- 启动验证：MySQL 主库 + Postgres 向量库双池共存，`skill` 表种子 3 条落库，`/api/skills` CRUD 验证通过
+- 编译验证：`mvn test` 全绿
+
 ---
 
 ## 十、风险与缓解
