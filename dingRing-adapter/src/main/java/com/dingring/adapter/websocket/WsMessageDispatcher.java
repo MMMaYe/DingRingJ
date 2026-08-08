@@ -8,6 +8,7 @@ import com.dingring.common.exception.BizException;
 import com.dingring.common.exception.ErrorCode;
 import com.dingring.common.util.JsonHelper;
 import com.dingring.common.util.LogHelper;
+import com.dingring.infrastructure.websocket.WsSessionRegistry;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +21,7 @@ import java.util.Map;
 /**
  * WS 入站消息分发器：解析 {type, data} 并路由到应用服务。
  * <p>C→S 消息类型：SEND_MESSAGE / REPLY_MESSAGE / CONCLUDE_TOPIC。
+ * <p>纯协议翻译层；定向错误推送委托给 infrastructure 层的 {@link WsSessionRegistry}。
  */
 @Slf4j
 @Component
@@ -29,7 +31,7 @@ public class WsMessageDispatcher {
     private final ObjectMapper objectMapper;
     private final ChatOrchestrator chatOrchestrator;
     private final TopicAppService topicAppService;
-    private final WsSessionManager sessionManager;
+    private final WsSessionRegistry sessionRegistry;
 
     /**
      * @param groupId 该连接绑定的群（握手时从 query 解析）
@@ -72,7 +74,7 @@ public class WsMessageDispatcher {
     }
 
     private void pushError(WebSocketSession session, ErrorCode errorCode, String message) {
-        sessionManager.pushToSession(session, WsConstants.ERROR, Map.of(
+        sessionRegistry.sendToSession(session, WsConstants.ERROR, Map.of(
                 "success", false,
                 "errorCode", errorCode.name(),
                 "message", message));

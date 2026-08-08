@@ -2,6 +2,7 @@ package com.dingring.adapter.websocket;
 
 import com.dingring.common.util.JsonHelper;
 import com.dingring.common.util.LogHelper;
+import com.dingring.infrastructure.websocket.WsSessionRegistry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -13,6 +14,8 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 /**
  * 群聊 WebSocket 处理器。连接地址：ws://host/ws/chat?groupId={id}。
+ * <p>纯协议翻译层：把 WS 握手/文本帧/关闭事件翻译成应用语义（注册会话/分发消息/注销会话），
+ * 技术实现（session 表维护）委托给 infrastructure 层的 {@link WsSessionRegistry}。
  */
 @Slf4j
 @Component
@@ -21,7 +24,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
 
     private static final String ATTR_GROUP_ID = "groupId";
 
-    private final WsSessionManager sessionManager;
+    private final WsSessionRegistry sessionRegistry;
     private final WsMessageDispatcher dispatcher;
 
     @Override
@@ -33,7 +36,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             return;
         }
         session.getAttributes().put(ATTR_GROUP_ID, groupId);
-        sessionManager.register(groupId, session);
+        sessionRegistry.register(groupId, session);
     }
 
     @Override
@@ -52,7 +55,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
         Long groupId = (Long) session.getAttributes().get(ATTR_GROUP_ID);
         if (groupId != null) {
-            sessionManager.unregister(groupId, session);
+            sessionRegistry.unregister(groupId, session);
         }
     }
 

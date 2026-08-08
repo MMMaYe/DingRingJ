@@ -1,8 +1,6 @@
-package com.dingring.adapter.websocket;
+package com.dingring.infrastructure.websocket;
 
 import com.dingring.common.util.LogHelper;
-import com.dingring.domain.service.GroupBroadcastService;
-import com.dingring.infrastructure.aop.Event;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -16,27 +14,29 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
 
 /**
- * WebSocket 会话管理器：维护 groupId -> 在线连接集合，实现 domain 层 GroupBroadcastService 出站端口。
- * <p>消息统一序列化为 {"type": ..., "data": ...}。
+ * WebSocket 会话注册表实现：维护 groupId -> 在线连接集合。
+ * <p>拆分自原 {@code WsSessionManager} 的会话表管理 + 序列化 + 定向推送职责。
+ * <p>纯技术基础设施：{@link ConcurrentHashMap} 会话表、{@link ObjectMapper} 序列化、
+ * {@code synchronized(session)} 并发写串行化，无任何协议翻译。
  */
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class WsSessionManager implements GroupBroadcastService {
+public class WsSessionRegistryImpl implements WsSessionRegistry {
 
     private final ObjectMapper objectMapper;
 
     /** groupId -> 该群的在线连接 */
     private final Map<Long, Set<WebSocketSession>> groupSessions = new ConcurrentHashMap<>();
 
-    /** 连接建立后注册到群 */
+    @Override
     public void register(Long groupId, WebSocketSession session) {
         groupSessions.computeIfAbsent(groupId, k -> new CopyOnWriteArraySet<>()).add(session);
-        LogHelper.printLog(WsSessionManager.class, "WsSessionManager.register", "REGISTER", "连接注册",
+        LogHelper.printLog(WsSessionRegistryImpl.class, "WsSessionRegistryImpl.register", "REGISTER", "连接注册",
                 "groupId={} sessionId={} 在线数={}", groupId, session.getId(), groupSessions.get(groupId).size());
     }
 
-    /** 连接关闭后注销 */
+    @Override
     public void unregister(Long groupId, WebSocketSession session) {
         Set<WebSocketSession> sessions = groupSessions.get(groupId);
         if (sessions != null) {
@@ -45,52 +45,52 @@ public class WsSessionManager implements GroupBroadcastService {
                 groupSessions.remove(groupId, sessions);
             }
         }
-        LogHelper.printLog(WsSessionManager.class, "WsSessionManager.unregister", "UNREGISTER", "连接注销", "groupId={} sessionId={}", groupId, session.getId());
+        LogHelper.printLog(WsSessionRegistryImpl.class, "WsSessionRegistryImpl.unregister", "UNREGISTER", "连接注销",
+                "groupId={} sessionId={}", groupId, session.getId());
     }
 
     @Override
-    public void broadcast(Long groupId, String type, Object data) {
+    public Set<WebSocketSession> lookup(Long groupId) {
         Set<WebSocketSession> sessions = groupSessions.get(groupId);
-        if (sessions == null || sessions.isEmpty()) {
-            return;
-        }
-        TextMessage message = encode(type, data);
-        if (message == null) {
-            return;
-        }
-        for (WebSocketSession session : sessions) {
-            sendSafely(session, message);
-        }
+        return sessions == null ? Set.of() : sessions;
     }
 
-    /** 向单个连接推送（错误提示等定向消息） */
-    public void pushToSession(WebSocketSession session, String type, Object data) {
+    @Override
+    public void sendToSession(WebSocketSession session, String type, Object data) {
         TextMessage message = encode(type, data);
         if (message != null) {
             sendSafely(session, message);
         }
     }
 
-    private TextMessage encode(String type, Object data) {
+    /**
+     * 序列化为 {@code {"type":..,"data":..}} JSON 文本帧。
+     * <p>包级可见：供同包的 {@link WsBroadcastAdapter} 复用，避免广播路径重复序列化逻辑。
+     */
+    TextMessage encode(String type, Object data) {
         try {
             return new TextMessage(objectMapper.writeValueAsString(Map.of("type", type, "data", data)));
         } catch (Exception e) {
-            LogHelper.printWarnLog(WsSessionManager.class, "WsSessionManager.encode", "ENCODE", "消息序列化失败", "type={}", type, e);
+            LogHelper.printWarnLog(WsSessionRegistryImpl.class, "WsSessionRegistryImpl.encode", "ENCODE", "消息序列化失败",
+                    "type={}", type, e);
             return null;
         }
     }
 
-    @Event(eventCode = "SEND_MESSAGE_TO_GROUP", eventName = "向群发送消息")
-    public void sendSafely(WebSocketSession session, TextMessage message) {
+    /**
+     * 单连接发送，{@code synchronized(session)} 串行化并发写避免 {@code TEXT_PARTIAL_WRITING}。
+     * <p>包级可见：供 {@link WsBroadcastAdapter} 复用。
+     */
+    void sendSafely(WebSocketSession session, TextMessage message) {
         try {
             if (session.isOpen()) {
-                // 同一 session 上的并发写需要串行化
                 synchronized (session) {
                     session.sendMessage(message);
                 }
             }
         } catch (Exception e) {
-            LogHelper.printWarnLog(WsSessionManager.class, "WsSessionManager.sendSafely", "SEND_SAFELY", "消息发送失败", "sessionId={}", session.getId(), e);
+            LogHelper.printWarnLog(WsSessionRegistryImpl.class, "WsSessionRegistryImpl.sendSafely", "SEND_SAFELY",
+                    "消息发送失败", "sessionId={}", session.getId(), e);
         }
     }
 }

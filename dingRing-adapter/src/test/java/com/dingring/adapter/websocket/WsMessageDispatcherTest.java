@@ -5,6 +5,7 @@ import com.dingring.app.service.TopicAppService;
 import com.dingring.common.constant.WsConstants;
 import com.dingring.common.exception.BizException;
 import com.dingring.common.exception.ErrorCode;
+import com.dingring.infrastructure.websocket.WsSessionRegistry;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -40,7 +41,7 @@ class WsMessageDispatcherTest {
     private TopicAppService topicAppService;
 
     @Mock
-    private WsSessionManager sessionManager;
+    private WsSessionRegistry sessionRegistry;
 
     @Mock
     private WebSocketSession session;
@@ -97,7 +98,7 @@ class WsMessageDispatcherTest {
         void unknownTypeShouldPushError() {
             dispatcher.dispatch(1L, session, payload("UNKNOWN_TYPE", "{}"));
 
-            verify(sessionManager).pushToSession(eq(session), eq(WsConstants.ERROR), any());
+            verify(sessionRegistry).sendToSession(eq(session), eq(WsConstants.ERROR), any());
             verify(chatOrchestrator, never()).onUserMessage(any(), any(), any(), any());
         }
     }
@@ -115,7 +116,7 @@ class WsMessageDispatcherTest {
             dispatcher.dispatch(1L, session, payload(WsConstants.CONCLUDE_TOPIC,
                     "{\"topicId\":100}"));
 
-            verify(sessionManager).pushToSession(eq(session), eq(WsConstants.ERROR), any());
+            verify(sessionRegistry).sendToSession(eq(session), eq(WsConstants.ERROR), any());
         }
 
         @Test
@@ -123,7 +124,7 @@ class WsMessageDispatcherTest {
         void malformedJsonShouldPushInternalError() {
             dispatcher.dispatch(1L, session, "not a valid json");
 
-            verify(sessionManager).pushToSession(eq(session), eq(WsConstants.ERROR), any());
+            verify(sessionRegistry).sendToSession(eq(session), eq(WsConstants.ERROR), any());
         }
 
         @Test
@@ -131,7 +132,7 @@ class WsMessageDispatcherTest {
         void missingTypeShouldPushError() {
             dispatcher.dispatch(1L, session, "{\"data\":{\"content\":\"hi\"}}");
 
-            verify(sessionManager).pushToSession(eq(session), eq(WsConstants.ERROR), any());
+            verify(sessionRegistry).sendToSession(eq(session), eq(WsConstants.ERROR), any());
         }
     }
 }

@@ -1,5 +1,6 @@
 package com.dingring.adapter.websocket;
 
+import com.dingring.infrastructure.websocket.WsSessionRegistry;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -32,7 +33,7 @@ import static org.mockito.Mockito.when;
 class ChatWebSocketHandlerTest {
 
     @Mock
-    private WsSessionManager sessionManager;
+    private WsSessionRegistry sessionRegistry;
 
     @Mock
     private WsMessageDispatcher dispatcher;
@@ -52,14 +53,14 @@ class ChatWebSocketHandlerTest {
     class ConnectionEstablished {
 
         @Test
-        @DisplayName("URL 含合法 groupId 时注册到 sessionManager 并写入 attributes")
+        @DisplayName("URL 含合法 groupId 时注册到 sessionRegistry 并写入 attributes")
         void shouldRegisterWhenGroupIdValid() throws Exception {
             WebSocketSession session = mockSession(URI.create("ws://localhost/ws/chat?groupId=42"));
             when(session.getAttributes()).thenReturn(new HashMap<>());
 
             handler.afterConnectionEstablished(session);
 
-            verify(sessionManager).register(eq(42L), eq(session));
+            verify(sessionRegistry).register(eq(42L), eq(session));
             // attributes 中应缓存 groupId 供后续 handleTextMessage 使用
             assertThat(session.getAttributes().get("groupId")).isEqualTo(42L);
         }
@@ -71,7 +72,7 @@ class ChatWebSocketHandlerTest {
 
             handler.afterConnectionEstablished(session);
 
-            verify(sessionManager, never()).register(any(), any());
+            verify(sessionRegistry, never()).register(any(), any());
             verify(session).close(eq(CloseStatus.BAD_DATA.withReason("缺少 groupId 参数")));
         }
 
@@ -82,7 +83,7 @@ class ChatWebSocketHandlerTest {
 
             handler.afterConnectionEstablished(session);
 
-            verify(sessionManager, never()).register(any(), any());
+            verify(sessionRegistry, never()).register(any(), any());
             verify(session).close(eq(CloseStatus.BAD_DATA.withReason("缺少 groupId 参数")));
         }
 
@@ -94,7 +95,7 @@ class ChatWebSocketHandlerTest {
 
             handler.afterConnectionEstablished(session);
 
-            verify(sessionManager, never()).register(any(), any());
+            verify(sessionRegistry, never()).register(any(), any());
             verify(session).close(eq(CloseStatus.BAD_DATA.withReason("缺少 groupId 参数")));
         }
     }
@@ -134,7 +135,7 @@ class ChatWebSocketHandlerTest {
     class ConnectionClosed {
 
         @Test
-        @DisplayName("attributes 含 groupId 时调用 sessionManager.unregister")
+        @DisplayName("attributes 含 groupId 时调用 sessionRegistry.unregister")
         void shouldUnregisterWhenGroupIdPresent() {
             WebSocketSession session = mock(WebSocketSession.class);
             Map<String, Object> attrs = new HashMap<>();
@@ -143,7 +144,7 @@ class ChatWebSocketHandlerTest {
 
             handler.afterConnectionClosed(session, CloseStatus.NORMAL);
 
-            verify(sessionManager).unregister(eq(42L), eq(session));
+            verify(sessionRegistry).unregister(eq(42L), eq(session));
         }
 
         @Test
@@ -154,7 +155,7 @@ class ChatWebSocketHandlerTest {
 
             handler.afterConnectionClosed(session, CloseStatus.NORMAL);
 
-            verify(sessionManager, never()).unregister(any(), any());
+            verify(sessionRegistry, never()).unregister(any(), any());
         }
     }
 }

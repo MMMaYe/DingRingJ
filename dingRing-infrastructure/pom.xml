@@ -54,6 +54,11 @@
             <groupId>org.springframework</groupId>
             <artifactId>spring-context</artifactId>
         </dependency>
+        <!-- Spring WebSocket（WsSessionRegistryImpl / WsBroadcastAdapter 依赖 WebSocketSession） -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-websocket</artifactId>
+        </dependency>
         <!-- 测试：JUnit 5 + AssertJ + Mockito -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
