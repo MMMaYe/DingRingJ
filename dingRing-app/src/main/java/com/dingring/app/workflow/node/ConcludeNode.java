@@ -119,12 +119,14 @@ public class ConcludeNode implements NodeAction {
             ContextBuilder.LlmContext ctx = contextBuilder.buildForConclusion(
                     concluder, topic.getChatGroupId(), topic.getId(), topic.getTitle(),
                     messageAssembler::resolveSenderName);
-            // 构建 ReactAgent 上下文（群记忆/用户画像由 Hook 动态注入）
+            // 构建 ReactAgent 上下文（群记忆/用户画像/知识由 Hook 动态注入）
             Map<String, Object> context = new HashMap<>();
             context.put("groupId", topic.getChatGroupId());
             context.put("topicId", topic.getId());
             context.put("userId", 1L);  // 当前单用户系统默认 ID
             context.put("speakerAgentId", concluder.getId());
+            // RAG 检索词：以主题标题为查询（RagInjectionHook 读取，让结论引用知识库）
+            context.put("ragQuery", topic.getTitle());
             // 收束节点用非流式 call（不需要流式输出，失败重试 1 次）
             AgentSpeakerService.AgentResult agentResult;
             try {

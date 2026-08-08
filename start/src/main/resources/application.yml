@@ -3,6 +3,10 @@ spring:
     active: dev
   application:
     name: dingring
+  # 排除 PgVectorStore 自动配置：Phase E 用第二数据源（PostgreSQL）手动创建 PgVectorStore，
+  # 若不禁用，自动配置会用主 MySQL 数据源执行 pgvector SQL 导致启动失败
+  autoconfigure:
+    exclude: org.springframework.ai.vectorstore.pgvector.autoconfigure.PgVectorStoreAutoConfiguration
   # SAA Nacos Prompt（Phase A：提示词热更新基础设施）
   # 有 Nacos 时从 Nacos 实时加载最新模板（热更新），无 Nacos 时 PromptTemplateLoader 降级到 classpath:/prompt-config.json
   ai:
@@ -10,6 +14,14 @@ spring:
       prompt:
         template:
           enabled: true
+    # Phase E：PostgreSQL 向量库（第二数据源，仅用于 PgVectorStore，不参与 MyBatis）
+    vectorstore:
+      pgvector:
+        datasource:
+          url: jdbc:postgresql://101.33.227.80:5432/my_rag
+          username: postgres
+          password: postgres123
+          driver-class-name: org.postgresql.Driver
   # Nacos 连接参数（本地开发可不配，PromptTemplateLoader 自动降级到本地 classpath 加载）
   cloud:
     nacos:
@@ -68,6 +80,19 @@ dingring:
     # LLM HTTP 连接/读超时（秒）：必须设置，默认客户端无超时会永久卡死对话引擎线程
     connect-timeout-seconds: 10
     read-timeout-seconds: 120
+  rag:
+    # Phase E：RAG 知识库总开关。false 时不加载向量库数据源/PgVectorStore/RAG Hook，
+    # 群聊主流程不受影响（RAG 是增强不是依赖）
+    enabled: true
+    # Embedding 模型提供商：mock=本地确定性向量（无 API 成本，用于框架联调）；后续接入真实模型改配置即可
+    embedding:
+      provider: mock
+    # 上传文件本地存储根目录
+    storage:
+      local-path: ./rag-files
+    # LLM 重排使用的轻量 Agent ID（默认 routeJudge，DeepSeek-V4-Flash）
+    reranker:
+      agent-id: 6
   moderator:
     # Moderator 主持人（Phase 2）：true 时由 LLM 接管选人/继续判断/收束判断；失败自动回退评分调度
     enabled: false

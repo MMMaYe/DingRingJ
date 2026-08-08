@@ -101,11 +101,13 @@ public class WorkNode implements NodeAction {
             // 构建工作任务 systemPrompt
             String systemPrompt = buildWorkPrompt(workAgent);
 
-            // 构建 context（供 Hook 读取 groupId/userId/speakerAgentId）
+            // 构建 context（供 Hook 读取 groupId/userId/speakerAgentId/ragQuery）
             Map<String, Object> context = new HashMap<>();
             context.put("groupId", groupId);
             context.put("userId", 1L);
             context.put("speakerAgentId", workAgent.getId());
+            // RAG 检索词：以任务输入为查询（RagInjectionHook 读取）
+            context.put("ragQuery", input);
 
             // 深度 ReAct 执行（recursionLimit=15，ToolSet.WORK）
             AgentSpeakerService.AgentResult result = agentSpeakerService.call(

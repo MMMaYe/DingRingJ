@@ -2479,6 +2479,58 @@ public class WorkNode implements NodeAction {
 - 上传 PDF -> 切片入库 -> 群聊提问 -> 检索注入 -> Agent 发言引用知识
 - LLM 重排失败时降级为纯向量 Top-5
 
+### 8.5 实施记录(2026-08-08 完成)
+
+**落地范围**:依赖 + 向量存储 + 检索链路 + Hook 注入 + 上传 API + 建表,一步到位全做。
+
+| 项 | 方案设计 | 实际落地 | 差异说明 |
+|---|---|---|---|
+| 向量存储 | PostgreSQL + pgvector(独立部署) | 已部署 101.33.227.80:5432/my_rag,pgvector 0.8.2 | 与用户确认后使用公网实例;`vector_store` 表已存在(COSINE+HNSW) |
+| 依赖 | `spring-ai-starter-vector-store-pgvector` | 已引入,并加 `postgresql` JDBC + `spring-ai-tika-document-reader` | 排除 `PgVectorStoreAutoConfiguration`(自动配置会用主 MySQL 数据源执行 pgvector SQL) |
+| 多数据源 | `VectorDataSourceConfig` | 已实现:独立 Hikari 连接池 + 独立 JdbcTemplate,MyBatis 零改动 | 连接池加 `SELECT 1` 探活 + 短超时(公网库) |
+| EmbeddingModel | 后续调研确定 | MockEmbeddingModel(1536 维,确定性 hash 向量,`@ConditionalOnProperty` 可切真实) | 与用户确认"先搭框架";配置文件 `dingring.rag.embedding.provider: mock` |
+| 重排 | LlmReranker | 已实现:复用 routeJudge Agent(id=6) + PromptTemplateLoader 渲染 `rag-rerank` 模板 | 候选 ≤5 直接返回不调 LLM;失败降级原始顺序 |
+| RAG 触发 | RagInjectionHook | 已实现 + 4 节点注入 `ragQuery`(ChatNode=用户输入/DiscussNode=触发消息/ConcludeNode=主题标题/WorkNode=任务输入) | Hook 从 state 读 ragQuery,空则不触发检索 |
+| 知识搜索工具 | KnowledgeSearchTool(占位) | Phase E 激活:注入 RagService,`searchKnowledge(query, groupId)` | 从占位转为真实检索 |
+
+**新增文件**(domain 3 + infrastructure 8 + adapter 3 + app 2):
+- domain:`RagService`/`Reranker` 端口 + `KnowledgeBase`/`File` 实体补全 + `KnowledgeBaseRepository`/`FileRepository` 端口
+- infrastructure/rag:`VectorDataSourceConfig`/`VectorDataSourceProperties`/`PgVectorStoreConfig`/`MockEmbeddingModel`/`SaaRagService`/`LlmReranker`/`DocumentIngestionPipeline`/`FileStorageService`
+- infrastructure/agent/hook:`RagInjectionHook`
+- infrastructure/persistence:KnowledgeBase/File RepositoryImpl + Mapper
+- adapter:`KbController`(知识库 CRUD + 文件上传)
+- app:`KnowledgeBaseAppService` + DTO
+
+**改造文件**:
+- `pom.xml`(infrastructure:pgvector + postgresql + tika)
+- `application.yml`:排除 PgVectorStoreAutoConfiguration + PostgreSQL 向量库连接 + `dingring.rag.*` 配置段
+- `DingRingApplication`:加 `@EnableAsync`(DocumentIngestionPipeline 异步摄入)
+- `SaaReactAgentFactory`:注册 RagInjectionHook
+- `KnowledgeSearchTool`:激活真实检索
+- 4 个节点:context 注入 ragQuery
+
+**MySQL 建表**(通过 MySQL MCP 执行):
+- `knowledge_base`(id/name/scope/group_id/status/feature/create_time/update_time + idx_scope/idx_group_id)
+- `kb_file`(id/knowledge_base_id/name/path/file_type/file_size/status/chunk_count/error_msg/create_time/update_time + idx_kb_id)
+
+**测试**(新增 14 个):
+- `SaaRagServiceTest`(5):格式化输出/空结果/检索异常/重排异常/空 query
+- `LlmRerankerTest`(5):JSON 打分降序/候选≤5跳过/空响应降级/异常降级/非法 JSON 降级
+- `RagInjectionHookTest`(4):注入/空知识/groupId 缺失/ragQuery 缺失
+- 全量验证:`mvn clean test` 7 模块 SUCCESS,Tests run: 316, Failures: 0, Errors: 0, Skipped: 0
+- 启动验证:`spring-boot:run` 成功,PgVectorStore 初始化(dimensions=1536),StateGraph 编译,Tomcat 启动
+
+**关键技术点**:
+- Mockito 5 对 interface default 方法**不转发真实实现**,测试必须 stub 实际调用的重载(4 参 chat),stub 底层 3 参无效
+- `mvn -pl start spring-boot:run` 不带 `-am` 会从本地仓库加载旧 jar 导致节点 Bean 缺失,需先 `mvn install -DskipTests`
+- PgVectorStore 手动创建时需排除 Spring AI 自动配置,否则自动配置用主 MySQL 数据源执行 pgvector SQL 导致启动失败
+- RagInjectionHook 通过 state 读 ragQuery,节点负责注入检索词,实现"发言时自动检索"
+
+**已知技术债**:
+- `spring-ai-tika-document-reader` 传递依赖 aliyun kms 带无效 POM 的 protobuf-java-util:3.22.1(警告级,不影响构建运行)
+- MockEmbeddingModel 的确定性向量仅用于框架联调,接入真实 Embedding 后需切换 provider
+- RagInjectionHook 每轮发言都触发检索(全量),后续可按需加缓存/频率限制
+
 ---
 
 ## 九、Phase F:SKILL 配置模块 + WorkNode Supervisor 增强

@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 知识库文件表 Mapper：无 JSON 字段，依赖 map-underscore-to-camel-case 自动映射（knowledge_base_id -> knowledgeBaseId 等） -->
+<mapper namespace="com.dingring.infrastructure.persistence.mapper.FileMapper">
+
+    <sql id="columns">
+        id, knowledge_base_id, name, path, file_type, file_size, status, chunk_count, error_msg, create_time, update_time
+    </sql>
+
+    <select id="findById" resultType="com.dingring.domain.knowledgebase.File">
+        SELECT <include refid="columns"/>
+        FROM kb_file
+        WHERE id = #{id}
+    </select>
+
+    <select id="findByKnowledgeBaseId" resultType="com.dingring.domain.knowledgebase.File">
+        SELECT <include refid="columns"/>
+        FROM kb_file
+        WHERE knowledge_base_id = #{knowledgeBaseId}
+        ORDER BY create_time DESC
+    </select>
+
+    <insert id="insert" parameterType="com.dingring.domain.knowledgebase.File"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO kb_file (knowledge_base_id, name, path, file_type, file_size, status, chunk_count, error_msg, create_time, update_time)
+        VALUES (#{knowledgeBaseId}, #{name}, #{path}, #{fileType}, #{fileSize}, #{status}, #{chunkCount}, #{errorMsg}, #{createTime}, #{updateTime})
+    </insert>
+
+    <update id="update" parameterType="com.dingring.domain.knowledgebase.File">
+        UPDATE kb_file
+        SET knowledge_base_id = #{knowledgeBaseId},
+            name              = #{name},
+            path              = #{path},
+            file_type         = #{fileType},
+            file_size         = #{fileSize},
+            status            = #{status},
+            chunk_count       = #{chunkCount},
+            error_msg         = #{errorMsg},
+            update_time       = #{updateTime}
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM kb_file WHERE id = #{id}
+    </delete>
+
+</mapper>

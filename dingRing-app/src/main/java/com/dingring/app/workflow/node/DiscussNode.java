@@ -224,12 +224,14 @@ public class DiscussNode implements NodeAction {
                 ContextBuilder.LlmContext llmCtx = contextBuilder.build(
                         agent, ctx.getGroupId(), ctx.getTopicId(), messageAssembler::resolveSenderName);
 
-                // 构建 ReactAgent 上下文（群记忆/用户画像由 Hook 动态注入）
+                // 构建 ReactAgent 上下文（群记忆/用户画像/知识由 Hook 动态注入）
                 Map<String, Object> context = new HashMap<>();
                 context.put("groupId", ctx.getGroupId());
                 context.put("topicId", ctx.getTopicId());
                 context.put("userId", 1L);  // 当前单用户系统默认 ID
                 context.put("speakerAgentId", agent.getId());
+                // RAG 检索词：以触发调度的消息为查询（RagInjectionHook 读取）
+                context.put("ragQuery", ctx.getContent());
 
                 // Agent 发言（失败重试 1 次）；流式模式下重试前废弃旧流、换新 streamId 重开
                 AgentSpeakerService.AgentResult result;

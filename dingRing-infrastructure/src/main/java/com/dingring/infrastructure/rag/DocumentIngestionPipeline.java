@@ -1,0 +1,137 @@
+package com.dingring.infrastructure.rag;
+
+import com.dingring.common.util.LogHelper;
+import com.dingring.domain.knowledgebase.File;
+import com.dingring.domain.knowledgebase.FileRepository;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.ai.document.Document;
+import org.springframework.ai.reader.tika.TikaDocumentReader;
+import org.springframework.ai.transformer.splitter.TokenTextSplitter;
+import org.springframework.ai.vectorstore.VectorStore;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.stereotype.Component;
+
+import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * 文档摄入管道（Phase E）。
+ * <p>异步执行：读取 → 切片 → 向量化 → 入库 → 更新状态。
+ * <p>容错：任何环节失败更新文件状态为 FAILED，不影响主流程。
+ */
+@Slf4j
+@Component
+@RequiredArgsConstructor
+@ConditionalOnProperty(name = "dingring.rag.enabled", havingValue = "true", matchIfMissing = true)
+public class DocumentIngestionPipeline {
+
+    private final VectorStore vectorStore;
+    private final FileRepository fileRepository;
+
+    /** 切片大小（token 数） */
+    private static final int CHUNK_SIZE = 800;
+    /** 切片重叠（token 数） */
+    private static final int CHUNK_OVERLAP = 200;
+    /** 向量入库批次大小 */
+    private static final int BATCH_SIZE = 50;
+
+    /**
+     * 异步执行文档摄入。
+     * <p>读取文件 → 切片 → 向量化入库 → 更新文件状态。
+     *
+     * @param file       文件元信息
+     * @param scope      知识库作用域（GLOBAL / GROUP）
+     * @param groupId    群 ID（scope=GROUP 时用于检索过滤）
+     */
+    @Async
+    public void ingest(File file, String scope, Long groupId) {
+        LogHelper.printLog(DocumentIngestionPipeline.class, "ingest", "RAG_INGEST",
+                "摄入开始", "fileId={} fileName={} scope={}", file.getId(), file.getName(), scope);
+        try {
+            // 1. 读取文件
+            List<Document> documents = readDocument(file);
+            if (documents.isEmpty()) {
+                updateFailed(file, "文件内容为空或读取失败");
+                return;
+            }
+            // 更新状态：切片中
+            file.setStatus(File.STATUS_CHUNKED);
+            fileRepository.update(file);
+
+            // 2. 切片
+            TokenTextSplitter splitter = new TokenTextSplitter(CHUNK_SIZE, CHUNK_OVERLAP, 5, 10000, true);
+            List<Document> chunks = splitter.apply(documents);
+            LogHelper.printLog(DocumentIngestionPipeline.class, "ingest", "RAG_INGEST",
+                    "切片完成", "fileId={} 切片数={}", file.getId(), chunks.size());
+
+            // 更新状态：向量化中
+            file.setStatus(File.STATUS_EMBEDDED);
+            file.setChunkCount(chunks.size());
+            fileRepository.update(file);
+
+            // 3. 构建 metadata 并入库
+            for (Document chunk : chunks) {
+                Map<String, Object> metadata = buildMetadata(file, scope, groupId);
+                chunk.getMetadata().putAll(metadata);
+            }
+            // 分批入库（避免单次 API 调用过大）
+            for (int i = 0; i < chunks.size(); i += BATCH_SIZE) {
+                int end = Math.min(i + BATCH_SIZE, chunks.size());
+                List<Document> batch = chunks.subList(i, end);
+                vectorStore.add(batch);
+            }
+
+            // 4. 更新状态：就绪
+            file.setStatus(File.STATUS_READY);
+            file.setUpdateTime(LocalDateTime.now());
+            fileRepository.update(file);
+            LogHelper.printLog(DocumentIngestionPipeline.class, "ingest", "RAG_INGEST",
+                    "摄入完成", "fileId={} fileName={} 切片数={} scope={}",
+                            file.getId(), file.getName(), chunks.size(), scope);
+        } catch (Exception e) {
+            LogHelper.printWarnLog(DocumentIngestionPipeline.class, "ingest", "RAG_INGEST",
+                    "摄入失败", "fileId={} fileName={} 错误: {}",
+                            file.getId(), file.getName(), e.getMessage(), e);
+            updateFailed(file, e.getMessage());
+        }
+    }
+
+    /** 用 Tika 读取文件内容 */
+    private List<Document> readDocument(File file) {
+        FileSystemResource resource = new FileSystemResource(file.getPath());
+        TikaDocumentReader reader = new TikaDocumentReader(resource);
+        return reader.get();
+    }
+
+    /** 构建 metadata（双层过滤用） */
+    private Map<String, Object> buildMetadata(File file, String scope, Long groupId) {
+        Map<String, Object> metadata = new HashMap<>();
+        metadata.put("source", "UPLOAD");
+        metadata.put("docType", file.getFileType());
+        metadata.put("scope", scope);
+        if (groupId != null) {
+            metadata.put("groupId", groupId);
+        }
+        metadata.put("docId", file.getKnowledgeBaseId());
+        metadata.put("docName", file.getName());
+        metadata.put("uploadTime", LocalDateTime.now().toString());
+        return metadata;
+    }
+
+    /** 更新文件状态为失败 */
+    private void updateFailed(File file, String errorMsg) {
+        try {
+            file.setStatus(File.STATUS_FAILED);
+            file.setErrorMsg(errorMsg);
+            file.setUpdateTime(LocalDateTime.now());
+            fileRepository.update(file);
+        } catch (Exception ex) {
+            log.error("更新文件失败状态异常: fileId={}", file.getId(), ex);
+        }
+    }
+}

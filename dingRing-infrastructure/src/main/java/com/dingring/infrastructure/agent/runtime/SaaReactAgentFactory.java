@@ -8,6 +8,7 @@ import com.dingring.domain.service.AgentSpeakerService.ToolSet;
 import com.dingring.infrastructure.agent.hook.GroupRosterHook;
 import com.dingring.infrastructure.agent.hook.MemoryInjectionHook;
 import com.dingring.infrastructure.agent.hook.ProfileInjectionHook;
+import com.dingring.infrastructure.agent.hook.RagInjectionHook;
 import com.dingring.infrastructure.agent.tool.KnowledgeSearchTool;
 import com.dingring.infrastructure.agent.tool.TopicHistoryTool;
 import com.dingring.infrastructure.agent.tool.UserProfileQueryTool;
@@ -38,6 +39,7 @@ public class SaaReactAgentFactory {
     private final MemoryInjectionHook memoryInjectionHook;
     private final ProfileInjectionHook profileInjectionHook;
     private final GroupRosterHook groupRosterHook;
+    private final RagInjectionHook ragInjectionHook;
     private final UserProfileQueryTool userProfileQueryTool;
     private final TopicHistoryTool topicHistoryTool;
     private final KnowledgeSearchTool knowledgeSearchTool;
@@ -74,7 +76,7 @@ public class SaaReactAgentFactory {
                 .systemPrompt(systemPrompt)
                 .tools(tools)
                 // Hook 单例共享安全：实现仅从 state 读 per-call 参数，不使用 agent 引用
-                .hooks(memoryInjectionHook, profileInjectionHook, groupRosterHook)
+                .hooks(memoryInjectionHook, profileInjectionHook, groupRosterHook, ragInjectionHook)
                 .compileConfig(CompileConfig.builder()
                         .recursionLimit(recursionLimit)
                         .build())

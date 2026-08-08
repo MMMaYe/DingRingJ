@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 知识库表 Mapper：feature 为 JSON 扩展字段，需 JsonMapTypeHandler 转换；其余字段由下划线转驼峰自动映射 -->
+<mapper namespace="com.dingring.infrastructure.persistence.mapper.KnowledgeBaseMapper">
+
+    <!-- feature 走 TypeHandler，其它列靠 map-underscore-to-camel-case 自动映射 -->
+    <resultMap id="kbMap" type="com.dingring.domain.knowledgebase.KnowledgeBase">
+        <id column="id" property="id"/>
+        <result column="feature" property="feature"
+                typeHandler="com.dingring.infrastructure.persistence.typehandler.JsonMapTypeHandler"/>
+    </resultMap>
+
+    <sql id="columns">
+        id, name, scope, group_id, status, feature, create_time, update_time
+    </sql>
+
+    <select id="findById" resultMap="kbMap">
+        SELECT <include refid="columns"/>
+        FROM knowledge_base
+        WHERE id = #{id}
+    </select>
+
+    <select id="findAll" resultMap="kbMap">
+        SELECT <include refid="columns"/>
+        FROM knowledge_base
+        ORDER BY update_time DESC
+    </select>
+
+    <insert id="insert" parameterType="com.dingring.domain.knowledgebase.KnowledgeBase"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO knowledge_base (name, scope, group_id, status, feature, create_time, update_time)
+        VALUES (#{name}, #{scope}, #{groupId}, #{status},
+                #{feature, typeHandler=com.dingring.infrastructure.persistence.typehandler.JsonMapTypeHandler},
+                #{createTime}, #{updateTime})
+    </insert>
+
+    <update id="update" parameterType="com.dingring.domain.knowledgebase.KnowledgeBase">
+        UPDATE knowledge_base
+        SET name        = #{name},
+            scope       = #{scope},
+            group_id    = #{groupId},
+            status      = #{status},
+            feature     = #{feature, typeHandler=com.dingring.infrastructure.persistence.typehandler.JsonMapTypeHandler},
+            update_time = #{updateTime}
+        WHERE id = #{id}
+    </update>
+
+    <!-- 物理删除：实体无 deleted 软删字段，知识库删除即落库清除 -->
+    <delete id="deleteById">
+        DELETE FROM knowledge_base WHERE id = #{id}
+    </delete>
+
+</mapper>
