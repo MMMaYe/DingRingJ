@@ -21,6 +21,11 @@
             <groupId>com.dingring</groupId>
             <artifactId>dingRing-infrastructure</artifactId>
         </dependency>
+        <!-- SAA Graph Core（Phase C：NodeAction 接口在 app 层实现，业务编排放 app 层） -->
+        <dependency>
+            <groupId>com.alibaba.cloud.ai</groupId>
+            <artifactId>spring-ai-alibaba-graph-core</artifactId>
+        </dependency>
         <!-- 事务、事件监听 -->
         <dependency>
             <groupId>org.springframework</groupId>

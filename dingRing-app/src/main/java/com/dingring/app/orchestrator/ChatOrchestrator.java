@@ -5,38 +5,34 @@ import com.dingring.app.service.MessageAssembler;
 import com.dingring.common.constant.WsConstants;
 import com.dingring.common.exception.BizException;
 import com.dingring.common.exception.ErrorCode;
-import com.dingring.common.util.JsonHelper;
 import com.dingring.common.util.LogHelper;
 import com.dingring.domain.agent.Agent;
 import com.dingring.domain.agent.AgentRepository;
-import com.dingring.domain.event.MessageSent;
-import com.dingring.domain.event.TopicClosed;
-import com.dingring.domain.event.TopicConcluding;
+import com.dingring.domain.discussion.Topic;
+import com.dingring.domain.discussion.TopicRepository;
 import com.dingring.domain.group.Group;
 import com.dingring.domain.group.GroupMessage;
 import com.dingring.domain.group.GroupRepository;
 import com.dingring.domain.group.MessageRepository;
 import com.dingring.domain.group.MessageType;
 import com.dingring.domain.group.SenderType;
-import com.dingring.domain.discussion.Topic;
-import com.dingring.domain.discussion.TopicRepository;
-import com.dingring.domain.service.DomainEventPublisher;
 import com.dingring.domain.service.GroupBroadcastService;
-import com.dingring.domain.service.LlmService;
 import com.dingring.infrastructure.aop.Event;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
 /**
- * 编排器（收束域）：用户消息入库广播后投递给 {@link DiscussionEngine} 异步驱动；
- * 本类保留收束域（状态流转 + 结论生成），结论任务排在引擎的群串行执行器上保证串行。
+ * 编排器（Phase C 重构）：接收域 + 收束域。
+ * <p>接收域：用户消息入库广播后投递给 {@link DiscussionEngine} 异步驱动。
+ * <p>收束域：同步状态流转（IN_PROGRESS→CONCLUDING）+ 异步触发收束流程（ConcludeNode 生成结论）。
+ * <p>结论生成逻辑已迁移到 {@link com.dingring.app.workflow.node.ConcludeNode}，
+ * 本类只负责同步状态流转和排队异步收束任务。
  */
 @Slf4j
 @Component
@@ -47,11 +43,7 @@ public class ChatOrchestrator {
     private final MessageRepository messageRepository;
     private final TopicRepository topicRepository;
     private final AgentRepository agentRepository;
-    private final SpeakerScheduler speakerScheduler;
-    private final ContextBuilder contextBuilder;
     private final MessageAssembler messageAssembler;
-    private final LlmService llmService;
-    private final DomainEventPublisher eventPublisher;
     private final GroupBroadcastService groupBroadcastService;
     private final DiscussionEngine discussionEngine;
 
@@ -95,9 +87,6 @@ public class ChatOrchestrator {
             if (topicId == null) {
                 LogHelper.printLog(ChatOrchestrator.class, "ChatOrchestrator.onUserMessage", "ON_USER_MESSAGE", "无活跃主题", "groupId={}", groupId);
             }
-            // 消息发送事件（先预留在这）
-    //        eventPublisher.publish(new MessageSent(message.getId(), groupId, topicId, userId,
-    //                SenderType.USER.name(), content, replyToMessageId, mentionedIds));
 
             // 投递信号：意图路由与应答由对话引擎异步驱动
             discussionEngine.onUserSignal(groupId, new DiscussionEngine.UserSignal(
@@ -122,6 +111,8 @@ public class ChatOrchestrator {
 
     /**
      * 触发结束讨论（指定总结 Agent）。
+     * <p>同步完成 IN_PROGRESS→CONCLUDING 状态流转（保证 REST API 即时响应），
+     * 异步排队收束流程（ConcludeNode 检测已是 CONCLUDING 跳过状态流转，直接生成结论）。
      *
      * @param concluderAgentId 总结 Agent ID（null = 调度评分最高者兜底）
      */
@@ -129,131 +120,23 @@ public class ChatOrchestrator {
     public void conclude(Long topicId, Long operatorId, String triggeredBy, Long concluderAgentId) {
         Topic topic = topicRepository.findById(topicId)
                 .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "主题不存在: " + topicId));
-        topic.startConcluding();
-        if (!topicRepository.update(topic)) {
-            throw new BizException(ErrorCode.TOPIC_NOT_IN_PROGRESS, "主题状态已变更，请刷新后重试");
-        }
-        pushTopicStatus(topic, "IN_PROGRESS");
 
-        //TODO：先预留在这里
-//        eventPublisher.publish(new TopicConcluding(topic.getId(), topic.getChatGroupId(), topic.getTitle()));
-
-        discussionEngine.execute(topic.getChatGroupId(), "结论生成",
-                () -> generateConclusion(topic, triggeredBy, concluderAgentId));
-    }
-
-    /** 总结 Agent 生成 STAR 结论；失败回退 IN_PROGRESS */
-    @Event(eventCode = "GENERATE_CONCLUSION", eventName = "生成讨论结论")
-    private void generateConclusion(Topic topic, String triggeredBy, Long designatedConcluderId) {
-        Long groupId = topic.getChatGroupId();
-        Group group = groupRepository.findById(groupId).orElse(null);
-        Agent concluder = resolveConcluder(group, topic, designatedConcluderId);
-        if (concluder == null) {
-            LogHelper.printWarnLog(ChatOrchestrator.class, "ChatOrchestrator.generateConclusion", "GENERATE_CONCLUSION", "无可用总结Agent回滚", "topicId={} 指定AgentId={}", topic.getId(), designatedConcluderId);
-            rollbackConclusion(topic, "群内没有可用的总结 Agent");
-            return;
-        }
-        LogHelper.printLog(ChatOrchestrator.class, "ChatOrchestrator.generateConclusion", "GENERATE_CONCLUSION", "开始生成结论",
-                "topicId={} 总结Agent={} triggeredBy={}", topic.getId(), concluder.getName(), triggeredBy);
-        groupBroadcastService.broadcast(groupId, WsConstants.AGENT_TYPING,
-                Map.of("groupId", groupId, "agentId", concluder.getId(), "agentName", concluder.getName(), "isTyping", true));
-        try {
-            ContextBuilder.LlmContext ctx = contextBuilder.buildForConclusion(
-                    concluder, groupId, topic.getId(), topic.getTitle(), messageAssembler::resolveSenderName);
-            String conclusion = chatWithRetry(concluder, ctx);
-            if (conclusion == null || conclusion.isBlank()) {
-                throw new BizException(ErrorCode.TOPIC_CONCLUSION_FAILED, "总结 Agent 返回空结论");
+        // 同步状态流转（ConcludeNode 会检测已是 CONCLUDING 跳过此步）
+        if (topic.isInProgress()) {
+            topic.startConcluding();
+            if (!topicRepository.update(topic)) {
+                throw new BizException(ErrorCode.TOPIC_NOT_IN_PROGRESS, "主题状态已变更，请刷新后重试");
             }
-            // 结论中不应残留协作标记
-            conclusion = ContextBuilder.stripMarkers(conclusion);
-            topic.close(conclusion, concluder.getId());
-            topicRepository.update(topic);
-            LogHelper.printLog(ChatOrchestrator.class, "ChatOrchestrator.generateConclusion", "GENERATE_CONCLUSION", "结论生成成功主题已关闭",
-                    "topicId={} 总结Agent={} 结论长度={}", topic.getId(), concluder.getName(), conclusion.length());
+            pushTopicStatus(topic, "IN_PROGRESS");
+        }
 
-            long messageCount = messageRepository.countByTopicId(topic.getId());
-            saveSystemNotice(groupId, topic.getId(),
-                    "讨论「" + topic.getTitle() + "」已结束，结论由「" + concluder.getName() + "」生成");
-            groupBroadcastService.broadcast(groupId, WsConstants.TOPIC_CLOSED, Map.of(
-                    "groupId", groupId,
-                    "topicId", topic.getId(),
-                    "title", topic.getTitle(),
-                    "conclusion", conclusion,
-                    "messageCount", messageCount,
-                    "closedAt", topic.getClosedAt().toString()));
-            eventPublisher.publish(new TopicClosed(topic.getId(), groupId, topic.getTitle(),
-                    conclusion, messageCount, triggeredBy, concluder.getId()));
-        } catch (Exception e) {
-            LogHelper.printWarnLog(ChatOrchestrator.class, "ChatOrchestrator.generateConclusion", "GENERATE_CONCLUSION", "结论生成失败", "topicId={}", topic.getId(), e);
-            rollbackConclusion(topic, e.getMessage());
-        } finally {
-            groupBroadcastService.broadcast(groupId, WsConstants.AGENT_TYPING,
-                    Map.of("groupId", groupId, "agentId", concluder.getId(), "agentName", concluder.getName(), "isTyping", false));
-        }
-    }
-
-    /** 解析总结 Agent：指定优先；否则按调度评分选最高的成员 Agent */
-    @Event(eventCode = "RESOLVE_CONCLUIDER", eventName = "决策总结Agent")
-    public Agent resolveConcluder(Group group, Topic topic, Long designatedId) {
-        if (designatedId != null) {
-            return agentRepository.findById(designatedId).orElse(null);
-        }
-        if (group == null) {
-            return null;
-        }
-        List<Agent> candidates = agentRepository.findByIds(group.memberAgentIds());
-        if (candidates.isEmpty()) {
-            return null;
-        }
-        MessageContext ctx = MessageContext.builder()
-                .groupId(group.getId())
-                .topicId(topic.getId())
-                .content("")
-                .mentionedAgentIds(List.of())
-                .repliedToAgentId(null)
-                .speakCounts(loadSpeakCounts(topic.getId(), group))
-                .build();
-        return speakerScheduler.rank(candidates, ctx).get(0).agent();
-    }
-
-    private void rollbackConclusion(Topic topic, String reason) {
-        try {
-            topic.rollbackToInProgress();
-            topicRepository.update(topic);
-            pushTopicStatus(topic, "CONCLUDING");
-        } catch (Exception ex) {
-            LogHelper.printWarnLog(ChatOrchestrator.class, "ChatOrchestrator.rollbackConclusion", "ROLLBACK_CONCLUSION", "回退异常", "topicId={}", topic.getId(), ex);
-        }
-        groupBroadcastService.broadcast(topic.getChatGroupId(), WsConstants.ERROR, Map.of(
-                "success", false,
-                "errorCode", ErrorCode.TOPIC_CONCLUSION_FAILED.name(),
-                "message", "结论生成失败，讨论已恢复：" + reason));
+        // 异步触发收束流程（排在群串行执行器上，保证与主循环串行）
+        Long groupId = topic.getChatGroupId();
+        discussionEngine.execute(groupId, "结论生成",
+                () -> discussionEngine.runConcludeFlow(topicId, groupId, triggeredBy, concluderAgentId));
     }
 
     /* ==================== 私有辅助 ==================== */
-
-    /** LLM 调用（失败重试 1 次） */
-    private String chatWithRetry(Agent agent, ContextBuilder.LlmContext ctx) {
-        try {
-            return llmService.chat(agent, ctx.systemPrompt(), ctx.turns());
-        } catch (Exception first) {
-            LogHelper.printWarnLog(ChatOrchestrator.class, "ChatOrchestrator.chatWithRetry", "CHAT_WITH_RETRY", "LLM首次失败重试",
-                    "agent={} 失败原因: {}", agent.getName(), first.getMessage());
-            return llmService.chat(agent, ctx.systemPrompt(), ctx.turns());
-        }
-    }
-
-    private void saveSystemNotice(Long groupId, Long topicId, String content) {
-        GroupMessage notice = new GroupMessage();
-        notice.setChatGroupId(groupId);
-        notice.setTopicId(topicId);
-        notice.setSenderId(0L);
-        notice.setSenderType(SenderType.SYSTEM);
-        notice.setMessageType(MessageType.SYSTEM_NOTICE);
-        notice.setContent(content);
-        messageRepository.save(notice);
-        groupBroadcastService.broadcast(groupId, WsConstants.NEW_MESSAGE, messageAssembler.toDto(notice));
-    }
 
     private void pushTopicStatus(Topic topic, String previousStatus) {
         groupBroadcastService.broadcast(topic.getChatGroupId(), WsConstants.TOPIC_STATUS_CHANGED, Map.of(
@@ -287,17 +170,5 @@ public class ChatOrchestrator {
                 .filter(m -> m.getSenderType() == SenderType.AGENT)
                 .map(GroupMessage::getSenderId)
                 .orElse(null);
-    }
-
-    /** Topic 内各成员 Agent 已发言次数 */
-    private Map<Long, Long> loadSpeakCounts(Long topicId, Group group) {
-        Map<Long, Long> counts = new HashMap<>();
-        if (topicId == null) {
-            return counts;
-        }
-        for (Long agentId : group.memberAgentIds()) {
-            counts.put(agentId, messageRepository.countByTopicIdAndSender(topicId, agentId, SenderType.AGENT));
-        }
-        return counts;
     }
 }

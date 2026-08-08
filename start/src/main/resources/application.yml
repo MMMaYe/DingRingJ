@@ -96,6 +96,12 @@ dingring:
     profile-extract-threshold: 15
     # 追溯建题最多回填闲聊条数
     backfill-limit: 15
+    # 发散模式发言间隔（毫秒，轻量防刷屏）
+    diverge-pace-ms: 2000
+    # 发散最大轮次（自动回拉收敛）
+    max-diverge-rounds: 3
+    # 提议收束后等用户确认的超时（毫秒，5分钟）
+    conclude-confirm-timeout-ms: 300000
     # CONCLUDING 状态超过该分钟数视为卡死（看门狗回滚）
     concluding-timeout-minutes: 5
     # 卡片对账回溯窗口（天）

@@ -1,0 +1,21 @@
+package com.dingring.domain.workflow;
+
+/**
+ * 群聊讨论业务规则（强类型配置，替代散落的 @Value 注入）。
+ * <p>pace 机制改为"收敛+发散"模型（方案 6.4 决策 2）：
+ * <ul>
+ *   <li>收敛模式(CONVERGE)：Agent 直接回答用户问题，无延迟，用户在等</li>
+ *   <li>发散模式(DIVERGE)：Agent 提出关联新视角，轻量 pace 防刷屏，maxDivergeRounds 后自动回拉收敛</li>
+ *   <li>等待模式(WAIT)：Agent 追问用户，阻塞等用户回答</li>
+ * </ul>
+ * 收束只由显式信号触发（CONCLUDE 提议/用户要求/熔断），不再用 convergePassCount（决策 4）。
+ */
+public record DiscussionRules(
+        long divergePaceMs,           // 发散模式发言间隔（轻量防刷屏，如 2000ms）
+        int maxDivergeRounds,         // 发散最大轮次（自动回拉收敛，如 3）
+        int maxRounds,                // 总熔断轮次（Agent 发言总数上限）
+        int profileExtractThreshold,  // 画像提炼触发阈值
+        int backfillLimit,             // 建题回填消息上限
+        int contextWindow,            // 上下文窗口
+        long concludeConfirmTimeoutMs  // 提议收束后等用户确认的超时（如 300000=5分钟，超时自动收束）
+) {}
