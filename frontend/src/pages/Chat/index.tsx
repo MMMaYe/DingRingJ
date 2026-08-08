@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import Sidebar, { IconPlus } from '../../components/Sidebar';
 import Avatar from '../../components/Avatar';
 import MessageItem from './MessageItem';
+import DiscussionStatus from '../../components/DiscussionStatus';
 import { formatTime, renderMarkdown } from './utils';
 import Modal from '../../components/Modal';
 import GroupSettings from '../../components/GroupSettings';
@@ -12,6 +13,7 @@ import { API } from '../../api';
 import type {
   GroupSummary, GroupDetail, TopicSummary, MemberInfo,
   MessageDTO, AgentDTO, ConclusionDTO, KnowledgeCardDTO, PageResult,
+  TopicStatusPayload,
 } from '../../types';
 import './style.css';
 
@@ -25,6 +27,8 @@ export default function ChatPage() {
   const [topics, setTopics] = useState<TopicSummary[]>([]);
   const [replyTo, setReplyTo] = useState<{ id: number; senderName: string; content: string } | null>(null);
   const [typing, setTyping] = useState<Map<number, string>>(new Map());
+  // 讨论状态实时快照(由 TOPIC_STATUS WS 事件驱动)
+  const [topicStatus, setTopicStatus] = useState<TopicStatusPayload | null>(null);
   // 流式发言半成品气泡：streamId -> 累积内容（COMPLETE 替换正式消息 / ABORT 丢弃）
   const [streams, setStreams] = useState<Map<string, { agentId: number; agentName: string; content: string }>>(new Map());
   const [inputText, setInputText] = useState('');
@@ -171,6 +175,7 @@ export default function ChatPage() {
       setReplyTo(null);
       setTyping(new Map());
       setStreams(new Map());
+      setTopicStatus(null);
       stickToBottomRef.current = true;
       setUnseenCount(0);
       setSearchParams({ groupId: String(targetId) }, { replace: true });
@@ -307,6 +312,9 @@ export default function ChatPage() {
           loadTopics();
           toast(`讨论开始：${(d as any).title}`, 'success');
           break;
+        case 'TOPIC_STATUS':
+          setTopicStatus(d as unknown as TopicStatusPayload);
+          break;
         case 'TOPIC_STATUS_CHANGED':
           if (activeTopic && activeTopic.id === (d as any).topicId) {
             setActiveTopic(prev => prev ? { ...prev, status: (d as any).status } : prev);
@@ -315,6 +323,7 @@ export default function ChatPage() {
           break;
         case 'TOPIC_CLOSED':
           setActiveTopic(null);
+          setTopicStatus(null);
           loadTopics();
           loadGroups();
           toast(`讨论「${(d as any).title}」已结束，结论已生成`, 'success');
@@ -414,6 +423,25 @@ export default function ChatPage() {
       toast('已发起结束讨论，正在生成总结…', 'success');
     } catch (e: any) { toast(e.message, 'error'); }
   }, [activeTopic]);
+
+  // ---- 收束确认/拒绝(CONCLUDE_PROPOSED 时前端按钮触发) ----
+  const concludeConfirm = useCallback(() => {
+    if (!group) return;
+    // 发送确认消息,后端 runLoop 从队列取出后判定为确认收束
+    wsCtx.send(group.id, { type: 'SEND_MESSAGE', data: { groupId: group.id, content: '总结吧，可以收尾了' } });
+    setTopicStatus(null);
+  }, [group, wsCtx]);
+
+  const concludeReject = useCallback(() => {
+    if (!group) return;
+    // 发送拒绝消息,后端 runLoop 判定为继续讨论
+    wsCtx.send(group.id, { type: 'SEND_MESSAGE', data: { groupId: group.id, content: '还想继续讨论一下' } });
+    setTopicStatus(null);
+  }, [group, wsCtx]);
+
+  const dismissHint = useCallback(() => {
+    setTopicStatus(prev => prev ? { ...prev, restartHint: '' } : null);
+  }, []);
 
   const restartTopic = useCallback(async () => {
     if (!activeTopic) return;
@@ -556,6 +584,14 @@ export default function ChatPage() {
                 </button>
               </div>
             </header>
+
+            {/* 讨论状态横幅(由 TOPIC_STATUS WS 事件驱动) */}
+            <DiscussionStatus
+              status={topicStatus}
+              onConcludeConfirm={concludeConfirm}
+              onConcludeReject={concludeReject}
+              onDismissHint={dismissHint}
+            />
 
             {/* 聊天内搜索栏 */}
             {searchOpen && (

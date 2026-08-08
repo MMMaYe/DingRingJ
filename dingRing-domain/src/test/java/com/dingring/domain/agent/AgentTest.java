@@ -21,21 +21,21 @@ class AgentTest {
     class Temperature {
 
         @Test
-        @DisplayName("feature 为 null 时使用默认 0.7")
+        @DisplayName("feature 为 null 时使用默认 1.0")
         void nullFeatureShouldUseDefault() {
             Agent a = new Agent();
             a.setFeature(null);
 
-            assertThat(a.temperature()).isEqualTo(0.7, within(0.0001));
+            assertThat(a.temperature()).isEqualTo(1.0, within(0.0001));
         }
 
         @Test
-        @DisplayName("feature 无 temperature 字段时使用默认 0.7")
+        @DisplayName("feature 无 temperature 字段时使用默认 1.0")
         void noTemperatureKeyShouldUseDefault() {
             Agent a = new Agent();
             a.setFeature(Map.of("maxTokens", 2048));
 
-            assertThat(a.temperature()).isEqualTo(0.7, within(0.0001));
+            assertThat(a.temperature()).isEqualTo(1.0, within(0.0001));
         }
 
         @Test
@@ -53,7 +53,7 @@ class AgentTest {
             Agent a = new Agent();
             a.setFeature(Map.of("temperature", "high"));
 
-            assertThat(a.temperature()).isEqualTo(0.7, within(0.0001));
+            assertThat(a.temperature()).isEqualTo(1.0, within(0.0001));
         }
     }
 

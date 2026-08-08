@@ -27,6 +27,18 @@
             <groupId>org.springframework.ai</groupId>
             <artifactId>spring-ai-openai</artifactId>
         </dependency>
+        <!-- SAA Nacos Prompt（Phase A：提示词热更新基础设施，Phase C 正式迁移 prompt） -->
+        <!-- SAA BOM 1.1.2.3 未管理此 artifact，需显式指定版本 -->
+        <dependency>
+            <groupId>com.alibaba.cloud.ai</groupId>
+            <artifactId>spring-ai-alibaba-starter-nacos-prompt</artifactId>
+            <version>${spring-ai-alibaba.version}</version>
+        </dependency>
+        <!-- SAA Graph Core（Phase A 只引入依赖，Phase C 才用 StateGraph） -->
+        <dependency>
+            <groupId>com.alibaba.cloud.ai</groupId>
+            <artifactId>spring-ai-alibaba-graph-core</artifactId>
+        </dependency>
         <!-- Spring AOP -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

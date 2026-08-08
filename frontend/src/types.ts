@@ -151,6 +151,15 @@ export interface WsPayload {
   data: Record<string, unknown>;
 }
 
+/** TOPIC_STATUS 事件:讨论状态实时快照 */
+export interface TopicStatusPayload {
+  discussMode: 'CONVERGE' | 'DIVERGE' | 'WAIT' | 'CONCLUDE_PROPOSED' | 'CONCLUDE' | '';
+  topicTitle: string;
+  divergeRounds: number;
+  maxDivergeRounds: number;
+  restartHint: string;
+}
+
 export interface CreateGroupRequest {
   name: string;
   agentIds: number[];

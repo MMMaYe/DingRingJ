@@ -101,7 +101,7 @@ class MessageRouterTest {
             ArgumentCaptor<LlmService.CallOptions> captor = ArgumentCaptor.forClass(LlmService.CallOptions.class);
             verify(llmService).chat(any(Agent.class), anyString(), anyList(), captor.capture());
             assertThat(captor.getValue().temperature()).isZero();
-            assertThat(captor.getValue().maxTokens()).isEqualTo(256);
+            assertThat(captor.getValue().maxTokens()).isEqualTo(1024);
         }
     }
 

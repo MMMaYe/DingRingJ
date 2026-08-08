@@ -1,0 +1,154 @@
+/**
+ * 讨论状态横幅样式
+ * 使用 Trae design tokens,与现有暗色主题一致
+ */
+
+/* 容器:位于 chat-header 和 chat-body 之间 */
+.discuss-status {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  background: var(--bg-base-secondary);
+  border-bottom: 1px solid var(--border-neutral-l1);
+}
+
+/* 状态标签栏 */
+.discuss-status__bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 16px;
+  background: color-mix(in srgb, var(--status-color, var(--color-primary)) 8%, transparent);
+  transition: background 0.3s ease;
+}
+
+.discuss-status__icon {
+  font-size: 12px;
+  line-height: 1;
+  filter: saturate(1.2);
+}
+
+.discuss-status__label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--status-color, var(--text-default));
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+/* 发散进度 */
+.discuss-status__diverge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 4px;
+}
+
+.discuss-status__diverge-text {
+  font-size: 10px;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.discuss-status__diverge-track {
+  display: block;
+  width: 48px;
+  height: 3px;
+  border-radius: var(--radius-full);
+  background: var(--bg-overlay-l3);
+  overflow: hidden;
+}
+
+.discuss-status__diverge-fill {
+  display: block;
+  height: 100%;
+  border-radius: var(--radius-full);
+  background: var(--status-color, var(--color-primary));
+  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 话题重启提示 */
+.discuss-status__hint {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 16px;
+  background: var(--status-alert-surface-l1);
+  border-top: 1px solid var(--border-neutral-l1);
+  animation: hint-slide-in 0.3s ease;
+}
+
+.discuss-status__hint-text {
+  flex: 1;
+  font-size: 11px;
+  color: var(--status-alert-default);
+  line-height: 1.5;
+}
+
+.discuss-status__hint-close {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-4);
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  transition: color 0.12s, background 0.12s;
+}
+
+.discuss-status__hint-close:hover {
+  color: var(--text-default);
+  background: var(--bg-overlay-l2);
+}
+
+/* 收束确认按钮组 */
+.discuss-status__actions {
+  display: flex;
+  gap: 8px;
+  padding: 6px 16px;
+  border-top: 1px solid var(--border-neutral-l1);
+  animation: actions-fade-in 0.25s ease;
+}
+
+/* 小按钮变体 */
+.btn--sm {
+  height: 26px;
+  padding: 0 12px;
+  font-size: 11px;
+  font-weight: 500;
+  border-radius: var(--radius-6);
+  line-height: 1;
+}
+
+/* 动画 */
+@keyframes hint-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes actions-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* 亮色模式适配 */
+[data-theme="light"] .discuss-status__bar {
+  background: color-mix(in srgb, var(--status-color, var(--color-primary)) 6%, transparent);
+}

@@ -82,7 +82,7 @@ class ModeratorServiceTest {
         @Test
         @DisplayName("正常 JSON：全字段解析，花名映射为 AgentId")
         void validJsonShouldParseAllFields() {
-            when(llmService.chat(any(Agent.class), anyString(), anyList())).thenReturn(
+            when(llmService.chat(any(Agent.class), anyString(), anyList(), any())).thenReturn(
                     "{\"should_continue\": true, \"next_speaker\": \"小李\", "
                             + "\"should_conclude\": false, \"guidance\": \"请从成本角度补充\"}");
 
@@ -99,7 +99,7 @@ class ModeratorServiceTest {
         @Test
         @DisplayName("容忍 ```json 包裹与前后杂文")
         void wrappedJsonShouldBeTolerated() {
-            when(llmService.chat(any(Agent.class), anyString(), anyList())).thenReturn(
+            when(llmService.chat(any(Agent.class), anyString(), anyList(), any())).thenReturn(
                     "好的，我的判断是：\n```json\n{\"should_continue\": false, \"next_speaker\": \"老王\", "
                             + "\"should_conclude\": false, \"guidance\": \"\"}\n```");
 
@@ -114,7 +114,7 @@ class ModeratorServiceTest {
         @Test
         @DisplayName("should_conclude=true 时 wantsConclude 为真")
         void shouldConcludeTrueShouldWantConclude() {
-            when(llmService.chat(any(Agent.class), anyString(), anyList())).thenReturn(
+            when(llmService.chat(any(Agent.class), anyString(), anyList(), any())).thenReturn(
                     "{\"should_continue\": true, \"next_speaker\": \"老王\", "
                             + "\"should_conclude\": true, \"guidance\": \"\"}");
 
@@ -127,7 +127,7 @@ class ModeratorServiceTest {
         @Test
         @DisplayName("next_speaker 不在群内：nextSpeakerId 为 null，其余字段正常")
         void unknownSpeakerShouldYieldNullSpeakerId() {
-            when(llmService.chat(any(Agent.class), anyString(), anyList())).thenReturn(
+            when(llmService.chat(any(Agent.class), anyString(), anyList(), any())).thenReturn(
                     "{\"should_continue\": true, \"next_speaker\": \"路人甲\", "
                             + "\"should_conclude\": false, \"guidance\": \"继续\"}");
 
@@ -149,7 +149,7 @@ class ModeratorServiceTest {
             setField("enabled", false);
 
             assertThat(service.decide(topic, members, Map.of())).isNull();
-            verify(llmService, never()).chat(any(), anyString(), anyList());
+            verify(llmService, never()).chat(any(), anyString(), anyList(), any());
         }
 
         @Test
@@ -161,7 +161,7 @@ class ModeratorServiceTest {
         @Test
         @DisplayName("LLM 异常时返回 null")
         void llmFailureShouldReturnNull() {
-            when(llmService.chat(any(Agent.class), anyString(), anyList()))
+            when(llmService.chat(any(Agent.class), anyString(), anyList(), any()))
                     .thenThrow(new RuntimeException("LLM 超时"));
 
             assertThat(service.decide(topic, members, Map.of())).isNull();
@@ -170,7 +170,7 @@ class ModeratorServiceTest {
         @Test
         @DisplayName("输出不含 JSON 时返回 null")
         void nonJsonOutputShouldReturnNull() {
-            when(llmService.chat(any(Agent.class), anyString(), anyList()))
+            when(llmService.chat(any(Agent.class), anyString(), anyList(), any()))
                     .thenReturn("我觉得大家聊得差不多了");
 
             assertThat(service.decide(topic, members, Map.of())).isNull();
@@ -185,14 +185,14 @@ class ModeratorServiceTest {
         @DisplayName("配置了独立模型：借用首成员端点但用主持人模型")
         void configuredModelShouldOverrideMemberModel() throws Exception {
             setField("model", "moderator-fast");
-            when(llmService.chat(any(Agent.class), anyString(), anyList())).thenReturn(
+            when(llmService.chat(any(Agent.class), anyString(), anyList(), any())).thenReturn(
                     "{\"should_continue\": true, \"next_speaker\": \"老王\", "
                             + "\"should_conclude\": false, \"guidance\": \"\"}");
 
             service.decide(topic, members, Map.of());
 
             ArgumentCaptor<Agent> captor = ArgumentCaptor.forClass(Agent.class);
-            verify(llmService).chat(captor.capture(), anyString(), anyList());
+            verify(llmService).chat(captor.capture(), anyString(), anyList(), any());
             Agent host = captor.getValue();
             assertThat(host.getName()).isEqualTo("主持人");
             assertThat(host.getModelName()).isEqualTo("moderator-fast");
@@ -203,14 +203,14 @@ class ModeratorServiceTest {
         @Test
         @DisplayName("未配置模型：复用首成员模型")
         void blankModelShouldReuseMemberModel() {
-            when(llmService.chat(any(Agent.class), anyString(), anyList())).thenReturn(
+            when(llmService.chat(any(Agent.class), anyString(), anyList(), any())).thenReturn(
                     "{\"should_continue\": true, \"next_speaker\": \"老王\", "
                             + "\"should_conclude\": false, \"guidance\": \"\"}");
 
             service.decide(topic, members, Map.of());
 
             ArgumentCaptor<Agent> captor = ArgumentCaptor.forClass(Agent.class);
-            verify(llmService).chat(captor.capture(), anyString(), anyList());
+            verify(llmService).chat(captor.capture(), anyString(), anyList(), any());
             assertThat(captor.getValue().getModelName()).isEqualTo("qwen-plus");
         }
 
@@ -221,7 +221,7 @@ class ModeratorServiceTest {
             msg.setContent("我先说两句");
             when(messageRepository.findRecentByTopicId(eq(100L), anyInt())).thenReturn(List.of(msg));
             when(messageAssembler.resolveSenderName(any())).thenReturn("老王");
-            when(llmService.chat(any(Agent.class), anyString(), anyList())).thenReturn(
+            when(llmService.chat(any(Agent.class), anyString(), anyList(), any())).thenReturn(
                     "{\"should_continue\": true, \"next_speaker\": \"老王\", "
                             + "\"should_conclude\": false, \"guidance\": \"\"}");
 
@@ -230,7 +230,7 @@ class ModeratorServiceTest {
             @SuppressWarnings("unchecked")
             ArgumentCaptor<List<LlmService.ChatTurn>> turnsCaptor =
                     ArgumentCaptor.forClass((Class) List.class);
-            verify(llmService).chat(any(Agent.class), anyString(), turnsCaptor.capture());
+            verify(llmService).chat(any(Agent.class), anyString(), turnsCaptor.capture(), any());
             String input = turnsCaptor.getValue().get(0).content();
             assertThat(input).contains("测试主题");
             assertThat(input).contains("老王").contains("已发言 2 次");

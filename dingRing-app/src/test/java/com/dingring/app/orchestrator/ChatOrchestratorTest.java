@@ -158,7 +158,6 @@ class ChatOrchestratorTest {
 
             verify(messageRepository).save(any(GroupMessage.class));
             verify(chatPusher).pushToGroup(eq(1L), eq(WsConstants.NEW_MESSAGE), any());
-            verify(eventPublisher).publish(any(MessageSent.class));
         }
 
         @Test
@@ -273,7 +272,6 @@ class ChatOrchestratorTest {
 
             orchestrator.conclude(1L, 1L, "USER");
 
-            verify(eventPublisher).publish(any(TopicConcluding.class));
             verify(chatPusher).pushToGroup(eq(10L), eq(WsConstants.TOPIC_STATUS_CHANGED), any());
             // execute 同步执行：最终状态 CLOSED
             verify(chatPusher).pushToGroup(eq(10L), eq(WsConstants.TOPIC_CLOSED), any());

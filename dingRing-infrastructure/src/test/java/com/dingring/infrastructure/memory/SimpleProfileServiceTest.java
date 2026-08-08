@@ -23,7 +23,7 @@ import static org.mockito.Mockito.when;
 
 /**
  * {@link SimpleProfileService} 用户画像服务单元测试。
- * <p>核心：既有画像 + 近期对话 → LLM 增量合并 → upsert 覆盖写回；任何失败静默跳过。
+ * <p>核心：既有画像 + 近期对话 -> LLM 增量合并 -> saveNewVersion 覆盖写回；任何失败静默跳过。
  */
 @DisplayName("SimpleProfileService 用户画像")
 class SimpleProfileServiceTest {
@@ -87,7 +87,7 @@ class SimpleProfileServiceTest {
     class ExtractAndMerge {
 
         @Test
-        @DisplayName("首次提炼：新建画像并 upsert")
+        @DisplayName("首次提炼：新建画像并 saveNewVersion")
         void firstExtractionShouldCreateProfile() {
             when(userProfileRepository.findByUserId(1L)).thenReturn(Optional.empty());
             when(llmService.chat(any(Agent.class), anyString(), anyList()))
@@ -96,7 +96,7 @@ class SimpleProfileServiceTest {
             service.extractAndMerge(1L, extractor, "测试群", "用户: 就这么定了");
 
             ArgumentCaptor<UserProfile> captor = ArgumentCaptor.forClass(UserProfile.class);
-            verify(userProfileRepository).upsert(captor.capture());
+            verify(userProfileRepository).saveNewVersion(captor.capture());
             assertThat(captor.getValue().getUserId()).isEqualTo(1L);
             assertThat(captor.getValue().getProfileText()).isEqualTo("- 表达直接\n- 决策果断");
         }
@@ -118,7 +118,7 @@ class SimpleProfileServiceTest {
             verify(llmService).chat(any(Agent.class), anyString(), turnsCaptor.capture());
             assertThat(turnsCaptor.getValue().get(0).content()).contains("- 偏好简洁表达");
             ArgumentCaptor<UserProfile> captor = ArgumentCaptor.forClass(UserProfile.class);
-            verify(userProfileRepository).upsert(captor.capture());
+            verify(userProfileRepository).saveNewVersion(captor.capture());
             assertThat(captor.getValue().getProfileText()).contains("情绪稳定");
         }
 
@@ -128,18 +128,18 @@ class SimpleProfileServiceTest {
             service.extractAndMerge(1L, extractor, "测试群", "  ");
 
             verify(llmService, never()).chat(any(), anyString(), anyList());
-            verify(userProfileRepository, never()).upsert(any());
+            verify(userProfileRepository, never()).saveNewVersion(any());
         }
 
         @Test
         @DisplayName("LLM 返回空时不写回")
-        void blankLlmOutputShouldNotUpsert() {
+        void blankLlmOutputShouldNotSaveNewVersion() {
             when(userProfileRepository.findByUserId(1L)).thenReturn(Optional.empty());
             when(llmService.chat(any(Agent.class), anyString(), anyList())).thenReturn("  ");
 
             service.extractAndMerge(1L, extractor, "测试群", "用户: hi");
 
-            verify(userProfileRepository, never()).upsert(any());
+            verify(userProfileRepository, never()).saveNewVersion(any());
         }
 
         @Test
@@ -151,7 +151,7 @@ class SimpleProfileServiceTest {
 
             service.extractAndMerge(1L, extractor, "测试群", "用户: hi");
 
-            verify(userProfileRepository, never()).upsert(any());
+            verify(userProfileRepository, never()).saveNewVersion(any());
         }
     }
 }

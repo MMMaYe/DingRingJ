@@ -97,7 +97,7 @@ class CardEventHandlerTest {
 
             // 等待虚拟线程执行完跳过逻辑
             Thread.sleep(300);
-            verify(llmService, org.mockito.Mockito.never()).chat(any(), anyString(), any());
+            verify(llmService, org.mockito.Mockito.never()).chat(any(), anyString(), any(), any());
             verify(cardRepository, org.mockito.Mockito.never()).saveBatch(any());
         }
 
@@ -112,7 +112,7 @@ class CardEventHandlerTest {
                       {"question":"什么是 GC?","answer":"垃圾回收","category":"JVM"}
                     ]
                     """;
-            when(llmService.chat(any(), anyString(), any())).thenReturn(json);
+            when(llmService.chat(any(), anyString(), any(), any())).thenReturn(json);
             mockSaveBatchWithIdBackfill();
 
             handler.onTopicClosed(topicClosedEvent(1L, 10L, 99L));
@@ -134,7 +134,7 @@ class CardEventHandlerTest {
                     [{"question":"Q1","answer":"A1","category":"c1"}]
                     ```
                     """;
-            when(llmService.chat(any(), anyString(), any())).thenReturn(raw);
+            when(llmService.chat(any(), anyString(), any(), any())).thenReturn(raw);
             mockSaveBatchWithIdBackfill();
 
             handler.onTopicClosed(topicClosedEvent(1L, 10L, 99L));
@@ -153,7 +153,7 @@ class CardEventHandlerTest {
                     [{"question":"Q1","answer":"A1"}]
                     希望对你有帮助。
                     """;
-            when(llmService.chat(any(), anyString(), any())).thenReturn(noisy);
+            when(llmService.chat(any(), anyString(), any(), any())).thenReturn(noisy);
             mockSaveBatchWithIdBackfill();
 
             handler.onTopicClosed(topicClosedEvent(1L, 10L, 99L));
@@ -166,12 +166,12 @@ class CardEventHandlerTest {
         void emptyArrayShouldTriggerRetry() {
             Agent concluder = agent(99L, "总结者");
             when(agentRepository.findById(99L)).thenReturn(Optional.of(concluder));
-            when(llmService.chat(any(), anyString(), any())).thenReturn("[]");
+            when(llmService.chat(any(), anyString(), any(), any())).thenReturn("[]");
 
             handler.onTopicClosed(topicClosedEvent(1L, 10L, 99L));
 
             // 重试 3 次（首次 + 2 次重试）
-            verify(llmService, timeout(2000).times(3)).chat(any(), anyString(), any());
+            verify(llmService, timeout(2000).times(3)).chat(any(), anyString(), any(), any());
             // 失败时不应入库、不应发布事件
             verify(cardRepository, org.mockito.Mockito.never()).saveBatch(any());
             verify(eventPublisher, org.mockito.Mockito.never()).publish(any(KnowledgeCardGenerated.class));
@@ -182,13 +182,13 @@ class CardEventHandlerTest {
         void exceptionShouldRetryThreeTimesAndNotThrow() {
             Agent concluder = agent(99L, "总结者");
             when(agentRepository.findById(99L)).thenReturn(Optional.of(concluder));
-            when(llmService.chat(any(), anyString(), any()))
+            when(llmService.chat(any(), anyString(), any(), any()))
                     .thenThrow(new RuntimeException("LLM 服务不可用"));
 
             // 不应抛出异常（不阻塞主流程）
             handler.onTopicClosed(topicClosedEvent(1L, 10L, 99L));
 
-            verify(llmService, timeout(2000).times(3)).chat(any(), anyString(), any());
+            verify(llmService, timeout(2000).times(3)).chat(any(), anyString(), any(), any());
             verify(cardRepository, org.mockito.Mockito.never()).saveBatch(any());
         }
 
@@ -200,7 +200,7 @@ class CardEventHandlerTest {
             String validJson = """
                     [{"question":"Q1","answer":"A1","category":"c1"}]
                     """;
-            when(llmService.chat(any(), anyString(), any()))
+            when(llmService.chat(any(), anyString(), any(), any()))
                     .thenThrow(new RuntimeException("网络抖动"))
                     .thenReturn(validJson);
             mockSaveBatchWithIdBackfill();
@@ -209,7 +209,7 @@ class CardEventHandlerTest {
 
             verify(cardRepository, timeout(2000)).saveBatch(any());
             verify(eventPublisher, timeout(2000)).publish(any(KnowledgeCardGenerated.class));
-            verify(llmService, timeout(2000).atLeast(2)).chat(any(), anyString(), any());
+            verify(llmService, timeout(2000).atLeast(2)).chat(any(), anyString(), any(), any());
         }
 
         @Test
@@ -220,7 +220,7 @@ class CardEventHandlerTest {
             String json = """
                     [{"question":"Q1","answer":"A1"}]
                     """;
-            when(llmService.chat(any(), anyString(), any())).thenReturn(json);
+            when(llmService.chat(any(), anyString(), any(), any())).thenReturn(json);
             mockSaveBatchWithIdBackfill();
 
             handler.onTopicClosed(topicClosedEvent(1L, 10L, 99L));
@@ -245,7 +245,7 @@ class CardEventHandlerTest {
                       {"answer":"A3"}
                     ]
                     """;
-            when(llmService.chat(any(), anyString(), any())).thenReturn(json);
+            when(llmService.chat(any(), anyString(), any(), any())).thenReturn(json);
             mockSaveBatchWithIdBackfill();
 
             handler.onTopicClosed(topicClosedEvent(1L, 10L, 99L));
@@ -265,7 +265,7 @@ class CardEventHandlerTest {
             String json = """
                     [{"question":"什么是 GC?","answer":"垃圾回收","category":"JVM"}]
                     """;
-            when(llmService.chat(any(), anyString(), any())).thenReturn(json);
+            when(llmService.chat(any(), anyString(), any(), any())).thenReturn(json);
             mockSaveBatchWithIdBackfill();
 
             handler.onTopicClosed(topicClosedEvent(42L, 10L, 99L));
