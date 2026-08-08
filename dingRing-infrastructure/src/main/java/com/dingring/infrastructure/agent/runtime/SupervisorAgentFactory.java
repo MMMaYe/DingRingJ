@@ -51,8 +51,12 @@ public class SupervisorAgentFactory {
     private static final String SUPERVISOR_NAME = "work-supervisor";
     /** Supervisor ReAct 循环上限：拆解+多次委派，需足够深度 */
     private static final int SUPERVISOR_RECURSION_LIMIT = 15;
-    /** 子 Agent ReAct 循环上限：单任务执行，轻量 */
-    private static final int WORKER_RECURSION_LIMIT = 8;
+    /**
+     * 子 Agent ReAct 循环上限。
+     * <p>注意：recursionLimit 按图节点执行次数计数（单轮 = __START__ + 4 hooks + 模型 ≥ 6 步），
+     * 必须留足「工具调用后第二轮回读结果」的余量，否则模型第二轮永不执行。
+     */
+    private static final int WORKER_RECURSION_LIMIT = 15;
 
     private final SaaModelFactory modelFactory;
     private final WorkProgressBroadcastHook workProgressBroadcastHook;

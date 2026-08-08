@@ -331,6 +331,10 @@ export default function ChatPage() {
         case 'CARD_GENERATED':
           toast(`✨ 已生成 ${(d as any).cardCount} 张知识卡片`, 'success');
           break;
+        case 'WORK_TASK_STARTED':
+          const task = String((d as any).taskDescription || '');
+          toast(`${(d as any).agentName} 开始执行任务${(d as any).supervisorMode ? '（成员协作）' : ''}：${task.length > 30 ? task.slice(0, 30) + '…' : task}`, 'info');
+          break;
         case 'ERROR':
           toast((d as any).message || '服务异常', 'error');
           break;

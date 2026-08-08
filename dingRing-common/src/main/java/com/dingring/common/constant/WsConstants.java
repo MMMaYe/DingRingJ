@@ -32,5 +32,7 @@ public final class WsConstants {
     public static final String WORK_RESULT = "WORK_RESULT";
     /** WORK 确认请求 {groupId, step, question}，子 Agent 需要用户确认/补充信息时推送 */
     public static final String WORK_CONFIRM_REQUEST = "WORK_CONFIRM_REQUEST";
+    /** WORK 任务开始 {groupId, agentName, taskDescription, supervisorMode}，WORK 意图触发时推送 */
+    public static final String WORK_TASK_STARTED = "WORK_TASK_STARTED";
     public static final String ERROR = "ERROR";
 }

@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -41,12 +42,15 @@ public class SedimentNode implements NodeAction {
         String conclusion = state.<String>value(StateKeys.CONCLUSION).orElse(null);
         Long concluderAgentId = state.<Long>value(StateKeys.CONCLUDER_AGENT_ID).orElse(null);
 
+        // WORK 流程无 topicId（topicId 为 null），Map.of 不接受 null，需用 HashMap
+        Map<String, Object> logFields = new HashMap<>();
+        logFields.put("topicId", topicId);
+        logFields.put("concluded", concluded);
+        logFields.put("conclusionLen", conclusion == null ? 0 : conclusion.length());
+        logFields.put("concluderAgentId", concluderAgentId);
+
         LogHelper.printLog(SedimentNode.class, "SedimentNode.apply", "SEDIMENT_NODE", "讨论沉淀",
-                "request={}", JsonHelper.mapToJsonStr(Map.of(
-                        "topicId", topicId,
-                        "concluded", concluded,
-                        "conclusionLen", conclusion == null ? 0 : conclusion.length(),
-                        "concluderAgentId", concluderAgentId)));
+                "request={}", JsonHelper.mapToJsonStr(logFields));
 
         if (Boolean.TRUE.equals(concluded) && conclusion != null) {
             // 结论已生成：知识卡片由 CardEventHandler 监听 TopicClosed 事件异步生成

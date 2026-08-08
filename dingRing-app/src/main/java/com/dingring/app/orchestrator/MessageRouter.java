@@ -15,8 +15,10 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 
 /**
- * 消息路由器：对每条用户消息做一次 LLM 意图判定（CHAT 闲聊 / DISCUSS 讨论 / CONCLUDE 收束）。
- * <p>DISCUSS 时顺带产出话题标题与置信度（追溯式建题依据）；判定失败降级 CHAT，不阻塞主流程。
+ * 消息路由器：对每条用户消息做一次 LLM 意图判定
+ * （CHAT 闲聊 / DISCUSS 讨论 / CONCLUDE 收束 / WORK 任务执行）。
+ * <p>DISCUSS 时顺带产出话题标题与置信度（追溯式建题依据）；WORK 交由 WorkNode 进入任务模式；
+ * 判定失败降级 CHAT，不阻塞主流程。
  */
 @Slf4j
 @Component
@@ -24,7 +26,7 @@ import java.util.List;
 public class MessageRouter {
 
     /** 消息意图 */
-    public enum Intent { CHAT, DISCUSS, CONCLUDE }
+    public enum Intent { CHAT, DISCUSS, CONCLUDE, WORK }
 
     /** 判定置信度 */
     public enum Confidence { HIGH, LOW }

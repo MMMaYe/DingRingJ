@@ -21,7 +21,8 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * 意图分类节点：对用户消息做 LLM 意图判定（CHAT 闲聊 / DISCUSS 讨论 / CONCLUDE 收束）。
+ * 意图分类节点：对用户消息做 LLM 意图判定
+ * （CHAT 闲聊 / DISCUSS 讨论 / CONCLUDE 收束 / WORK 任务执行）。
  * <p>迁移自 {@link MessageRouter#route}，复用现有 MessageRouter 业务逻辑。
  * <p>意图分类 prompt 从 Nacos 加载（热更新），但 MessageRouter.route 内部仍用 PromptConstants（Phase C 暂不修改 MessageRouter 内部实现，避免破坏现有测试）。
  * <p>设计要点（方案 6.4 决策 2）：

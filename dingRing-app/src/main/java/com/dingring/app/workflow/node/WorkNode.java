@@ -37,8 +37,8 @@ import java.util.Map;
  * <p>Phase F 增强：Supervisor 编排模式——将群成员 Agent 包装为子 Agent 工具，
  * 由 Supervisor 拆解任务并委派执行；通过 {@code dingring.supervisor.enabled} 开关控制，
  * 关闭时降级为 Phase D 的单 Agent 深度 ReAct（方案十一回退策略）。
- * <p>注意：当前 MessageRouter 尚未支持 WORK 意图（仅 CHAT/DISCUSS/CONCLUDE），
- * 本节点在 StateGraph 中保留占位路径，WORK 意图启用后可直接执行。
+ * <p>Phase G 启用：MessageRouter 现已支持 WORK 意图分类（四选一），
+ * WORK 消息经 StateGraph 条件边路由到本节点；任务开始时广播 {@link WsConstants#WORK_TASK_STARTED}。
  * <p>设计要点：
  * <ul>
  *   <li>单 Agent 模式：选群首成员作为工作 Agent（后续可配置专职工作 Agent）</li>
@@ -115,7 +115,10 @@ public class WorkNode implements NodeAction {
     private Map<String, Object> executeWithSingleAgent(OverAllState state, Long groupId, String input,
                                                        Group group, Agent workAgent) {
 
-        // 通知群聊：任务开始
+        // 通知群聊：任务开始（WORK_TASK_STARTED 前端 toast 提示）
+        broadcastWorkTaskStarted(groupId, workAgent, input, false);
+
+        // 通知群聊：打字状态
         groupBroadcastService.broadcast(groupId, WsConstants.AGENT_TYPING, Map.of(
                 "groupId", groupId,
                 "agentId", workAgent.getId(),
@@ -206,6 +209,9 @@ public class WorkNode implements NodeAction {
         Agent supervisorAgent = members.get(0);
         List<Agent> workers = members.subList(1, members.size());
 
+        // 通知群聊：任务开始（WORK_TASK_STARTED 前端 toast 提示）
+        broadcastWorkTaskStarted(groupId, supervisorAgent, input, true);
+
         groupBroadcastService.broadcast(groupId, WsConstants.AGENT_TYPING, Map.of(
                 "groupId", groupId,
                 "agentId", supervisorAgent.getId(),
@@ -252,6 +258,24 @@ public class WorkNode implements NodeAction {
                     "agentName", supervisorAgent.getName(),
                     "isTyping", false));
         }
+    }
+
+    /**
+     * 广播 WORK 任务开始提示。
+     *
+     * @param groupId       群 ID
+     * @param agent         执行任务的主 Agent（单 Agent 模式为工作 Agent，Supervisor 模式为编排者）
+     * @param taskDescription 任务原文（用户输入）
+     * @param supervisorMode 是否 Supervisor 编排模式
+     */
+    private void broadcastWorkTaskStarted(Long groupId, Agent agent, String taskDescription, boolean supervisorMode) {
+        groupBroadcastService.broadcast(groupId, WsConstants.WORK_TASK_STARTED, Map.of(
+                "groupId", groupId,
+                "agentName", agent.getName(),
+                "taskDescription", taskDescription,
+                "supervisorMode", supervisorMode));
+        LogHelper.printLog(WorkNode.class, "broadcastWorkTaskStarted", "WORK_NODE",
+                "WORK 任务开始广播", "groupId={} agent={} supervisorMode={}", groupId, agent.getName(), supervisorMode);
     }
 
     /** 构建 Supervisor systemPrompt（编排者人设 + 拆解/委派/汇总协议 + 可委派成员清单） */

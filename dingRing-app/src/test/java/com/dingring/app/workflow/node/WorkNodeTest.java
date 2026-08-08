@@ -19,6 +19,7 @@ import com.dingring.infrastructure.agent.runtime.SupervisorAgentFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.test.util.ReflectionTestUtils;
 
@@ -111,6 +112,11 @@ class WorkNodeTest {
 
         assertThat(result).containsEntry("workResult", "单 Agent 结果");
         verify(supervisorAgentFactory, never()).buildSupervisor(any(), anyString(), anyList());
+
+        ArgumentCaptor<Map> payload = ArgumentCaptor.forClass(Map.class);
+        verify(groupBroadcastService).broadcast(anyLong(),
+                org.mockito.ArgumentMatchers.eq(WsConstants.WORK_TASK_STARTED), payload.capture());
+        assertThat(payload.getValue()).containsEntry("supervisorMode", false);
     }
 
     @Test
@@ -150,6 +156,11 @@ class WorkNodeTest {
         verify(agentSpeakerService, never()).call(any(), anyString(), anyList(), any(), any());
         verify(messageRepository).save(any(com.dingring.domain.group.GroupMessage.class));
         verify(groupBroadcastService).broadcast(anyLong(), org.mockito.ArgumentMatchers.eq(WsConstants.NEW_MESSAGE), any());
+
+        ArgumentCaptor<Map> payload = ArgumentCaptor.forClass(Map.class);
+        verify(groupBroadcastService).broadcast(anyLong(),
+                org.mockito.ArgumentMatchers.eq(WsConstants.WORK_TASK_STARTED), payload.capture());
+        assertThat(payload.getValue()).containsEntry("supervisorMode", true);
     }
 
     @Test

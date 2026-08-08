@@ -2606,7 +2606,63 @@ ReactAgent supervisor = ReactAgent.builder()
 
 ---
 
-## 十、风险与缓解
+## 十、Phase G:WORK 意图闭环
+
+### 10.1 目标
+
+让 WORK 意图消息真正走通闭环：**意图分类 → WorkNode → 深度 ReAct 工作 Agent → 产出物入库广播**，并在验证阶段修复发现的 3 个 SAA 运行时 bug。
+
+### 10.2 改动范围
+
+#### 意图分类增强（WORK 维度）
+- `dingRing-common` `PromptConstants`：`INTENT_CLASSIFIER` 模板新增 WORK 分类定义与示例——WORK = 明确可交付产出物的执行指令（"帮我写/生成/整理/查一下"），DISCUSS = 征求意见/开放探讨（"该怎么做？""选哪个？"），两者以"是否对产出物有明确要求"为界
+- `start/src/main/resources/prompt-config.json`：`intent-classify` 模板同步更新
+- `MessageRouter`：`Intent` 枚举新增 `WORK`；`route()` 传"当前是否有活跃主题"上下文，CONCLUDE 仅在活跃讨论时成立；判定失败降级 CHAT 不阻塞主流程
+- `IntentClassifyNode`：按 Route 结果分发四向（CHAT/DISCUSS/CONCLUDE/WORK），WORK 经条件边路由到 WorkNode
+- 新增 `IntentClassifyNodeTest`
+
+#### WorkNode（单 Agent 深度 ReAct）
+- WORK 意图 → `executeWithSingleAgent`：广播 `WORK_TASK_STARTED`（前端 toast）→ `buildWorkPrompt`（Agent 人设 + 工作指令）→ `AgentSpeakerService.call(... ToolSet.WORK ...)` → 结果入库广播 `NEW_MESSAGE`
+- Supervisor 模式（Phase F）保留为可选，`dingring.supervisor.enabled=false` 默认走单 Agent 深度 ReAct（降级链：Supervisor 异常 → 单 Agent）
+- `WorkNodeTest` 更新
+
+#### AgentSpeakerService WORK 分支
+- `AgentSpeakerServiceImpl.call`：`toolSet == ToolSet.WORK` 走 `agentFactory.buildWorkAgent(...)`（深度 ReAct），否则 `buildDiscussAgent(...)`（轻量讨论）
+- `SaaReactAgentFactory`：新增 `WORK_RECURSION_LIMIT=15` 与 `buildWorkAgent`；ToolSet.WORK 工具集 = KnowledgeSearchTool + TopicHistoryTool + UserProfileQueryTool；DISCUSS_RECURSION_LIMIT=10
+- `AgentSpeakerService` 注释同步（讨论=10 / 工作=15）
+
+#### 前端
+- `frontend/src/pages/Chat/index.tsx`：支持 `WORK_TASK_STARTED` toast 提示
+
+### 10.3 验证阶段修复的 3 个 SAA bug（关键技术发现）
+
+#### bug1：recursionLimit=3 导致模型节点永不执行
+- **现象**：WORK 消息触发 Agent 时报 `No AssistantMessage found in 'messages' state`
+- **根因**：SAA `recursionLimit` 按图节点执行次数计数。ReactAgent 单轮 = `__START__` + 4 个 beforeModel Hook + `_AGENT_MODEL_`（+ 工具节点），至少 7 步。旧值 3 时模型节点永远无法执行，图提前终止
+- **修复**：讨论场景 `DISCUSS_RECURSION_LIMIT=10`（1 轮完整推理 + 工具调用），工作场景 `WORK_RECURSION_LIMIT=15`（深度 ReAct）；同步排查 `SupervisorAgentFactory` WORKER 8→15 预防同类隐患
+- **回归测试**：`ReactAgentFactoryRegressionTest`（真实工厂路径，mock ChatModel + 真实 Hook/工具，CHAT/DISCUSS/CONCLUDE/WORK 四场景）
+
+#### bug2：MemorySaver checkpoint 残留导致意图误路由
+- **现象**：WORK 消息之后的下一条 DISCUSS 消息被残留 `INTENT=WORK` 误路由（`意图预设跳过LLM intent=WORK`）
+- **根因**（字节码反编译确认）：`CompileConfig` 默认注册 `MemorySaver`，且按固定默认 `threadId` 存 checkpoint；`GraphRunnerContext` 构造器 → `initializeFromStart` → `CompiledGraph.getInitialState` 从 saver 恢复同 thread 的历史 checkpoint 并合并进 inputs → 第二次 `invoke` 恢复第一次的全部 state（含 intent 键）
+- **修复**：`SaaWorkflow` 编译时 `graph.compile(CompileConfig.builder().releaseThread(true).build())`，每次 invoke 后释放该 thread 的 checkpoint，杜绝残留
+- **回归测试**：`SaaStateResidueReproTest`（最小 SAA 图双路径：先复现残留，再加 `releaseThread(true)` 验证二次 invoke 正确路由）
+
+#### bug3：SedimentNode `Map.of` 传 null 抛 NPE
+- **现象**：WORK 流程无 topicId，`Map.of("topicId", topicId, ...)` 因 Map.of 不接受 null 抛 NPE
+- **修复**：改为 HashMap 逐 put，WORK 场景 topicId 为 null 时正常打日志
+
+### 10.4 验收
+
+- 测试：基础设施模块 73 用例全绿（含 ReactAgentFactoryRegressionTest 4 + SaaStateResidueReproTest 1）、app 模块 26 用例全绿
+- 真实 WS 端到端验证（服务重启加载新代码）：
+  - "帮我整理一份 Java 面试高频题 TOP10 的清单" → `JUDGE_ROUTE` → `{"intent":"WORK","confidence":"HIGH"}` → WorkNode → `WORK_TASK_STARTED` 广播（agent=老王, supervisorMode=false）→ 真实 LLM 回复入库广播，无 `No AssistantMessage` 报错（bug1 修复生效）
+  - 紧接其后发 "Redis 缓存穿透和击穿有什么区别" → `JUDGE_ROUTE` → `{"intent":"DISCUSS","topicTitle":"缓存穿透与击穿区别","confidence":"HIGH"}` → `TOPIC_CREATED topicId=20`，讨论正常开题推进（bug2 修复生效，无残留 INTENT 误路由）
+  - WORK 流程全程无 SedimentNode NPE（bug3 修复生效）
+
+---
+
+## 十一、风险与缓解
 
 | 风险 | 缓解 |
 |---|---|
@@ -2621,7 +2677,7 @@ ReactAgent supervisor = ReactAgent.builder()
 
 ---
 
-## 十一、回退方案汇总
+## 十二、回退方案汇总
 
 | Phase | 回退方式 |
 |---|---|
@@ -2632,10 +2688,11 @@ ReactAgent supervisor = ReactAgent.builder()
 | Phase D | `AgentSpeakerService` 降级为纯 LLM 调用(不注入 Toolkit) |
 | Phase E | RAG 失败不阻塞主流程(容错设计) |
 | Phase F | WorkNode 降级为单 Agent(不用 Supervisor) |
+| Phase G | 意图分类降级 CHAT(判定失败不阻塞) + WorkNode 单 Agent 兜底(不开 Supervisor) |
 
 ---
 
-## 十二、实施顺序与依赖关系
+## 十三、实施顺序与依赖关系
 
 ```
 Phase 0 (版本升级)
@@ -2651,13 +2708,15 @@ Phase D (ReactAgent + Toolkit)
 Phase E (RAG VectorStore)
   ↓ (可与 Phase D 并行,但 KnowledgeSearchTool 依赖 Phase E)
 Phase F (SKILL + Supervisor)
+  ↓ (依赖 Phase F 的 WorkNode Supervisor)
+Phase G (WORK 意图闭环 + SAA 运行时 bug 修复)
 ```
 
-**建议**:Phase 0-C 串行执行(每步验证),Phase D-E 可并行,Phase F 最后。
+**建议**:Phase 0-C 串行执行(每步验证),Phase D-E 可并行,Phase F-G 串行收尾。
 
 ---
 
-## 十三、编码规范
+## 十四、编码规范
 
 ### 注释要求
 

@@ -70,6 +70,28 @@ class MessageRouterTest {
         }
 
         @Test
+        @DisplayName("WORK 带产出物指令正常解析")
+        void workIntentShouldParse() {
+            stubLlm("{\"intent\": \"WORK\", \"topicTitle\": \"\", \"confidence\": \"HIGH\"}");
+
+            MessageRouter.Route route = router.route(judge, "帮我写一份商城系统技术方案文档", null);
+
+            assertThat(route.intent()).isEqualTo(MessageRouter.Intent.WORK);
+            assertThat(route.confidence()).isEqualTo(MessageRouter.Confidence.HIGH);
+        }
+
+        @Test
+        @DisplayName("WORK 空标题不触发 DISCUSS 截断兜底")
+        void workBlankTitleShouldNotFallback() {
+            stubLlm("{\"intent\": \"WORK\", \"topicTitle\": \"\", \"confidence\": \"LOW\"}");
+
+            MessageRouter.Route route = router.route(judge, "帮我把群聊结论整理成要点清单", null);
+
+            assertThat(route.intent()).isEqualTo(MessageRouter.Intent.WORK);
+            assertThat(route.topicTitle()).isEmpty();
+        }
+
+        @Test
         @DisplayName("intent 小写也能解析")
         void lowercaseIntentShouldParse() {
             stubLlm("{\"intent\": \"chat\", \"topicTitle\": \"\", \"confidence\": \"low\"}");

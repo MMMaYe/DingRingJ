@@ -1,5 +1,6 @@
 package com.dingring.infrastructure.workflow;
 
+import com.alibaba.cloud.ai.graph.CompileConfig;
 import com.alibaba.cloud.ai.graph.CompiledGraph;
 import com.alibaba.cloud.ai.graph.KeyStrategyFactory;
 import com.alibaba.cloud.ai.graph.StateGraph;
@@ -172,7 +173,11 @@ public class SaaWorkflow implements DiscussionFlowService {
         graph.addEdge("work", "sediment");
 
         // 5. 编译
-        compiledGraph = graph.compile();
+        // releaseThread(true)：每次 invoke 结束后释放该 thread 的 checkpoint，避免状态残留。
+        // SAA 1.1.2.3 默认 CompileConfig 注册 MemorySaver，且默认 RunnableConfig.threadId 固定，
+        // 导致下一次 invoke 时 getInitialState 从 saver 恢复上一次执行的全部 state
+        // （含 intent 等键），造成 DISCUSS 消息被残留 INTENT=WORK 误路由（Phase G bug2）。
+        compiledGraph = graph.compile(CompileConfig.builder().releaseThread(true).build());
         log.info("SaaWorkflow StateGraph 编译完成，节点: preprocess/intent-classify/chat/ensure-topic/discuss/conclude/sediment/profile-extract/work");
     }
 

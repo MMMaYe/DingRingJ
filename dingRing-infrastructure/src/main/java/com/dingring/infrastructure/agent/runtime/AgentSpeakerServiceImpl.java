@@ -37,7 +37,10 @@ public class AgentSpeakerServiceImpl implements AgentSpeakerService {
     @Override
     public AgentResult call(Agent agent, String systemPrompt, List<ChatTurn> messages,
                             ToolSet toolSet, Map<String, Object> context) {
-        ReactAgent reactAgent = agentFactory.buildDiscussAgent(agent, systemPrompt, toolSet);
+        // WORK 场景走深度 ReAct（recursionLimit=15），其余场景走轻量讨论（recursionLimit=10）
+        ReactAgent reactAgent = toolSet == ToolSet.WORK
+                ? agentFactory.buildWorkAgent(agent, systemPrompt)
+                : agentFactory.buildDiscussAgent(agent, systemPrompt, toolSet);
 
         // 构建 ReactAgent 初始 state：messages + context（groupId/topicId/userId 供 Hook 读取）
         Map<String, Object> inputs = buildInputs(messages, context);
