@@ -40,7 +40,7 @@ public class AgentSpeakerServiceImpl implements AgentSpeakerService {
     @Event(eventCode = "CALL", eventName = "Agent同事发言")
     public AgentResult call(Agent agent, String systemPrompt, List<ChatTurn> messages,
                             ToolSet toolSet, Map<String, Object> context) {
-        // WORK 场景走深度 ReAct（recursionLimit=15），其余场景走轻量讨论（recursionLimit=10）
+        // WORK 场景走深度 ReAct（recursionLimit=40），其余场景走轻量讨论（recursionLimit=24）
         ReactAgent reactAgent = toolSet == ToolSet.WORK
                 ? agentFactory.buildWorkAgent(agent)
                 : agentFactory.buildDiscussAgent(agent, toolSet);

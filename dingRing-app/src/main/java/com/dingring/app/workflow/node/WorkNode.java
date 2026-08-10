@@ -43,7 +43,7 @@ import java.util.Map;
  * <ul>
  *   <li>单 Agent 模式：选群首成员作为工作 Agent（后续可配置专职工作 Agent）</li>
  *   <li>Supervisor 模式：选群首成员作为编排者（模型配置来源），其余成员作为执行者</li>
- *   <li>调用 agentSpeakerService.call() with ToolSet.WORK（recursionLimit=15，深度 ReAct）</li>
+ *   <li>调用 agentSpeakerService.call() with ToolSet.WORK（recursionLimit=40，深度 ReAct）</li>
  *   <li>工作产出入库广播</li>
  * </ul>
  */
@@ -137,7 +137,7 @@ public class WorkNode implements NodeAction {
             // RAG 检索词：以任务输入为查询（RagInjectionHook 读取）
             context.put("ragQuery", input);
 
-            // 深度 ReAct 执行（recursionLimit=15，ToolSet.WORK）
+            // 深度 ReAct 执行（recursionLimit=40，ToolSet.WORK）
             AgentSpeakerService.AgentResult result = agentSpeakerService.call(
                     workAgent, systemPrompt,
                     List.of(ChatTurn.user(input)),

@@ -103,6 +103,28 @@ class ReactAgentFactoryRegressionTest {
     }
 
     @Test
+    @DisplayName("回归：工具调用后需第二轮回读最终文本（recursionLimit 需支撑两轮）")
+    void toolCallThenFinalTextInvokesModel() throws Exception {
+        stubBaseMocks();
+        // 第一轮：模型决定调 queryUserProfile 工具（无文本）；第二轮：输出最终发言文本
+        when(chatModel.call(any(Prompt.class))).thenReturn(
+                new ChatResponse(List.of(new Generation(AssistantMessage.builder()
+                        .content("")
+                        .toolCalls(List.of(new AssistantMessage.ToolCall(
+                                "call_1", "function", "queryUserProfile", "{\"userId\":1}")))
+                        .build()))),
+                new ChatResponse(List.of(new Generation(new AssistantMessage("这是老王的回复")))));
+        // 覆盖 stubBaseMocks 里的固定响应
+        when(profileService.getProfile(any())).thenReturn("程序员老王，专注高并发与缓存");
+
+        ReactAgent agent = newFactory().buildDiscussAgent(domainAgent, ToolSet.CHAT);
+        AssistantMessage result = callAgent(agent);
+
+        assertEquals("这是老王的回复", result.getText());
+        verify(chatModel, atLeastOnce()).call(any(Prompt.class));
+    }
+
+    @Test
     @DisplayName("回归：CHAT 场景经工厂构建后可真正调用模型")
     void chatScenarioInvokesModel() throws Exception {
         stubBaseMocks();

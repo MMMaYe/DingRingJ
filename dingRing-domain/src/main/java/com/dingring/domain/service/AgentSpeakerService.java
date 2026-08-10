@@ -14,7 +14,7 @@ import java.util.function.Consumer;
  *   <li>systemPrompt 只含 Agent 人设 + 协作协议（基础部分），群记忆/用户画像/群成员名单由 Hook 动态注入</li>
  *   <li>context 携带 groupId/topicId/userId 等，传入 ReactAgent 初始 state 供 Hook 读取</li>
  *   <li>tools 按场景注入：闲聊=画像查询，讨论=知识检索，收束=历史主题，工作=通用工具集</li>
- *   <li>ReAct 循环上限由 recursionLimit 控制（讨论=10，工作=15）</li>
+ *   <li>ReAct 循环上限由 recursionLimit 控制（讨论=24，工作=40）</li>
  * </ul>
  */
 public interface AgentSpeakerService {
