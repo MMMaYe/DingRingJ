@@ -97,14 +97,17 @@ public class DiscussNode implements NodeAction {
         List<Long> mentionedAgentIds = state.value(StateKeys.MENTIONED_AGENT_IDS, List.<Long>of());
         Long repliedToAgentId = state.<Long>value(StateKeys.REPLIED_TO_AGENT_ID).orElse(null);
 
+        // 用 HashMap 而非 Map.of：topicId/groupId 可能为 null（如未建题被误路由时），
+        // Map.of 遇到 null 值会抛 NPE，反而遮蔽下方 groupId/topicId 的防御校验
+        Map<String, Object> logMap = new HashMap<>();
+        logMap.put("groupId", groupId);
+        logMap.put("topicId", topicId);
+        logMap.put("passedAgentIds", passedAgentIds);
+        logMap.put("divergeRounds", divergeRounds);
+        logMap.put("maxDivergeRounds", maxDivergeRounds);
+        logMap.put("mentionedAgentIds", mentionedAgentIds);
         LogHelper.printLog(DiscussNode.class, "DiscussNode.apply", "DISCUSS_NODE", "讨论推进开始",
-                "request={}", JsonHelper.mapToJsonStr(Map.of(
-                        "groupId", groupId,
-                        "topicId", topicId,
-                        "passedAgentIds", passedAgentIds,
-                        "divergeRounds", divergeRounds,
-                        "maxDivergeRounds", maxDivergeRounds,
-                        "mentionedAgentIds", mentionedAgentIds)));
+                "request={}", JsonHelper.mapToJsonStr(logMap));
 
         if (groupId == null || topicId == null) {
             throw new IllegalStateException("DiscussNode 缺少必要参数 groupId/topicId");

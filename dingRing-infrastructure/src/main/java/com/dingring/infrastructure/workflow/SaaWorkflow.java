@@ -146,9 +146,11 @@ public class SaaWorkflow implements DiscussionFlowService {
         graph.addEdge("profile-extract", StateGraph.END);
 
         // ensure-topic 条件边：建题成功 → 进入讨论；未达门槛 → 回退到闲聊应答
+        // 注意：建题成功（ensureSuccess=true）应进 discuss；未建题（false）回退 chat。
+        // 曾写反（true→CHAT），导致低置信度未建题的消息被错误路由进 discuss（topicId 为空）而崩溃。
         graph.addConditionalEdges("ensure-topic",
                 AsyncEdgeAction.edge_async(state -> state.value(StateKeys.ENSURE_SUCCESS, false)
-                        ? "CHAT" : "DISCUSS"),
+                        ? "DISCUSS" : "CHAT"),
                 Map.of(
                         "DISCUSS", "discuss",
                         "CHAT", "chat"
