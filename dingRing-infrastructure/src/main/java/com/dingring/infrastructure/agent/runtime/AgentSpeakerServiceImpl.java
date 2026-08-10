@@ -5,6 +5,8 @@ import com.dingring.common.util.LogHelper;
 import com.dingring.domain.agent.Agent;
 import com.dingring.domain.service.AgentSpeakerService;
 import com.dingring.domain.service.LlmService.ChatTurn;
+import com.dingring.infrastructure.agent.hook.SystemMessageMergeHook;
+import com.dingring.infrastructure.aop.Event;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.messages.AssistantMessage;
@@ -35,15 +37,16 @@ public class AgentSpeakerServiceImpl implements AgentSpeakerService {
     private final SaaReactAgentFactory agentFactory;
 
     @Override
+    @Event(eventCode = "CALL", eventName = "Agent同事发言")
     public AgentResult call(Agent agent, String systemPrompt, List<ChatTurn> messages,
                             ToolSet toolSet, Map<String, Object> context) {
         // WORK 场景走深度 ReAct（recursionLimit=15），其余场景走轻量讨论（recursionLimit=10）
         ReactAgent reactAgent = toolSet == ToolSet.WORK
-                ? agentFactory.buildWorkAgent(agent, systemPrompt)
-                : agentFactory.buildDiscussAgent(agent, systemPrompt, toolSet);
+                ? agentFactory.buildWorkAgent(agent)
+                : agentFactory.buildDiscussAgent(agent, toolSet);
 
-        // 构建 ReactAgent 初始 state：messages + context（groupId/topicId/userId 供 Hook 读取）
-        Map<String, Object> inputs = buildInputs(messages, context);
+        // 构建 ReactAgent 初始 state：messages + systemPrompt + context（groupId/topicId/userId 供 Hook 读取）
+        Map<String, Object> inputs = buildInputs(systemPrompt, messages, context);
 
         LogHelper.printLog(AgentSpeakerServiceImpl.class, "AgentSpeakerServiceImpl.call", "AGENT_SPEAK",
                 "Agent发言开始", "agent={} toolSet={} 消息数={} context={}",
@@ -80,12 +83,14 @@ public class AgentSpeakerServiceImpl implements AgentSpeakerService {
 
     /**
      * 构建 ReactAgent 初始 state。
-     * <p>messages 转为 Spring AI Message 列表，context 参数（groupId/topicId/userId/speakerAgentId）
-     * 一并放入 state 供 Hook 读取。
+     * <p>messages 转为 Spring AI Message 列表；systemPrompt 写入
+     * {@link SystemMessageMergeHook#BASE_SYSTEM_PROMPT_KEY}，由合并 Hook 与注入的
+     * SystemMessage 拼成单条；context 参数（groupId/topicId/userId/speakerAgentId）一并放入 state 供 Hook 读取。
      */
-    private Map<String, Object> buildInputs(List<ChatTurn> messages, Map<String, Object> context) {
+    private Map<String, Object> buildInputs(String systemPrompt, List<ChatTurn> messages, Map<String, Object> context) {
         Map<String, Object> inputs = new HashMap<>();
         inputs.put("messages", toSpringMessages(messages));
+        inputs.put(SystemMessageMergeHook.BASE_SYSTEM_PROMPT_KEY, systemPrompt != null ? systemPrompt : "");
         if (context != null) {
             inputs.putAll(context);
         }

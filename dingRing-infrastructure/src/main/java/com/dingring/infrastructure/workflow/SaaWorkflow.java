@@ -13,6 +13,7 @@ import com.dingring.domain.service.DiscussionFlowService;
 import com.dingring.domain.workflow.DiscussionFlowResult;
 import com.dingring.domain.workflow.DiscussionRules;
 import com.dingring.domain.workflow.StateKeys;
+import com.dingring.infrastructure.aop.Event;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -182,7 +183,8 @@ public class SaaWorkflow implements DiscussionFlowService {
     }
 
     @Override
-    public DiscussionFlowResult advance(DiscussionRules rules, Map<String, Object> inputs) {
+    @Event(eventCode = "SaaWorkflow.advance", eventName = "推进群聊至下一节点")
+       public DiscussionFlowResult advance(DiscussionRules rules, Map<String, Object> inputs) {
         // 合并 DiscussionRules 参数到 inputs，让各 NodeAction 从 OverAllState 读取配置
         Map<String, Object> allInputs = new HashMap<>(inputs);
         allInputs.put("divergePaceMs", rules.divergePaceMs());

@@ -14,6 +14,7 @@ import com.dingring.infrastructure.agent.hook.GroupRosterHook;
 import com.dingring.infrastructure.agent.hook.MemoryInjectionHook;
 import com.dingring.infrastructure.agent.hook.ProfileInjectionHook;
 import com.dingring.infrastructure.agent.hook.RagInjectionHook;
+import com.dingring.infrastructure.agent.hook.SystemMessageMergeHook;
 import com.dingring.infrastructure.agent.tool.KnowledgeSearchTool;
 import com.dingring.infrastructure.agent.tool.TopicHistoryTool;
 import com.dingring.infrastructure.agent.tool.UserProfileQueryTool;
@@ -66,6 +67,7 @@ class ReactAgentFactoryRegressionTest {
                 new ProfileInjectionHook(profileService),
                 new GroupRosterHook(groupRepository, agentRepository),
                 new RagInjectionHook(ragService),
+                new SystemMessageMergeHook(),
                 new UserProfileQueryTool(profileService),
                 new TopicHistoryTool(topicRepository),
                 new KnowledgeSearchTool(ragService));
@@ -104,7 +106,7 @@ class ReactAgentFactoryRegressionTest {
     @DisplayName("回归：CHAT 场景经工厂构建后可真正调用模型")
     void chatScenarioInvokesModel() throws Exception {
         stubBaseMocks();
-        ReactAgent agent = newFactory().buildDiscussAgent(domainAgent, "你是群里的技术专家老王。", ToolSet.CHAT);
+        ReactAgent agent = newFactory().buildDiscussAgent(domainAgent, ToolSet.CHAT);
         AssistantMessage result = callAgent(agent);
         assertEquals("这是老王的回复", result.getText());
         verify(chatModel, atLeastOnce()).call(any(Prompt.class));
@@ -114,7 +116,7 @@ class ReactAgentFactoryRegressionTest {
     @DisplayName("回归：DISCUSS 场景经工厂构建后可真正调用模型")
     void discussScenarioInvokesModel() throws Exception {
         stubBaseMocks();
-        ReactAgent agent = newFactory().buildDiscussAgent(domainAgent, "你是群里的技术专家老王。", ToolSet.DISCUSS);
+        ReactAgent agent = newFactory().buildDiscussAgent(domainAgent, ToolSet.DISCUSS);
         AssistantMessage result = callAgent(agent);
         assertEquals("这是老王的回复", result.getText());
         verify(chatModel, atLeastOnce()).call(any(Prompt.class));
@@ -124,7 +126,7 @@ class ReactAgentFactoryRegressionTest {
     @DisplayName("回归：CONCLUDE 场景经工厂构建后可真正调用模型")
     void concludeScenarioInvokesModel() throws Exception {
         stubBaseMocks();
-        ReactAgent agent = newFactory().buildDiscussAgent(domainAgent, "你是群里的技术专家老王。", ToolSet.CONCLUDE);
+        ReactAgent agent = newFactory().buildDiscussAgent(domainAgent, ToolSet.CONCLUDE);
         AssistantMessage result = callAgent(agent);
         assertEquals("这是老王的回复", result.getText());
         verify(chatModel, atLeastOnce()).call(any(Prompt.class));
@@ -134,7 +136,7 @@ class ReactAgentFactoryRegressionTest {
     @DisplayName("回归：WORK 场景经工厂构建后可真正调用模型")
     void workScenarioInvokesModel() throws Exception {
         stubBaseMocks();
-        ReactAgent agent = newFactory().buildWorkAgent(domainAgent, "你是群里的技术专家老王。");
+        ReactAgent agent = newFactory().buildWorkAgent(domainAgent);
         AssistantMessage result = callAgent(agent);
         assertEquals("这是老王的回复", result.getText());
         verify(chatModel, atLeastOnce()).call(any(Prompt.class));
