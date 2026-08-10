@@ -117,18 +117,20 @@ public class DiscussNode implements NodeAction {
         if (terminator.reachedMaxRounds(topicId)) {
             LogHelper.printLog(DiscussNode.class, "DiscussNode.apply", "DISCUSS_NODE", "达到最大轮次自动收束",
                     "topicId={}", topicId);
-            return concludeResult("MAX_ROUNDS", null);
+            return concludeResult(topicId, "MAX_ROUNDS", null);
         }
 
         Group group = groupRepository.findById(groupId).orElse(null);
         if (group == null) {
-            return concludeResult("FAILED", null);
+            LogHelper.printWarnLog(DiscussNode.class, "DiscussNode.apply", "DISCUSS_NODE", "群不存在触发收束",
+                    "groupId={} topicId={}", groupId, topicId);
+            return concludeResult(topicId, "FAILED", null);
         }
         List<Agent> all = agentRepository.findByIds(group.memberAgentIds());
         if (all.isEmpty()) {
             LogHelper.printWarnLog(DiscussNode.class, "DiscussNode.apply", "DISCUSS_NODE", "无成员Agent收束",
                     "groupId={}", groupId);
-            return concludeResult("FAILED", null);
+            return concludeResult(topicId, "FAILED", null);
         }
 
         // @提及的 Agent 即使已 PASS 也应答一次：从 passedAgentIds 中移除
@@ -146,7 +148,7 @@ public class DiscussNode implements NodeAction {
         if (candidates.isEmpty()) {
             LogHelper.printLog(DiscussNode.class, "DiscussNode.apply", "DISCUSS_NODE", "全员PASS讨论收敛",
                     "topicId={}", topicId);
-            return concludeResult("CONVERGED", null);
+            return concludeResult(topicId, "CONVERGED", null);
         }
 
         // 发言（降级链：失败接力下一个）
@@ -181,7 +183,7 @@ public class DiscussNode implements NodeAction {
                     // 发散达上限：自动收束
                     LogHelper.printLog(DiscussNode.class, "DiscussNode.apply", "DISCUSS_NODE", "发散达上限自动收束",
                             "topicId={} divergeRounds={}/{}", topicId, newDivergeRounds, maxDivergeRounds);
-                    return concludeResult("CONVERGED", null);
+                    return concludeResult(topicId, "CONVERGED", null);
                 }
                 result.put(StateKeys.DISCUSS_MODE, StateKeys.MODE_DIVERGE);
                 result.put(StateKeys.PASSED_AGENT_IDS, new ArrayList<>(newPassed));
@@ -197,7 +199,7 @@ public class DiscussNode implements NodeAction {
             }
             case FAILED -> {
                 // 所有候选失败：收束
-                return concludeResult("FAILED", null);
+                return concludeResult(topicId, "FAILED", null);
             }
         }
         return result;
@@ -342,7 +344,10 @@ public class DiscussNode implements NodeAction {
     }
 
     /** 构造收束结果（discussMode=CONCLUDE, concluded=true） */
-    private Map<String, Object> concludeResult(String triggeredBy, Long concluderAgentId) {
+    private Map<String, Object> concludeResult(Long topicId, String triggeredBy, Long concluderAgentId) {
+        LogHelper.printLog(DiscussNode.class, "DiscussNode.concludeResult", "DISCUSS_NODE",
+                "讨论收敛触发收束", "topicId={} triggeredBy={} concluderAgentId={}",
+                topicId, triggeredBy, concluderAgentId);
         Map<String, Object> result = new HashMap<>();
         result.put(StateKeys.DISCUSS_MODE, StateKeys.MODE_CONCLUDE);
         result.put(StateKeys.TRIGGERED_BY, triggeredBy);

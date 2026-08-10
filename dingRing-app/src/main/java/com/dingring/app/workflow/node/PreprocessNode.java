@@ -59,14 +59,21 @@ public class PreprocessNode implements NodeAction {
                 "request={}", JsonHelper.mapToJsonStr(logMap));
 
         if (groupId == null) {
+            LogHelper.printWarnLog(PreprocessNode.class, "PreprocessNode.apply", "PREPROCESS",
+                    "缺少必要参数 groupId", "");
             throw new IllegalStateException("PreprocessNode 缺少必要参数 groupId");
         }
 
         // 校验群存在（防御性检查，ChatOrchestrator 已校验过）
         Optional<Group> groupOpt = groupRepository.findById(groupId);
         if (groupOpt.isEmpty()) {
+            LogHelper.printWarnLog(PreprocessNode.class, "PreprocessNode.apply", "PREPROCESS",
+                    "群不存在", "groupId={}", groupId);
             throw new IllegalStateException("群不存在: " + groupId);
         }
+        LogHelper.printLog(PreprocessNode.class, "PreprocessNode.apply", "PREPROCESS",
+                "群信息加载成功", "groupId={} 群名={} 成员数={}",
+                groupId, groupOpt.get().getName(), groupOpt.get().memberAgentIds() == null ? 0 : groupOpt.get().memberAgentIds().size());
 
         // 加载活跃话题（每群最多一个活跃话题）
         Optional<Topic> activeTopic = topicRepository.findActiveByGroupId(groupId)

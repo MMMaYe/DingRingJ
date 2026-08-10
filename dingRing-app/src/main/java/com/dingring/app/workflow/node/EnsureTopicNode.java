@@ -99,6 +99,8 @@ public class EnsureTopicNode implements NodeAction {
         try {
             confidence = MessageRouter.Confidence.valueOf(confidenceStr);
         } catch (Exception e) {
+            LogHelper.printWarnLog(EnsureTopicNode.class, "EnsureTopicNode.apply", "ENSURE_TOPIC",
+                    "confidence解析失败按LOW处理", "groupId={} confidenceStr={}", groupId, confidenceStr);
             confidence = MessageRouter.Confidence.LOW;
         }
 

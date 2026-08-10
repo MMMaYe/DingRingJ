@@ -97,11 +97,19 @@ public class ConcludeNode implements NodeAction {
             if (!topicRepository.update(topic)) {
                 throw new BizException(ErrorCode.TOPIC_NOT_IN_PROGRESS, "主题状态已变更，请刷新后重试");
             }
+            LogHelper.printLog(ConcludeNode.class, "ConcludeNode.apply", "CONCLUDE_NODE",
+                    "状态流转成功 IN_PROGRESS→CONCLUDING", "topicId={}", topicId);
             pushTopicStatus(topic, "IN_PROGRESS");
+        } else {
+            LogHelper.printLog(ConcludeNode.class, "ConcludeNode.apply", "CONCLUDE_NODE",
+                    "已是 CONCLUDING 跳过状态流转", "topicId={} 当前状态={}", topicId, topic.getStatus());
         }
 
         Group group = groupId != null ? groupRepository.findById(groupId).orElse(null) : null;
         Agent concluder = resolveConcluder(group, topic, designatedConcluderId);
+        LogHelper.printLog(ConcludeNode.class, "ConcludeNode.apply", "CONCLUDE_NODE",
+                "总结Agent解析结果", "topicId={} concluder={} 指定AgentId={}",
+                topicId, concluder == null ? "无" : concluder.getName(), designatedConcluderId);
         if (concluder == null) {
             LogHelper.printWarnLog(ConcludeNode.class, "ConcludeNode.apply", "CONCLUDE_NODE",
                     "无可用总结Agent回滚", "topicId={} 指定AgentId={}", topicId, designatedConcluderId);
@@ -143,6 +151,9 @@ public class ConcludeNode implements NodeAction {
             }
             String conclusion = agentResult.content();
             if (conclusion == null || conclusion.isBlank()) {
+                LogHelper.printWarnLog(ConcludeNode.class, "ConcludeNode.apply", "CONCLUDE_NODE",
+                        "总结 Agent 返回空结论", "topicId={} agent={}",
+                        topicId, concluder.getName());
                 throw new BizException(ErrorCode.TOPIC_CONCLUSION_FAILED, "总结 Agent 返回空结论");
             }
             // 结论中不应残留协作标记
@@ -220,6 +231,8 @@ public class ConcludeNode implements NodeAction {
         try {
             topic.rollbackToInProgress();
             topicRepository.update(topic);
+            LogHelper.printLog(ConcludeNode.class, "ConcludeNode.rollbackConclusion", "CONCLUDE_NODE",
+                    "讨论已回滚至IN_PROGRESS", "topicId={} 原因={}", topic.getId(), reason);
             pushTopicStatus(topic, "CONCLUDING");
         } catch (Exception ex) {
             LogHelper.printWarnLog(ConcludeNode.class, "ConcludeNode.rollbackConclusion", "CONCLUDE_NODE",
@@ -241,6 +254,8 @@ public class ConcludeNode implements NodeAction {
         notice.setContent(content);
         messageRepository.save(notice);
         groupBroadcastService.broadcast(groupId, WsConstants.NEW_MESSAGE, messageAssembler.toDto(notice));
+        LogHelper.printLog(ConcludeNode.class, "ConcludeNode.saveSystemNotice", "CONCLUDE_NODE",
+                "系统通知已入库广播", "groupId={} topicId={} messageId={}", groupId, topicId, notice.getId());
     }
 
     private void pushTopicStatus(Topic topic, String previousStatus) {
@@ -250,5 +265,8 @@ public class ConcludeNode implements NodeAction {
                 "title", topic.getTitle(),
                 "status", topic.getStatus().name(),
                 "previousStatus", previousStatus));
+        LogHelper.printLog(ConcludeNode.class, "ConcludeNode.pushTopicStatus", "CONCLUDE_NODE",
+                "主题状态变更已广播", "topicId={} {}→{}",
+                topic.getId(), previousStatus, topic.getStatus());
     }
 }

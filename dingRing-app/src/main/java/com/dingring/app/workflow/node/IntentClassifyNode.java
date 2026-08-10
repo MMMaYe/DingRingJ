@@ -73,6 +73,9 @@ public class IntentClassifyNode implements NodeAction {
 
         if (groupId == null || input == null || input.isBlank()) {
             // 防御性兜底：空输入按 CHAT 处理
+            LogHelper.printWarnLog(IntentClassifyNode.class, "IntentClassifyNode.apply", "INTENT_CLASSIFY",
+                    "缺少必要参数按CHAT兜底", "groupId={} inputLen={}",
+                    groupId, input == null ? 0 : input.length());
             Map<String, Object> result = new HashMap<>();
             result.put(StateKeys.INTENT, "CHAT");
             return result;
@@ -117,6 +120,8 @@ public class IntentClassifyNode implements NodeAction {
     private Agent loadRouteJudge(Long groupId) {
         Optional<Agent> judge = agentRepository.findRouteJudge();
         if (judge.isPresent()) {
+            LogHelper.printLog(IntentClassifyNode.class, "IntentClassifyNode.loadRouteJudge",
+                    "INTENT_CLASSIFY", "命中专职路由判定器", "judge={}", judge.get().getName());
             return judge.get();
         }
 

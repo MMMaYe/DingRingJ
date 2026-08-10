@@ -113,8 +113,13 @@ public class ChatNode implements NodeAction {
         // 选 Agent：@提及优先，否则评分最高
         Agent speaker = selectSpeaker(members, mentionedAgentIds, groupId);
         if (speaker == null) {
+            LogHelper.printWarnLog(ChatNode.class, "ChatNode.apply", "CHAT_NODE", "无可用发言Agent跳过",
+                    "groupId={} 成员数={} mentionedCount={}", groupId, members.size(), mentionedAgentIds.size());
             return Map.of();
         }
+        LogHelper.printLog(ChatNode.class, "ChatNode.apply", "CHAT_NODE", "发言Agent选择完成",
+                "groupId={} speaker={} mentionedCount={}",
+                groupId, speaker.getName(), mentionedAgentIds.size());
 
         // 构建上下文 + 调用 LLM 发言
         SpeakResult speakResult = speakOnce(speaker, members, groupId, input, mentionedAgentIds, repliedToAgentId);
@@ -154,8 +159,13 @@ public class ChatNode implements NodeAction {
                     .filter(a -> a.getId().equals(mentionId))
                     .findFirst().orElse(null);
             if (mentioned != null) {
+                LogHelper.printLog(ChatNode.class, "ChatNode.selectSpeaker", "CHAT_NODE",
+                        "@提及命中Agent", "groupId={} mentionId={} speaker={}",
+                        groupId, mentionId, mentioned.getName());
                 return mentioned;
             }
+            LogHelper.printWarnLog(ChatNode.class, "ChatNode.selectSpeaker", "CHAT_NODE",
+                    "@提及Agent不在群成员中降级评分", "groupId={} mentionId={}", groupId, mentionId);
         }
         // 无 @ 或 @ 的 Agent 不在群内：评分选最高
         MessageContext ctx = MessageContext.builder()
@@ -167,7 +177,15 @@ public class ChatNode implements NodeAction {
                 .speakCounts(Map.of())
                 .build();
         List<SpeakerScheduler.ScoredAgent> ranked = speakerScheduler.rank(members, ctx);
-        return ranked.isEmpty() ? null : ranked.get(0).agent();
+        if (ranked.isEmpty()) {
+            LogHelper.printWarnLog(ChatNode.class, "ChatNode.selectSpeaker", "CHAT_NODE",
+                    "评分无结果无可用Agent", "groupId={} 成员数={}", groupId, members.size());
+            return null;
+        }
+        LogHelper.printLog(ChatNode.class, "ChatNode.selectSpeaker", "CHAT_NODE", "评分选Agent完成",
+                "groupId={} speaker={} score={} reason={}",
+                groupId, ranked.get(0).agent().getName(), ranked.get(0).score(), ranked.get(0).reason());
+        return ranked.get(0).agent();
     }
 
     /**

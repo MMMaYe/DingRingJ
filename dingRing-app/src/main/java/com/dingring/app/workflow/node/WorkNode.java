@@ -105,8 +105,14 @@ public class WorkNode implements NodeAction {
 
         // Supervisor 模式需要至少 2 名成员（1 编排者 + 1 执行者），否则自动降级单 Agent
         if (supervisorEnabled && members.size() >= 2) {
+            LogHelper.printLog(WorkNode.class, "WorkNode.apply", "WORK_NODE",
+                    "选择 Supervisor 编排模式", "groupId={} supervisor={} 成员数={}",
+                    groupId, members.get(0).getName(), members.size());
             return executeWithSupervisor(state, groupId, input, group, members);
         }
+        LogHelper.printLog(WorkNode.class, "WorkNode.apply", "WORK_NODE",
+                "选择单 Agent 深度 ReAct 模式", "groupId={} workAgent={} supervisorEnabled={} 成员数={}",
+                groupId, members.get(0).getName(), supervisorEnabled, members.size());
         return executeWithSingleAgent(state, groupId, input, group, members.get(0));
     }
 
@@ -140,10 +146,17 @@ public class WorkNode implements NodeAction {
             context.put("ragQuery", input);
 
             // 深度 ReAct 执行（recursionLimit=40，ToolSet.WORK）
+            long callStart = System.currentTimeMillis();
+            LogHelper.printLog(WorkNode.class, "WorkNode.executeWithSingleAgent", "WORK_NODE",
+                    "开始调用工作 Agent 深度 ReAct", "groupId={} agent={} inputLen={}",
+                    groupId, workAgent.getName(), input.length());
             AgentSpeakerService.AgentResult result = agentSpeakerService.call(
                     workAgent, systemPrompt,
                     List.of(ChatTurn.user(input)),
                     AgentSpeakerService.ToolSet.WORK, context);
+            LogHelper.printLog(WorkNode.class, "WorkNode.executeWithSingleAgent", "WORK_NODE",
+                    "工作 Agent 调用完成", "groupId={} agent={} 耗时={}ms",
+                    groupId, workAgent.getName(), System.currentTimeMillis() - callStart);
 
             String workResult = result.content();
             if (workResult == null || workResult.isBlank()) {

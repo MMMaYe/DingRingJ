@@ -91,9 +91,18 @@ public class ProfileExtractNode implements NodeAction {
                 "触发画像提炼", "groupId={} 输入消息数={} extractor={}", groupId, recent.size(), extractor.getName());
 
         // 异步虚拟线程执行：不阻塞 StateGraph
-        Thread.ofVirtual().name("profile-extract-" + groupId).start(() ->
+        Thread.ofVirtual().name("profile-extract-" + groupId).start(() -> {
+            try {
                 profileService.extractAndMerge(GroupAppService.DEFAULT_USER_ID,
-                        extractor, groupName, dialogue));
+                        extractor, groupName, dialogue);
+                LogHelper.printLog(ProfileExtractNode.class, "ProfileExtractNode.asyncTask", "PROFILE_EXTRACT_NODE",
+                        "画像提炼完成", "groupId={} extractor={} 输入消息数={}",
+                        groupId, extractor.getName(), recent.size());
+            } catch (Exception e) {
+                LogHelper.printWarnLog(ProfileExtractNode.class, "ProfileExtractNode.asyncTask", "PROFILE_EXTRACT_NODE",
+                        "画像提炼失败", "groupId={} extractor={}", groupId, extractor.getName(), e);
+            }
+        });
 
         return Map.of();
     }
