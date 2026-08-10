@@ -112,6 +112,7 @@ public class SaaWorkflow implements DiscussionFlowService {
             strategies.put(StateKeys.TRIGGERED_BY, new ReplaceStrategy());
             // 讨论态运行时状态（替换策略——由 DiscussionEngine 维护，每次 advance 通过 inputs 传入）
             strategies.put(StateKeys.PASSED_AGENT_IDS, new ReplaceStrategy());
+            strategies.put(StateKeys.MENTION_HANDLED, new ReplaceStrategy());
             strategies.put(StateKeys.LOW_DISCUSS_STREAK, new ReplaceStrategy());
             strategies.put(StateKeys.SPEAKER_AGENT_ID, new ReplaceStrategy());
             strategies.put(StateKeys.ENSURE_SUCCESS, new ReplaceStrategy());

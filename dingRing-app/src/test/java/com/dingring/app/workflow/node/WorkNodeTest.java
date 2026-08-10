@@ -24,6 +24,7 @@ import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -96,6 +97,14 @@ class WorkNodeTest {
 
     private OverAllState stateWith(Long groupId, String input) {
         return new OverAllState(Map.of("groupId", groupId, "input", input));
+    }
+
+    private OverAllState stateWithMentioned(Long groupId, String input, List<Long> mentionedAgentIds) {
+        Map<String, Object> values = new HashMap<>();
+        values.put("groupId", groupId);
+        values.put("input", input);
+        values.put("mentionedAgentIds", mentionedAgentIds);
+        return new OverAllState(values);
     }
 
     @Test
@@ -184,5 +193,67 @@ class WorkNodeTest {
         assertThat(result).containsEntry("workResult", "降级结果");
         verify(agentSpeakerService).call(any(Agent.class), anyString(), anyList(),
                 org.mockito.ArgumentMatchers.eq(AgentSpeakerService.ToolSet.WORK), any(Map.class));
+    }
+
+    @Test
+    @DisplayName("单 Agent 模式：@ 提及优先于群首（用户点名的人来执行）")
+    void shouldPickMentionedAgentAsWorkAgent() {
+        Long groupId = 1L;
+        when(groupRepository.findById(groupId)).thenReturn(Optional.of(groupWithAgentIds(groupId, List.of(10L, 20L))));
+        when(agentRepository.findByIds(List.of(10L, 20L))).thenReturn(List.of(agent(10L, "柯南"), agent(20L, "灰原")));
+        when(agentSpeakerService.call(any(Agent.class), anyString(), anyList(),
+                any(AgentSpeakerService.ToolSet.class), any(Map.class)))
+                .thenReturn(AgentSpeakerService.AgentResult.of("被 @ 者结果"));
+
+        Map<String, Object> result = node.apply(stateWithMentioned(groupId, "@灰原 帮我画个图", List.of(20L)));
+
+        assertThat(result).containsEntry("workResult", "被 @ 者结果");
+        ArgumentCaptor<Agent> agentCaptor = ArgumentCaptor.forClass(Agent.class);
+        verify(agentSpeakerService).call(agentCaptor.capture(), anyString(), anyList(),
+                org.mockito.ArgumentMatchers.eq(AgentSpeakerService.ToolSet.WORK), any(Map.class));
+        assertThat(agentCaptor.getValue().getId()).isEqualTo(20L);
+        assertThat(agentCaptor.getValue().getName()).isEqualTo("灰原");
+    }
+
+    @Test
+    @DisplayName("单 Agent 模式：@ 提及对象不在群内时回退群首成员")
+    void shouldFallbackToFirstMemberWhenMentionedNotInGroup() {
+        Long groupId = 1L;
+        when(groupRepository.findById(groupId)).thenReturn(Optional.of(groupWithAgentIds(groupId, List.of(10L, 20L))));
+        when(agentRepository.findByIds(List.of(10L, 20L))).thenReturn(List.of(agent(10L, "柯南"), agent(20L, "灰原")));
+        when(agentSpeakerService.call(any(Agent.class), anyString(), anyList(),
+                any(AgentSpeakerService.ToolSet.class), any(Map.class)))
+                .thenReturn(AgentSpeakerService.AgentResult.of("群首结果"));
+
+        Map<String, Object> result = node.apply(stateWithMentioned(groupId, "@路人 帮我查资料", List.of(99L)));
+
+        assertThat(result).containsEntry("workResult", "群首结果");
+        ArgumentCaptor<Agent> agentCaptor = ArgumentCaptor.forClass(Agent.class);
+        verify(agentSpeakerService).call(agentCaptor.capture(), anyString(), anyList(),
+                org.mockito.ArgumentMatchers.eq(AgentSpeakerService.ToolSet.WORK), any(Map.class));
+        assertThat(agentCaptor.getValue().getId()).isEqualTo(10L);
+    }
+
+    @Test
+    @DisplayName("Supervisor 模式：@ 点名的成员作为编排者并注入点名提示")
+    void shouldPickMentionedAsSupervisorAndInjectNames() throws GraphRunnerException {
+        setSupervisorEnabled(true);
+        Long groupId = 1L;
+        when(groupRepository.findById(groupId)).thenReturn(Optional.of(groupWithAgentIds(groupId, List.of(10L, 20L))));
+        when(agentRepository.findByIds(List.of(10L, 20L))).thenReturn(List.of(agent(10L, "柯南"), agent(20L, "灰原")));
+
+        ReactAgent supervisor = mock(ReactAgent.class);
+        when(supervisorAgentFactory.buildSupervisor(any(Agent.class), anyString(), anyList()))
+                .thenReturn(supervisor);
+        when(supervisor.call(any(Map.class))).thenReturn(new AssistantMessage("汇总结果"));
+
+        Map<String, Object> result = node.apply(stateWithMentioned(groupId, "@灰原 生成一份调研报告", List.of(20L)));
+
+        assertThat(result).containsEntry("workResult", "汇总结果");
+        ArgumentCaptor<Agent> agentCaptor = ArgumentCaptor.forClass(Agent.class);
+        ArgumentCaptor<String> promptCaptor = ArgumentCaptor.forClass(String.class);
+        verify(supervisorAgentFactory).buildSupervisor(agentCaptor.capture(), promptCaptor.capture(), anyList());
+        assertThat(agentCaptor.getValue().getId()).isEqualTo(20L);
+        assertThat(promptCaptor.getValue()).contains("点名了「灰原」");
     }
 }

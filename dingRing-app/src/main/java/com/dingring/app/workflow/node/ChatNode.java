@@ -43,7 +43,7 @@ import java.util.UUID;
  * <p>设计要点（方案 6.3.2 简化 + 6.4 决策）：
  * <ul>
  *   <li>Phase C 简化：每次用户消息只回复一次（移除 autoReplies 循环，由 DiscussionEngine 多次调用 advance 实现）</li>
- *   <li>@提及时只选被 @ 的 Agent；否则用 SpeakerScheduler 评分选最高分者</li>
+ *   <li>统一走 SpeakerScheduler 评分选 Agent：@提及 +800 大权重加分通常优先，不再硬选；失败/空内容按评分顺延下一位</li>
  *   <li>chatBuffer 累积：由 DiscussionEngine 在 GroupState 中维护，每次调用 advance 时传入 inputs</li>
  *   <li>达阈值时设置 needProfileExtract=true，条件边分流到 profile-extract 节点</li>
  *   <li>流式输出（streaming.enabled=true）：逐块推送 MESSAGE_DELTA，完成推 MESSAGE_COMPLETE</li>
@@ -110,19 +110,19 @@ public class ChatNode implements NodeAction {
             return Map.of();
         }
 
-        // 选 Agent：@提及优先，否则评分最高
-        Agent speaker = selectSpeaker(members, mentionedAgentIds, groupId);
-        if (speaker == null) {
+        // 选 Agent：统一走调度评分（@提及 +800 大权重加分通常优先，但不再硬选首个）
+        List<SpeakerScheduler.ScoredAgent> ranked = rankSpeakers(members, mentionedAgentIds, groupId);
+        if (ranked.isEmpty()) {
             LogHelper.printWarnLog(ChatNode.class, "ChatNode.apply", "CHAT_NODE", "无可用发言Agent跳过",
                     "groupId={} 成员数={} mentionedCount={}", groupId, members.size(), mentionedAgentIds.size());
             return Map.of();
         }
-        LogHelper.printLog(ChatNode.class, "ChatNode.apply", "CHAT_NODE", "发言Agent选择完成",
-                "groupId={} speaker={} mentionedCount={}",
-                groupId, speaker.getName(), mentionedAgentIds.size());
+        LogHelper.printLog(ChatNode.class, "ChatNode.apply", "CHAT_NODE", "候选Agent排序完成",
+                "groupId={} 排序={}", groupId, ranked.stream()
+                        .map(s -> s.agent().getName() + "(" + s.score() + "," + s.reason() + ")").toList());
 
-        // 构建上下文 + 调用 LLM 发言
-        SpeakResult speakResult = speakOnce(speaker, members, groupId, input, mentionedAgentIds, repliedToAgentId);
+        // 按评分降序级联发言：被 @ 者通常优先，但失败/空内容时顺延下一位，不垄断、不整条报错
+        SpeakResult speakResult = speakOnceCascading(ranked, members, groupId, input, mentionedAgentIds, repliedToAgentId);
         if (!speakResult.success) {
             // 发言失败：所有 Agent 都失败，广播错误
             groupBroadcastService.broadcast(groupId, WsConstants.ERROR, Map.of(
@@ -150,24 +150,10 @@ public class ChatNode implements NodeAction {
     }
 
     /**
-     * 选发言 Agent：@提及时选被 @ 的第一个，否则用 SpeakerScheduler 评分选最高分者。
+     * 候选 Agent 评分排序：统一走 {@link SpeakerScheduler}（@提及 +800 大权重加分通常优先，
+     * 但不再硬选首个被 @ 者），返回按分数降序的完整候选列表供级联发言。
      */
-    private Agent selectSpeaker(List<Agent> members, List<Long> mentionedAgentIds, Long groupId) {
-        if (mentionedAgentIds != null && !mentionedAgentIds.isEmpty()) {
-            Long mentionId = mentionedAgentIds.get(0);
-            Agent mentioned = members.stream()
-                    .filter(a -> a.getId().equals(mentionId))
-                    .findFirst().orElse(null);
-            if (mentioned != null) {
-                LogHelper.printLog(ChatNode.class, "ChatNode.selectSpeaker", "CHAT_NODE",
-                        "@提及命中Agent", "groupId={} mentionId={} speaker={}",
-                        groupId, mentionId, mentioned.getName());
-                return mentioned;
-            }
-            LogHelper.printWarnLog(ChatNode.class, "ChatNode.selectSpeaker", "CHAT_NODE",
-                    "@提及Agent不在群成员中降级评分", "groupId={} mentionId={}", groupId, mentionId);
-        }
-        // 无 @ 或 @ 的 Agent 不在群内：评分选最高
+    private List<SpeakerScheduler.ScoredAgent> rankSpeakers(List<Agent> members, List<Long> mentionedAgentIds, Long groupId) {
         MessageContext ctx = MessageContext.builder()
                 .groupId(groupId)
                 .topicId(null)
@@ -176,16 +162,27 @@ public class ChatNode implements NodeAction {
                 .repliedToAgentId(null)
                 .speakCounts(Map.of())
                 .build();
-        List<SpeakerScheduler.ScoredAgent> ranked = speakerScheduler.rank(members, ctx);
-        if (ranked.isEmpty()) {
-            LogHelper.printWarnLog(ChatNode.class, "ChatNode.selectSpeaker", "CHAT_NODE",
-                    "评分无结果无可用Agent", "groupId={} 成员数={}", groupId, members.size());
-            return null;
+        return speakerScheduler.rank(members, ctx);
+    }
+
+    /**
+     * 按评分降序级联发言：首位（通常为被 @ 者）失败/空内容时顺延下一位，
+     * 被 @ 者不垄断发言；全部候选都失败才返回失败。
+     */
+    private SpeakResult speakOnceCascading(List<SpeakerScheduler.ScoredAgent> ranked, List<Agent> members, Long groupId,
+                                           String input, List<Long> mentionedAgentIds, Long repliedToAgentId) {
+        for (int i = 0; i < ranked.size(); i++) {
+            SpeakerScheduler.ScoredAgent scored = ranked.get(i);
+            Agent agent = scored.agent();
+            LogHelper.printLog(ChatNode.class, "ChatNode.speakOnceCascading", "CHAT_NODE", "候选发言 降级链位置",
+                    "index={}/{} agent={} score={} reason={}",
+                    i + 1, ranked.size(), agent.getName(), scored.score(), scored.reason());
+            SpeakResult result = speakOnce(agent, members, groupId, input, mentionedAgentIds, repliedToAgentId);
+            if (result.success) {
+                return result;
+            }
         }
-        LogHelper.printLog(ChatNode.class, "ChatNode.selectSpeaker", "CHAT_NODE", "评分选Agent完成",
-                "groupId={} speaker={} score={} reason={}",
-                groupId, ranked.get(0).agent().getName(), ranked.get(0).score(), ranked.get(0).reason());
-        return ranked.get(0).agent();
+        return new SpeakResult(false);
     }
 
     /**

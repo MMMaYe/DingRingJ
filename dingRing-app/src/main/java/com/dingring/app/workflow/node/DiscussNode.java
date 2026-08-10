@@ -95,6 +95,7 @@ public class DiscussNode implements NodeAction {
         int divergeRounds = state.value(StateKeys.DIVERGE_ROUNDS, 0);
         int maxDivergeRounds = state.value("maxDivergeRounds", 3);
         List<Long> mentionedAgentIds = state.value(StateKeys.MENTIONED_AGENT_IDS, List.<Long>of());
+        boolean mentionHandled = state.value(StateKeys.MENTION_HANDLED, false);
         Long repliedToAgentId = state.<Long>value(StateKeys.REPLIED_TO_AGENT_ID).orElse(null);
 
         // 用 HashMap 而非 Map.of：topicId/groupId 可能为 null（如未建题被误路由时），
@@ -106,6 +107,7 @@ public class DiscussNode implements NodeAction {
         logMap.put("divergeRounds", divergeRounds);
         logMap.put("maxDivergeRounds", maxDivergeRounds);
         logMap.put("mentionedAgentIds", mentionedAgentIds);
+        logMap.put("mentionHandled", mentionHandled);
         LogHelper.printLog(DiscussNode.class, "DiscussNode.apply", "DISCUSS_NODE", "讨论推进开始",
                 "request={}", JsonHelper.mapToJsonStr(logMap));
 
@@ -133,12 +135,17 @@ public class DiscussNode implements NodeAction {
             return concludeResult(topicId, "FAILED", null);
         }
 
-        // @提及的 Agent 即使已 PASS 也应答一次：从 passedAgentIds 中移除
+        // @提及的 Agent 保证一次发言权：仅在豁免未消费（mentionHandled=false）时从 passedAgentIds 移除一次，
+        // 本轮结束即消费豁免，后续轮次按正常 PASS/轮转逻辑处理
+        boolean mentionExempted = false;
         Set<Long> passedSet = new HashSet<>(passedAgentIds);
         Long mentionId = (mentionedAgentIds != null && !mentionedAgentIds.isEmpty())
                 ? mentionedAgentIds.get(0) : null;
-        if (mentionId != null) {
+        if (mentionId != null && !mentionHandled) {
             passedSet.remove(mentionId);
+            mentionExempted = true;
+            LogHelper.printLog(DiscussNode.class, "DiscussNode.apply", "DISCUSS_NODE", "@提及豁免一次PASS",
+                    "topicId={} mentionId={}", topicId, mentionId);
         }
 
         // 过滤候选：排除已 PASS 的
@@ -202,6 +209,8 @@ public class DiscussNode implements NodeAction {
                 return concludeResult(topicId, "FAILED", null);
             }
         }
+        // 记录 @提及一次性发言权是否已消费（本轮被豁免即视为消费；未被豁免则透传原值）
+        result.put(StateKeys.MENTION_HANDLED, mentionExempted ? Boolean.TRUE : mentionHandled);
         return result;
     }
 

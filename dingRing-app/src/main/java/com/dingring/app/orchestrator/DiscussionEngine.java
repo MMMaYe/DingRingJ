@@ -53,6 +53,8 @@ public class DiscussionEngine {
         String discussMode;
         /** 本轮已 PASS 的 Agent ID 列表（有人发言即清空） */
         List<Long> passedAgentIds = List.of();
+        /** @提及的一次性发言权是否已消费（新用户消息含提及时重置，发言/跳过一次后置 true） */
+        boolean mentionHandled;
         /** 连续低置信度 DISCUSS 计数（追溯式建题） */
         int lowDiscussStreak;
         /** 闲聊缓冲计数（达阈值触发画像提炼） */
@@ -227,6 +229,9 @@ public class DiscussionEngine {
         inputs.put(StateKeys.LOW_DISCUSS_STREAK, state.lowDiscussStreak);
         inputs.put(StateKeys.CHAT_BUFFER, state.chatBuffer);
         inputs.put(StateKeys.DIVERGE_ROUNDS, state.divergeRounds);
+        // @提及一次性发言权：新用户消息含提及时重置（重新豁免一次），否则透传原值
+        boolean hasMention = signal.mentionedAgentIds() != null && !signal.mentionedAgentIds().isEmpty();
+        inputs.put(StateKeys.MENTION_HANDLED, hasMention ? Boolean.FALSE : state.mentionHandled);
         return discussionFlowService.advance(rules, inputs);
     }
 
@@ -239,6 +244,7 @@ public class DiscussionEngine {
         inputs.put(StateKeys.MENTIONED_AGENT_IDS, List.of());
         inputs.put(StateKeys.PASSED_AGENT_IDS, state.passedAgentIds);
         inputs.put(StateKeys.DIVERGE_ROUNDS, state.divergeRounds);
+        inputs.put(StateKeys.MENTION_HANDLED, state.mentionHandled);
         return discussionFlowService.advance(rules, inputs);
     }
 
@@ -290,6 +296,8 @@ public class DiscussionEngine {
         if (buffer instanceof Integer) state.chatBuffer = (Integer) buffer;
         Object rounds = result.state().get(StateKeys.DIVERGE_ROUNDS);
         if (rounds instanceof Integer) state.divergeRounds = (Integer) rounds;
+        Object handled = result.state().get(StateKeys.MENTION_HANDLED);
+        if (handled instanceof Boolean) state.mentionHandled = (Boolean) handled;
     }
 
     /** 根据讨论模式决定 poll 超时：DIVERGE=divergePaceMs，其他=阻塞等待 */

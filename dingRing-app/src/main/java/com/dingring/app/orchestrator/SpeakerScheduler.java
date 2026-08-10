@@ -15,8 +15,8 @@ import java.util.concurrent.ThreadLocalRandom;
 @Component
 public class SpeakerScheduler {
 
-    /** @提及短路分 */
-    private static final int MENTION_SCORE = 1000;
+    /** @提及大权重加分（不短路，参与统一评分排序；被 @ 者通常优先但非绝对垄断） */
+    private static final int MENTION_BOOST = 800;
     /** 引用提升分 */
     private static final int REPLY_BONUS = 500;
     /** 自由基础分 */
@@ -41,10 +41,10 @@ public class SpeakerScheduler {
     }
 
     /**
-     * 最终分数 = @提及分 + 引用提升分 + 自由基础分 - 轮次均衡惩罚 + 随机扰动
-     * <p>优先级规则（短路，从上到下）：
+     * 最终分数 = 自由基础分 + @提及加分 + 引用提升分 - 轮次均衡惩罚 + 随机扰动
+     * <p>评分规则（统一排序，无短路）：
      * <ol>
-     * <li>@提及 → 直接返回 1000（最高优先级，短路）</li>
+     * <li>@提及 → +800（大权重加分，通常优先；不再短路，避免"被 @ 即无条件垄断"）</li>
      * <li>引用回复 → +500</li>
      * <li>自由基础分 → 100</li>
      * <li>轮次均衡惩罚 → -speakCount * 10</li>
@@ -52,11 +52,11 @@ public class SpeakerScheduler {
      * </ol>
      */
     int calculateScore(Agent agent, MessageContext ctx) {
-        // 规则1：@提及短路
-        if (ctx.isMentioned(agent.getId())) {
-            return MENTION_SCORE;
-        }
         int score = BASE_SCORE; // 规则3：自由基础分
+        // 规则1：@提及大权重加分
+        if (ctx.isMentioned(agent.getId())) {
+            score += MENTION_BOOST;
+        }
         // 规则2：引用提升
         if (agent.getId().equals(ctx.getRepliedToAgentId())) {
             score += REPLY_BONUS;

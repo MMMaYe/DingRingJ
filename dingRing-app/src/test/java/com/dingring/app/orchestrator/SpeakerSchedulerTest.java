@@ -12,7 +12,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * {@link SpeakerScheduler} 调度算法单元测试。
- * <p>评分公式：@提及(1000) > 引用回复(+500) > 自由(100) - 轮次惩罚(*10) + 随机(0~20)
+ * <p>评分公式：自由(100) + @提及(+800) + 引用回复(+500) - 轮次惩罚(*10) + 随机(0~20)，统一排序无短路
  */
 @DisplayName("SpeakerScheduler 调度算法")
 class SpeakerSchedulerTest {
@@ -31,8 +31,8 @@ class SpeakerSchedulerTest {
     class CalculateScore {
 
         @Test
-        @DisplayName("@提及短路返回 1000")
-        void mentionedAgentShouldGetMentionScore() {
+        @DisplayName("@提及 +800 大权重加分（基础 100 + 提及 800 + 随机 0~20 = [900, 920]）")
+        void mentionedAgentShouldGetMentionBoost() {
             Agent a = agent(10L, "老王");
             MessageContext ctx = MessageContext.builder()
                     .mentionedAgentIds(List.of(10L))
@@ -41,7 +41,7 @@ class SpeakerSchedulerTest {
 
             int score = scheduler.calculateScore(a, ctx);
 
-            assertThat(score).isEqualTo(1000);
+            assertThat(score).isBetween(900, 920);
         }
 
         @Test
@@ -87,8 +87,8 @@ class SpeakerSchedulerTest {
         }
 
         @Test
-        @DisplayName("@提及优先级高于引用回复（即使被引用也不加 500）")
-        void mentionShouldShortCircuitReplyBonus() {
+        @DisplayName("@提及加分与引用叠加（不再短路：100 + 800 + 500 - 50 + 随机 = [1350, 1370]）")
+        void mentionShouldStackWithReplyBonus() {
             Agent a = agent(10L, "老王");
             MessageContext ctx = MessageContext.builder()
                     .mentionedAgentIds(List.of(10L))
@@ -98,8 +98,8 @@ class SpeakerSchedulerTest {
 
             int score = scheduler.calculateScore(a, ctx);
 
-            // @提及短路，引用与惩罚都不生效
-            assertThat(score).isEqualTo(1000);
+            // @提及 +800 与引用 +500 叠加生效，轮次惩罚 50 也生效（无短路）
+            assertThat(score).isBetween(1350, 1370);
         }
     }
 
@@ -121,7 +121,7 @@ class SpeakerSchedulerTest {
 
             assertThat(ranked.get(0).agent()).isEqualTo(a2);
             assertThat(ranked.get(0).reason()).isEqualTo("MENTIONED");
-            assertThat(ranked.get(0).score()).isEqualTo(1000);
+            assertThat(ranked.get(0).score()).isBetween(900, 920);
         }
 
         @Test
@@ -162,7 +162,7 @@ class SpeakerSchedulerTest {
 
             List<SpeakerScheduler.ScoredAgent> ranked = scheduler.rank(List.of(free, replied, mentioned), ctx);
 
-            // 按分数降序：老王(MENTIONED,1000) > 小李(REPLIED,600~620) > 小张(FREE,100~120)
+            // 按分数降序：老王(MENTIONED,900~920) > 小李(REPLIED,600~620) > 小张(FREE,100~120)
             assertThat(ranked.get(0).agent().getName()).isEqualTo("老王");
             assertThat(ranked.get(0).reason()).isEqualTo("MENTIONED");
             assertThat(ranked.get(1).agent().getName()).isEqualTo("小李");

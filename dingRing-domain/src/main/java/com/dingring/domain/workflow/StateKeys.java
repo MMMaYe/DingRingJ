@@ -42,6 +42,7 @@ public final class StateKeys {
 
     // === 讨论态运行时状态（由 DiscussionEngine 维护，每次 advance 通过 inputs 传入） ===
     public static final String PASSED_AGENT_IDS = "passedAgentIds";     // 本轮已 PASS 的 Agent ID 列表（有人发言即清空）
+    public static final String MENTION_HANDLED = "mentionHandled";     // @提及的一次性发言权是否已消费（true 后不再豁免 PASS）
     public static final String LOW_DISCUSS_STREAK = "lowDiscussStreak";  // 连续低置信度 DISCUSS 计数（追溯式建题）
     public static final String SPEAKER_AGENT_ID = "speakerAgentId";     // 本轮实际发言 Agent ID（用于事件回放/调试）
     public static final String ENSURE_SUCCESS = "ensureSuccess";       // 建题是否成功（false 时条件边回退到 chat 节点）

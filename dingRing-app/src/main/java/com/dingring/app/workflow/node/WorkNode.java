@@ -103,17 +103,40 @@ public class WorkNode implements NodeAction {
             return Map.of();
         }
 
+        // 选工作 Agent：优先被 @ 提及的 Agent（用户明确指派对象），否则群首成员
+        List<Long> mentionedAgentIds = state.value(StateKeys.MENTIONED_AGENT_IDS, List.<Long>of());
+        Agent workAgent = pickWorkAgent(members, mentionedAgentIds);
+        LogHelper.printLog(WorkNode.class, "WorkNode.apply", "WORK_NODE",
+                "选定工作 Agent", "groupId={} workAgent={} mentioned={}",
+                groupId, workAgent.getName(), mentionedAgentIds);
+
         // Supervisor 模式需要至少 2 名成员（1 编排者 + 1 执行者），否则自动降级单 Agent
         if (supervisorEnabled && members.size() >= 2) {
             LogHelper.printLog(WorkNode.class, "WorkNode.apply", "WORK_NODE",
                     "选择 Supervisor 编排模式", "groupId={} supervisor={} 成员数={}",
-                    groupId, members.get(0).getName(), members.size());
-            return executeWithSupervisor(state, groupId, input, group, members);
+                    groupId, workAgent.getName(), members.size());
+            return executeWithSupervisor(state, groupId, input, group, members, workAgent, mentionedAgentIds);
         }
         LogHelper.printLog(WorkNode.class, "WorkNode.apply", "WORK_NODE",
                 "选择单 Agent 深度 ReAct 模式", "groupId={} workAgent={} supervisorEnabled={} 成员数={}",
-                groupId, members.get(0).getName(), supervisorEnabled, members.size());
-        return executeWithSingleAgent(state, groupId, input, group, members.get(0));
+                groupId, workAgent.getName(), supervisorEnabled, members.size());
+        return executeWithSingleAgent(state, groupId, input, group, workAgent);
+    }
+
+    /**
+     * 选择执行任务的 Agent：优先用户 @ 提及的群成员（首个命中，按提及顺序），
+     * 无提及或提及对象不在群内时回退群首成员。
+     */
+    private Agent pickWorkAgent(List<Agent> members, List<Long> mentionedAgentIds) {
+        if (mentionedAgentIds != null && !mentionedAgentIds.isEmpty()) {
+            for (Long id : mentionedAgentIds) {
+                Agent hit = members.stream().filter(m -> m.getId().equals(id)).findFirst().orElse(null);
+                if (hit != null) {
+                    return hit;
+                }
+            }
+        }
+        return members.get(0);
     }
 
     /**
@@ -219,10 +242,12 @@ public class WorkNode implements NodeAction {
      * 保证 WORK 意图不因编排故障而完全不可用（方案十一：WorkNode 降级为单 Agent）。
      */
     private Map<String, Object> executeWithSupervisor(OverAllState state, Long groupId, String input,
-                                                      Group group, List<Agent> members) {
-        // 群首成员作为编排者（模型配置来源），其余成员作为执行者
-        Agent supervisorAgent = members.get(0);
-        List<Agent> workers = members.subList(1, members.size());
+                                                      Group group, List<Agent> members, Agent supervisorAgent,
+                                                      List<Long> mentionedAgentIds) {
+        // 群首/被 @ 成员作为编排者（模型配置来源），其余成员作为执行者
+        List<Agent> workers = members.stream()
+                .filter(m -> !m.getId().equals(supervisorAgent.getId()))
+                .toList();
 
         // 通知群聊：任务开始（WORK_TASK_STARTED 前端 toast 提示）
         broadcastWorkTaskStarted(groupId, supervisorAgent, input, true);
@@ -235,7 +260,8 @@ public class WorkNode implements NodeAction {
 
         try {
             // 构建 Supervisor：worker 成员名清单注入提示词，供其按名委派
-            String supervisorPrompt = buildSupervisorPrompt(supervisorAgent, workers);
+            String supervisorPrompt = buildSupervisorPrompt(supervisorAgent, workers,
+                    resolveMentionedNames(members, mentionedAgentIds));
             ReactAgent supervisor = supervisorAgentFactory.buildSupervisor(supervisorAgent, supervisorPrompt, workers);
 
             // 注入群上下文：Supervisor 的 state 依赖 Hook（记忆/画像/名单/RAG）靠这些 key 工作
@@ -245,6 +271,7 @@ public class WorkNode implements NodeAction {
             inputs.put("userId", 1L);
             inputs.put("speakerAgentId", supervisorAgent.getId());
             inputs.put("ragQuery", input);
+            inputs.put(StateKeys.MENTIONED_AGENT_IDS, mentionedAgentIds);
 
             LogHelper.printLog(WorkNode.class, "executeWithSupervisor", "WORK_NODE",
                     "Supervisor 委派执行开始", "groupId={} supervisor={} workers={}",
@@ -294,7 +321,7 @@ public class WorkNode implements NodeAction {
     }
 
     /** 构建 Supervisor systemPrompt（编排者人设 + 拆解/委派/汇总协议 + 可委派成员清单） */
-    private String buildSupervisorPrompt(Agent supervisorAgent, List<Agent> workers) {
+    private String buildSupervisorPrompt(Agent supervisorAgent, List<Agent> workers, List<String> mentionedNames) {
         StringBuilder sp = new StringBuilder();
         if (supervisorAgent.getSystemPrompt() != null && !supervisorAgent.getSystemPrompt().isBlank()) {
             sp.append(supervisorAgent.getSystemPrompt()).append("\n\n");
@@ -305,8 +332,22 @@ public class WorkNode implements NodeAction {
         sp.append("3. 委派时在参数中携带必要上下文（群 ID、任务背景），保证执行者理解任务；\n");
         sp.append("4. 收集所有子任务结果后，汇总为完整的最终答案输出。\n");
         sp.append("可委派的执行者：" + workers.stream().map(Agent::getName).reduce((a, b) -> a + "、" + b).orElse("无") + "\n");
+        if (mentionedNames != null && !mentionedNames.isEmpty()) {
+            sp.append("用户本次任务点名了「" + String.join("、", mentionedNames) + "」，请优先将该成员作为主要执行者委派。\n");
+        }
         sp.append("群成员之间各有专长，请让合适的成员处理合适的问题。");
         return sp.toString();
+    }
+
+    /** 将 @ 提及的 Agent ID 解析为花名（仅保留群内成员，便于提示词点名） */
+    private List<String> resolveMentionedNames(List<Agent> members, List<Long> mentionedAgentIds) {
+        if (mentionedAgentIds == null || mentionedAgentIds.isEmpty()) {
+            return List.of();
+        }
+        return mentionedAgentIds.stream()
+                .flatMap(id -> members.stream().filter(m -> m.getId().equals(id)))
+                .map(Agent::getName)
+                .toList();
     }
 
     /** 工作结果入库广播（Supervisor 产出以编排者身份发言） */
