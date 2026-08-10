@@ -184,3 +184,40 @@ export interface CreateGroupRequest {
 export interface UpdateMembersRequest {
   agentIds: number[];
 }
+
+// ---- SKILL ----
+export interface SkillDTO {
+  id: number;
+  name: string;
+  description: string | null;
+  /** 工具集标识（逗号分隔的原始串） */
+  toolNames: string | null;
+  /** 解析后的工具名列表 */
+  toolNameList: string[];
+  /** 附加系统提示词 */
+  systemPrompt: string | null;
+  /** 作用域：GLOBAL（全局生效） / AGENT（绑定 Agent） */
+  scope: 'GLOBAL' | 'AGENT';
+  /** scope=AGENT 时绑定的 Agent ID */
+  agentId: number | null;
+  /** 状态：ACTIVE / INACTIVE */
+  status: 'ACTIVE' | 'INACTIVE';
+  createTime: string;
+  updateTime: string;
+}
+
+/** SKILL 创建/修改统一请求（与后端 SaveSkillRequest 对齐） */
+export interface SaveSkillRequest {
+  name: string;
+  description?: string;
+  /** 工具集标识（逗号分隔，如 "searchKnowledge,queryUserProfile"） */
+  toolNames?: string;
+  /** 附加系统提示词 */
+  systemPrompt?: string;
+  /** 作用域：GLOBAL / AGENT，缺省 GLOBAL */
+  scope?: 'GLOBAL' | 'AGENT';
+  /** scope=AGENT 时绑定的 Agent ID */
+  agentId?: number | null;
+  /** 状态：ACTIVE / INACTIVE */
+  status?: 'ACTIVE' | 'INACTIVE';
+}

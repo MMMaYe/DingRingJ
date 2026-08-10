@@ -1,0 +1,128 @@
+/* Skills page styles（editorial 风格，与 Agents 页保持一致的视觉语言） */
+
+/* ---- 技能卡片列表 ---- */
+.skill-list { display: flex; flex-direction: column; gap: 10px; }
+
+.skill-card {
+  display: flex; gap: 16px;
+  padding: 16px;
+  border: 1px solid var(--border-neutral-l1);
+  border-radius: 12px;
+  background: var(--bg-base-secondary);
+  transition: border-color .15s, transform .15s;
+  animation: skill-card-in .35s cubic-bezier(.16, 1, .3, 1) both;
+}
+.skill-card:hover { border-color: var(--border-neutral-l2); }
+@keyframes skill-card-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.skill-card__index {
+  flex-shrink: 0;
+  width: 28px; padding-top: 2px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 12px; color: var(--text-tertiary);
+}
+
+.skill-card__body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+
+.skill-card__name-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.skill-card__name { font-size: 14px; font-weight: 600; color: var(--text-default); }
+
+.skill-card__desc {
+  font-size: 12px; color: var(--text-secondary); line-height: 18px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+.skill-card__tags { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+
+.skill-card__prompt {
+  display: flex; align-items: baseline; gap: 8px;
+  padding: 8px 10px;
+  background: var(--bg-base-tertiary);
+  border-left: 2px solid var(--border-brand);
+  border-radius: 6px;
+}
+.skill-card__prompt-label {
+  flex-shrink: 0;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10px; letter-spacing: .04em;
+  color: var(--text-brand); text-transform: uppercase;
+}
+.skill-card__prompt-text {
+  font-size: 12px; color: var(--text-secondary); line-height: 18px;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.skill-card__right {
+  flex-shrink: 0;
+  display: flex; flex-direction: column; align-items: flex-end; justify-content: space-between; gap: 8px;
+}
+.skill-card__actions { display: flex; gap: 6px; }
+.skill-card__meta { font-size: 11px; color: var(--text-tertiary); }
+
+/* ---- tag 变体（仅本页使用） ---- */
+.tag--muted { background: var(--bg-overlay-l2); color: var(--text-tertiary); }
+.tag--code {
+  font-family: "JetBrains Mono", monospace; font-size: 11px;
+  background: var(--bg-overlay-l2); color: var(--text-secondary);
+}
+.tag--ghost { background: transparent; border: 1px dashed var(--border-neutral-l2); color: var(--text-tertiary); }
+
+.form-hint { display: block; margin-top: 6px; font-size: 11px; color: var(--text-tertiary); }
+
+/* ---- 工具多选 ---- */
+.tool-picker { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+.tool-option {
+  position: relative;
+  display: flex; flex-direction: column; gap: 3px;
+  padding: 10px 12px 10px 28px;
+  background: var(--bg-base-tertiary);
+  border: 1px solid var(--border-neutral-l2);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: border-color .15s, background .15s;
+  text-align: left;
+  font-family: inherit;
+}
+.tool-option:hover { border-color: var(--border-brand); background: var(--bg-overlay-l1); }
+.tool-option.is-active { border-color: var(--border-brand); background: var(--bg-brand-popup); }
+.tool-option__check {
+  position: absolute; left: 9px; top: 10px;
+  width: 14px; height: 14px;
+  border: 1px solid var(--border-neutral-l2);
+  border-radius: 4px;
+  font-size: 10px; line-height: 14px; text-align: center;
+  color: transparent;
+  background: var(--bg-base-secondary);
+}
+.tool-option.is-active .tool-option__check {
+  border-color: var(--border-brand);
+  background: var(--bg-brand);
+  color: var(--text-on-brand, #fff);
+}
+.tool-option__title { font-size: 12px; font-weight: 600; color: var(--text-default-hover); }
+.tool-option.is-active .tool-option__title { color: var(--text-brand); }
+.tool-option__name { font-family: "JetBrains Mono", monospace; font-size: 10px; color: var(--text-tertiary); }
+.tool-option__desc { font-size: 11px; color: var(--text-tertiary); line-height: 15px; }
+
+/* ---- 作用域 / 状态二选一 ---- */
+.scope-picker { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.scope-option {
+  display: flex; flex-direction: column; gap: 3px;
+  padding: 10px 12px;
+  background: var(--bg-base-tertiary);
+  border: 1px solid var(--border-neutral-l2);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: border-color .15s, background .15s;
+  text-align: left;
+  font-family: inherit;
+}
+.scope-option:hover { border-color: var(--border-brand); background: var(--bg-overlay-l1); }
+.scope-option.is-active { border-color: var(--border-brand); background: var(--bg-brand-popup); }
+.scope-option__title { font-size: 13px; font-weight: 600; color: var(--text-default-hover); }
+.scope-option.is-active .scope-option__title { color: var(--text-brand); }
+.scope-option__desc { font-size: 11px; color: var(--text-tertiary); line-height: 15px; }
