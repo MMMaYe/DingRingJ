@@ -18,6 +18,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -56,9 +57,12 @@ public class ProfileExtractNode implements NodeAction {
         Long groupId = state.<Long>value(StateKeys.GROUP_ID).orElse(null);
         int profileThreshold = state.value("profileExtractThreshold", 15);
 
+        // 用 HashMap 而非 Map.of：groupId 可能为 null（防御性日志不应在入口先抛 NPE）
+        Map<String, Object> logMap = new HashMap<>();
+        logMap.put("groupId", groupId);
+        logMap.put("profileThreshold", profileThreshold);
         LogHelper.printLog(ProfileExtractNode.class, "ProfileExtractNode.apply", "PROFILE_EXTRACT_NODE",
-                "画像提炼开始", "request={}", JsonHelper.mapToJsonStr(Map.of(
-                        "groupId", groupId, "profileThreshold", profileThreshold)));
+                "画像提炼开始", "request={}", JsonHelper.mapToJsonStr(logMap));
 
         if (groupId == null) {
             LogHelper.printWarnLog(ProfileExtractNode.class, "ProfileExtractNode.apply", "PROFILE_EXTRACT_NODE",

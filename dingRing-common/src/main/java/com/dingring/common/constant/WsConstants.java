@@ -34,5 +34,7 @@ public final class WsConstants {
     public static final String WORK_CONFIRM_REQUEST = "WORK_CONFIRM_REQUEST";
     /** WORK 任务开始 {groupId, agentName, taskDescription, supervisorMode}，WORK 意图触发时推送 */
     public static final String WORK_TASK_STARTED = "WORK_TASK_STARTED";
+    /** 图流程节点推进事件 {node, nodeName, status, elapsedMs, state}，由 SaaWorkflow.stream() 驱动，供前端渲染流程步骤条 */
+    public static final String FLOW_EVENT = "FLOW_EVENT";
     public static final String ERROR = "ERROR";
 }

@@ -16,6 +16,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.WebSocketSession;
 
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -44,8 +45,13 @@ public class WsMessageDispatcher {
             JsonNode root = objectMapper.readTree(payload);
             String type = root.path("type").asText("");
             JsonNode data = root.path("data");
+            // 用 HashMap 而非 Map.of：groupId 可能为 null（防御性日志不应在入口先抛 NPE）
+            Map<String, Object> inboundMap = new HashMap<>();
+            inboundMap.put("groupId", groupId);
+            inboundMap.put("type", type);
+            inboundMap.put("payload", payload);
             LogHelper.printLog(WsMessageDispatcher.class, "WsMessageDispatcher.dispatch", "DISPATCH", "收到入站消息",
-                    JsonHelper.mapToJsonStr(Map.of("groupId", groupId, "type", type, "payload", payload)));
+                    JsonHelper.mapToJsonStr(inboundMap));
             switch (type) {
                 case WsConstants.SEND_MESSAGE -> chatOrchestrator.onUserMessage(
                         groupId, GroupAppService.DEFAULT_USER_ID,

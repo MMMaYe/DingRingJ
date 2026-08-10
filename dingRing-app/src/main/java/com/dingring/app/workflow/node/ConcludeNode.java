@@ -74,12 +74,15 @@ public class ConcludeNode implements NodeAction {
         String triggeredBy = state.value(StateKeys.TRIGGERED_BY, "USER");
         Long designatedConcluderId = state.<Long>value(StateKeys.CONCLUDER_AGENT_ID).orElse(null);
 
+        // 用 HashMap 而非 Map.of：topicId 可能为 null（无活跃主题被误路由进收束），
+        // Map.of 会在日志处先抛 NPE，掩盖下方真正的防御校验（缺少必要参数 topicId）
+        Map<String, Object> logMap = new HashMap<>();
+        logMap.put("topicId", topicId);
+        logMap.put("groupId", groupId);
+        logMap.put("triggeredBy", triggeredBy);
+        logMap.put("designatedConcluderId", designatedConcluderId);
         LogHelper.printLog(ConcludeNode.class, "ConcludeNode.apply", "CONCLUDE_NODE", "收束开始",
-                "request={}", JsonHelper.mapToJsonStr(Map.of(
-                        "topicId", topicId,
-                        "groupId", groupId,
-                        "triggeredBy", triggeredBy,
-                        "designatedConcluderId", designatedConcluderId)));
+                "request={}", JsonHelper.mapToJsonStr(logMap));
 
         if (topicId == null) {
             throw new IllegalStateException("ConcludeNode 缺少必要参数 topicId");

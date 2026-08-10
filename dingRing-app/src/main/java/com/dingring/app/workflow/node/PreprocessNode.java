@@ -51,8 +51,12 @@ public class PreprocessNode implements NodeAction {
         Long groupId = state.<Long>value(StateKeys.GROUP_ID).orElse(null);
         String input = state.value(StateKeys.INPUT, "");
 
+        // 用 HashMap 而非 Map.of：groupId 可能为 null（防御性日志不应在入口先抛 NPE）
+        Map<String, Object> logMap = new HashMap<>();
+        logMap.put("groupId", groupId);
+        logMap.put("inputLen", input == null ? 0 : input.length());
         LogHelper.printLog(PreprocessNode.class, "PreprocessNode.apply", "PREPROCESS", "预处理开始",
-                "request={}", JsonHelper.mapToJsonStr(Map.of("groupId", groupId, "inputLen", input == null ? 0 : input.length())));
+                "request={}", JsonHelper.mapToJsonStr(logMap));
 
         if (groupId == null) {
             throw new IllegalStateException("PreprocessNode 缺少必要参数 groupId");

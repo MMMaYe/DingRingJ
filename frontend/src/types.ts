@@ -160,6 +160,21 @@ export interface TopicStatusPayload {
   restartHint: string;
 }
 
+/** FLOW_EVENT 事件：图流程节点推进（可观测性步骤条） */
+export interface FlowEventPayload {
+  /** 图节点 ID（preprocess/intent-classify/chat/ensure-topic/discuss/work/conclude/sediment/error） */
+  node: string;
+  /** 节点展示名（后端映射） */
+  nodeName: string;
+  status: 'SUCCESS' | 'ERROR' | 'END';
+  /** 本节点耗时 ms */
+  elapsedMs: number;
+  /** ERROR 时携带异常信息 */
+  message?: string;
+  /** 可观测白名单 state 字段 */
+  state: Record<string, unknown>;
+}
+
 export interface CreateGroupRequest {
   name: string;
   agentIds: number[];

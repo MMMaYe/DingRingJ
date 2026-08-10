@@ -86,13 +86,15 @@ public class ChatNode implements NodeAction {
         int chatBuffer = state.value(StateKeys.CHAT_BUFFER, 0);
         int profileThreshold = state.value("profileExtractThreshold", 15);
 
+        // 用 HashMap 而非 Map.of：groupId 可能为 null（防御性日志不应在入口先抛 NPE）
+        Map<String, Object> logMap = new HashMap<>();
+        logMap.put("groupId", groupId);
+        logMap.put("inputLen", input == null ? 0 : input.length());
+        logMap.put("mentionedCount", mentionedAgentIds.size());
+        logMap.put("chatBuffer", chatBuffer);
+        logMap.put("profileThreshold", profileThreshold);
         LogHelper.printLog(ChatNode.class, "ChatNode.apply", "CHAT_NODE", "闲聊应答开始",
-                "request={}", JsonHelper.mapToJsonStr(Map.of(
-                        "groupId", groupId,
-                        "inputLen", input == null ? 0 : input.length(),
-                        "mentionedCount", mentionedAgentIds.size(),
-                        "chatBuffer", chatBuffer,
-                        "profileThreshold", profileThreshold)));
+                "request={}", JsonHelper.mapToJsonStr(logMap));
 
         if (groupId == null) {
             throw new IllegalStateException("ChatNode 缺少必要参数 groupId");

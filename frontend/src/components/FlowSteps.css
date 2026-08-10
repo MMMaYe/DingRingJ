@@ -1,0 +1,60 @@
+/* 图流程步骤条（FLOW_EVENT 可观测性）：横向步骤链，最后一个节点脉冲高亮 */
+.flow-steps {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 16px;
+  background: var(--bg-base-secondary);
+  border-bottom: 1px solid var(--color-border);
+  font-size: 12px;
+  color: var(--text-tertiary);
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.flow-step {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--bg-overlay-l2);
+  transition: background 0.2s;
+}
+
+.flow-step__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.55;
+}
+
+/* 当前执行节点：品牌色 + 呼吸脉冲 */
+.flow-step.is-active {
+  background: var(--bg-brand-popup);
+  color: var(--color-primary);
+}
+
+.flow-step.is-active .flow-step__dot {
+  animation: flow-step-pulse 1.1s ease-in-out infinite;
+}
+
+@keyframes flow-step-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.25; }
+}
+
+.flow-step__ms {
+  font-variant-numeric: tabular-nums;
+  opacity: 0.8;
+}
+
+.flow-step__arrow {
+  opacity: 0.45;
+}
+
+.flow-steps__error {
+  color: #ff6b5e;
+  margin-left: 4px;
+}

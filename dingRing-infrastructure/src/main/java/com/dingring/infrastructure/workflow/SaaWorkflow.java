@@ -3,13 +3,19 @@ package com.dingring.infrastructure.workflow;
 import com.alibaba.cloud.ai.graph.CompileConfig;
 import com.alibaba.cloud.ai.graph.CompiledGraph;
 import com.alibaba.cloud.ai.graph.KeyStrategyFactory;
+import com.alibaba.cloud.ai.graph.NodeOutput;
+import com.alibaba.cloud.ai.graph.OverAllState;
+import com.alibaba.cloud.ai.graph.RunnableConfig;
 import com.alibaba.cloud.ai.graph.StateGraph;
 import com.alibaba.cloud.ai.graph.action.AsyncEdgeAction;
 import com.alibaba.cloud.ai.graph.action.AsyncNodeAction;
+import com.alibaba.cloud.ai.graph.checkpoint.config.SaverConfig;
 import com.alibaba.cloud.ai.graph.exception.GraphStateException;
 import com.alibaba.cloud.ai.graph.state.strategy.ReplaceStrategy;
 import com.alibaba.cloud.ai.graph.state.strategy.AppendStrategy;
+import com.dingring.common.constant.WsConstants;
 import com.dingring.domain.service.DiscussionFlowService;
+import com.dingring.domain.service.GroupBroadcastService;
 import com.dingring.domain.workflow.DiscussionFlowResult;
 import com.dingring.domain.workflow.DiscussionRules;
 import com.dingring.domain.workflow.StateKeys;
@@ -20,8 +26,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 /**
  * DiscussionFlowService 的 SAA StateGraph 实现。
@@ -55,7 +62,28 @@ import java.util.Optional;
 public class SaaWorkflow implements DiscussionFlowService {
 
     private final NodeHandlerRegistry nodeRegistry;
+    private final GroupBroadcastService groupBroadcastService;
     private CompiledGraph compiledGraph;
+
+    /** 图节点 ID → 前端展示名（FLOW_EVENT 广播用） */
+    private static final Map<String, String> NODE_NAMES = Map.of(
+            "preprocess", "预处理",
+            "intent-classify", "意图分类",
+            "chat", "闲聊应答",
+            "ensure-topic", "建题判定",
+            "discuss", "讨论推进",
+            "work", "任务执行",
+            "conclude", "总结陈词",
+            "sediment", "沉淀入库",
+            "profile-extract", "画像提炼"
+    );
+
+    /** FLOW_EVENT 推送的可观测白名单：只暴露少量关键 state 字段，避免把完整 state（含消息历史）发给前端 */
+    private static final List<String> OBSERVABLE_STATE_KEYS = List.of(
+            StateKeys.INTENT, StateKeys.CONFIDENCE, StateKeys.TOPIC_TITLE, StateKeys.TOPIC_ID,
+            StateKeys.ENSURE_SUCCESS, StateKeys.DISCUSS_MODE, StateKeys.TRIGGERED_BY,
+            StateKeys.CONCLUDED, StateKeys.DIVERGE_ROUNDS, StateKeys.SPEAKER_AGENT_ID
+    );
 
     @PostConstruct
     public void init() throws GraphStateException {
@@ -176,11 +204,15 @@ public class SaaWorkflow implements DiscussionFlowService {
         graph.addEdge("work", "sediment");
 
         // 5. 编译
-        // releaseThread(true)：每次 invoke 结束后释放该 thread 的 checkpoint，避免状态残留。
-        // SAA 1.1.2.3 默认 CompileConfig 注册 MemorySaver，且默认 RunnableConfig.threadId 固定，
-        // 导致下一次 invoke 时 getInitialState 从 saver 恢复上一次执行的全部 state
-        // （含 intent 等键），造成 DISCUSS 消息被残留 INTENT=WORK 误路由（Phase G bug2）。
-        compiledGraph = graph.compile(CompileConfig.builder().releaseThread(true).build());
+        // 空 SaverConfig 禁用 checkpoint：本应用每次 advance() 都是独立无状态执行，
+        // 不需要跨调用恢复状态。默认 CompileConfig 注册 MemorySaver 且 RunnableConfig.threadId 固定，
+        // 一旦某次节点抛异常（图走 error 分支），handleCompletion 不会释放该 thread 的 checkpoint，
+        // 残留 state（如 intent=CONCLUDE）会被下一次 advance 的 getInitialState 合并恢复，
+        // 导致普通消息被错误路由进 ConcludeNode 并反复崩溃——形成自愈不了的崩溃循环（Phase G bug2 的复发形态）。
+        // 禁用后 getInitialState 恒为纯 inputs，预设意图（runConcludeFlow/advanceAuto）仍通过 inputs 透传。
+        compiledGraph = graph.compile(CompileConfig.builder()
+                .saverConfig(SaverConfig.builder().build())
+                .build());
         log.info("SaaWorkflow StateGraph 编译完成，节点: preprocess/intent-classify/chat/ensure-topic/discuss/conclude/sediment/profile-extract/work");
     }
 
@@ -198,13 +230,22 @@ public class SaaWorkflow implements DiscussionFlowService {
         allInputs.put("concludeConfirmTimeoutMs", rules.concludeConfirmTimeoutMs());
 
         log.info("SaaWorkflow.advance 开始执行, inputs={}", allInputs.keySet());
+        // groupId 恒在 inputs 中，用于 FLOW_EVENT 定向广播
+        Long groupId = inputs.get(StateKeys.GROUP_ID) instanceof Number n ? n.longValue() : null;
+        long[] lastNodeTs = { System.currentTimeMillis() };
         try {
-            Optional<com.alibaba.cloud.ai.graph.OverAllState> result = compiledGraph.invoke(allInputs);
-            if (result.isEmpty()) {
+            // 用 stream() 节点事件流替代 invoke()：每个节点执行完产生一个 NodeOutput，
+            // 借此把"图走到哪一步"实时广播到前端（FLOW_EVENT），其余语义与 invoke 完全一致
+            List<NodeOutput> outputs = compiledGraph.stream(allInputs, RunnableConfig.builder().build())
+                    .doOnNext(nodeOutput -> broadcastFlowEvent(groupId, nodeOutput, lastNodeTs))
+                    .collectList()
+                    .block();
+            if (outputs == null || outputs.isEmpty()) {
                 log.warn("SaaWorkflow.advance 返回空状态");
                 return new DiscussionFlowResult(false, null, Map.of());
             }
-            com.alibaba.cloud.ai.graph.OverAllState state = result.get();
+            // 最终状态取 END 节点（流中最后一个）的 state，与 invoke 返回值等价
+            OverAllState state = outputs.get(outputs.size() - 1).state();
             boolean concluded = state.value(StateKeys.CONCLUDED, false);
             String discussMode = state.value(StateKeys.DISCUSS_MODE, "");
             Map<String, Object> stateData = state.data();
@@ -212,8 +253,51 @@ public class SaaWorkflow implements DiscussionFlowService {
                     concluded, discussMode, stateData.keySet());
             return new DiscussionFlowResult(concluded, discussMode, stateData);
         } catch (Exception e) {
+            broadcastFlowError(groupId, e);
             log.error("SaaWorkflow.advance 执行异常", e);
             throw new RuntimeException("群聊流程执行失败: " + e.getMessage(), e);
         }
+    }
+
+    /** 把单个节点执行事件广播为 FLOW_EVENT（前端据此渲染流程步骤条） */
+    private void broadcastFlowEvent(Long groupId, NodeOutput nodeOutput, long[] lastNodeTs) {
+        if (groupId == null) {
+            return;
+        }
+        long now = System.currentTimeMillis();
+        long elapsedMs = now - lastNodeTs[0];
+        lastNodeTs[0] = now;
+
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("node", nodeOutput.node());
+        data.put("nodeName", NODE_NAMES.getOrDefault(nodeOutput.node(), nodeOutput.node()));
+        data.put("status", nodeOutput.isEND() ? "END" : "SUCCESS");
+        data.put("elapsedMs", elapsedMs);
+        data.put("state", extractObservableState(nodeOutput.state()));
+        groupBroadcastService.broadcast(groupId, WsConstants.FLOW_EVENT, data);
+    }
+
+    /** 图执行异常时广播一条 FLOW_EVENT(ERROR)，让前端流程条展示失败而非卡在最后节点 */
+    private void broadcastFlowError(Long groupId, Exception e) {
+        if (groupId == null) {
+            return;
+        }
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("node", "error");
+        data.put("nodeName", "流程异常");
+        data.put("status", "ERROR");
+        data.put("elapsedMs", 0L);
+        data.put("message", e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage());
+        data.put("state", Map.of());
+        groupBroadcastService.broadcast(groupId, WsConstants.FLOW_EVENT, data);
+    }
+
+    /** 只提取白名单字段，避免把完整 state（含消息历史等）推给前端 */
+    private Map<String, Object> extractObservableState(OverAllState state) {
+        Map<String, Object> visible = new LinkedHashMap<>();
+        for (String key : OBSERVABLE_STATE_KEYS) {
+            state.value(key).ifPresent(v -> visible.put(key, v));
+        }
+        return visible;
     }
 }

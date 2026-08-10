@@ -63,11 +63,13 @@ public class IntentClassifyNode implements NodeAction {
             return Map.of();
         }
 
+        // 用 HashMap 而非 Map.of：groupId 可能为 null（防御性日志不应在入口先抛 NPE）
+        Map<String, Object> logMap = new HashMap<>();
+        logMap.put("groupId", groupId);
+        logMap.put("inputLen", input == null ? 0 : input.length());
+        logMap.put("hasActiveTopic", activeTopicTitle != null);
         LogHelper.printLog(IntentClassifyNode.class, "IntentClassifyNode.apply", "INTENT_CLASSIFY", "意图分类开始",
-                "request={}", JsonHelper.mapToJsonStr(Map.of(
-                        "groupId", groupId,
-                        "inputLen", input == null ? 0 : input.length(),
-                        "hasActiveTopic", activeTopicTitle != null)));
+                "request={}", JsonHelper.mapToJsonStr(logMap));
 
         if (groupId == null || input == null || input.isBlank()) {
             // 防御性兜底：空输入按 CHAT 处理

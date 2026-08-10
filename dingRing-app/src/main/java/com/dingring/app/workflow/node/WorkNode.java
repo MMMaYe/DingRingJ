@@ -76,10 +76,12 @@ public class WorkNode implements NodeAction {
         Long groupId = state.<Long>value(StateKeys.GROUP_ID).orElse(null);
         String input = state.value(StateKeys.INPUT, "");
 
+        // 用 HashMap 而非 Map.of：groupId 可能为 null（防御性日志不应在入口先抛 NPE）
+        Map<String, Object> logMap = new HashMap<>();
+        logMap.put("groupId", groupId);
+        logMap.put("inputLen", input == null ? 0 : input.length());
         LogHelper.printLog(WorkNode.class, "WorkNode.apply", "WORK_NODE",
-                "WORK意图处理开始", "request={}", JsonHelper.mapToJsonStr(Map.of(
-                        "groupId", groupId,
-                        "inputLen", input == null ? 0 : input.length())));
+                "WORK意图处理开始", "request={}", JsonHelper.mapToJsonStr(logMap));
 
         if (groupId == null || input == null || input.isBlank()) {
             LogHelper.printWarnLog(WorkNode.class, "WorkNode.apply", "WORK_NODE",

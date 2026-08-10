@@ -71,13 +71,15 @@ public class EnsureTopicNode implements NodeAction {
         int lowDiscussStreak = state.value(StateKeys.LOW_DISCUSS_STREAK, 0);
         int backfillLimit = state.value("backfillLimit", 15);
 
+        // 用 HashMap 而非 Map.of：groupId/topicTitle 可能为 null（防御性日志不应在入口先抛 NPE）
+        Map<String, Object> logMap = new HashMap<>();
+        logMap.put("groupId", groupId);
+        logMap.put("topicTitle", topicTitle);
+        logMap.put("confidence", confidenceStr);
+        logMap.put("lowDiscussStreak", lowDiscussStreak);
+        logMap.put("backfillLimit", backfillLimit);
         LogHelper.printLog(EnsureTopicNode.class, "EnsureTopicNode.apply", "ENSURE_TOPIC", "建题判定开始",
-                "request={}", JsonHelper.mapToJsonStr(Map.of(
-                        "groupId", groupId,
-                        "topicTitle", topicTitle,
-                        "confidence", confidenceStr,
-                        "lowDiscussStreak", lowDiscussStreak,
-                        "backfillLimit", backfillLimit)));
+                "request={}", JsonHelper.mapToJsonStr(logMap));
 
         if (groupId == null) {
             throw new IllegalStateException("EnsureTopicNode 缺少必要参数 groupId");

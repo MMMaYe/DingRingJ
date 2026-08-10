@@ -4,6 +4,7 @@ import Sidebar, { IconPlus } from '../../components/Sidebar';
 import Avatar from '../../components/Avatar';
 import MessageItem from './MessageItem';
 import DiscussionStatus from '../../components/DiscussionStatus';
+import FlowSteps from '../../components/FlowSteps';
 import { formatTime, renderMarkdown } from './utils';
 import Modal from '../../components/Modal';
 import GroupSettings from '../../components/GroupSettings';
@@ -13,7 +14,7 @@ import { API } from '../../api';
 import type {
   GroupSummary, GroupDetail, TopicSummary, MemberInfo,
   MessageDTO, AgentDTO, ConclusionDTO, KnowledgeCardDTO, PageResult,
-  TopicStatusPayload,
+  TopicStatusPayload, FlowEventPayload,
 } from '../../types';
 import './style.css';
 
@@ -29,6 +30,8 @@ export default function ChatPage() {
   const [typing, setTyping] = useState<Map<number, string>>(new Map());
   // 讨论状态实时快照(由 TOPIC_STATUS WS 事件驱动)
   const [topicStatus, setTopicStatus] = useState<TopicStatusPayload | null>(null);
+  // 图流程步骤事件（由 FLOW_EVENT WS 事件驱动，渲染顶部流程步骤条）
+  const [flowSteps, setFlowSteps] = useState<FlowEventPayload[]>([]);
   // 流式发言半成品气泡：streamId -> 累积内容（COMPLETE 替换正式消息 / ABORT 丢弃）
   const [streams, setStreams] = useState<Map<string, { agentId: number; agentName: string; content: string }>>(new Map());
   const [inputText, setInputText] = useState('');
@@ -176,6 +179,7 @@ export default function ChatPage() {
       setTyping(new Map());
       setStreams(new Map());
       setTopicStatus(null);
+      setFlowSteps([]);
       stickToBottomRef.current = true;
       setUnseenCount(0);
       setSearchParams({ groupId: String(targetId) }, { replace: true });
@@ -315,6 +319,16 @@ export default function ChatPage() {
         case 'TOPIC_STATUS':
           setTopicStatus(d as unknown as TopicStatusPayload);
           break;
+        case 'FLOW_EVENT': {
+          const ev = d as unknown as FlowEventPayload;
+          setFlowSteps(prev => {
+            // 每次图流程都从 preprocess 起步：以此为界重置，避免上一次的 END 定格残留在新流程上
+            if (ev.node === 'preprocess') return [ev];
+            const next = [...prev, ev];
+            return next.slice(-20);
+          });
+          break;
+        }
         case 'TOPIC_STATUS_CHANGED':
           if (activeTopic && activeTopic.id === (d as any).topicId) {
             setActiveTopic(prev => prev ? { ...prev, status: (d as any).status } : prev);
@@ -588,6 +602,9 @@ export default function ChatPage() {
                 </button>
               </div>
             </header>
+
+            {/* 图流程步骤条(由 FLOW_EVENT WS 事件驱动，可观测性) */}
+            <FlowSteps steps={flowSteps} />
 
             {/* 讨论状态横幅(由 TOPIC_STATUS WS 事件驱动) */}
             <DiscussionStatus
