@@ -91,19 +91,25 @@ public class CardEventHandler {
         LogHelper.printWarnLog(CardEventHandler.class, "CardEventHandler.generateCards", "GENERATE_CARDS", "卡片生成最终失败", "topicId={}", event.getTopicId());
     }
 
-    /** 解析 LLM 输出（容忍 ```json 代码块包裹） */
+    /** 解析 LLM 输出（容忍 ```json 代码块包裹、单对象代替数组两种情况） */
     private List<KnowledgeCard> parseCards(String raw, Long topicId) throws Exception {
         String json = raw.trim();
         if (json.startsWith("```")) {
             json = json.replaceAll("^```(json)?\\s*", "").replaceAll("```\\s*$", "").trim();
         }
+        List<Map<String, String>> items;
         int start = json.indexOf('[');
         int end = json.lastIndexOf(']');
         if (start >= 0 && end > start) {
             json = json.substring(start, end + 1);
+            items = objectMapper.readValue(json, new TypeReference<>() {
+            });
+        } else {
+            // 容错：LLM 偶尔只输出单个对象而非数组，包装成单元素列表避免整批重试
+            Map<String, String> single = objectMapper.readValue(json, new TypeReference<>() {
+            });
+            items = single.isEmpty() ? List.of() : List.of(single);
         }
-        List<Map<String, String>> items = objectMapper.readValue(json, new TypeReference<>() {
-        });
         return items.stream()
                 .filter(m -> m.get("question") != null && m.get("answer") != null)
                 .map(m -> {

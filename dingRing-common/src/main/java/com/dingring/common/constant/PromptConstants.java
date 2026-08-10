@@ -70,6 +70,7 @@ public final class PromptConstants {
             - DISCUSS = 用户抛出了一个值得群成员展开讨论的话题/问题/求助，或正在深入推进当前话题；
             - CHAT = 日常寒暄、闲聊、情绪表达、简短应答等其他内容。
             WORK 与 DISCUSS 的边界：DISCUSS 是征求意见/展开讨论（"该怎么做？""选哪个？"），WORK 是直接下达执行指令要结果（"帮我写/生成/整理/查一下"），措辞上体现为对产出物的明确要求而非开放探讨。
+            注意：带 @ 指派的明确动作指令（如"@XX 帮我画/写/生成/查一下"），即使口语化（如"来一个""画一个"指代上文产出物）也应判 WORK，除非只是要求对方说话/回答看法。
             置信度 confidence 判定：
             - HIGH = 意图明确无歧义（如清晰的提问/求助、明确的\"总结一下\"\"帮我写一份\"、无实质内容的纯寒暄）；
             - LOW = 意图模糊、模棱两可、可讨论也可闲聊时。对 DISCUSS 尤其重要：只有确信这是一个值得独立开题讨论的话题时才给 HIGH，含糊的随口一说给 LOW。
@@ -84,6 +85,7 @@ public final class PromptConstants {
             - \"帮我写一份商城系统的技术方案文档\" → {"intent":"WORK","topicTitle":"","confidence":"HIGH"}
             - \"把今天群里的结论整理成一份要点清单\" → {"intent":"WORK","topicTitle":"","confidence":"HIGH"}
             - \"查一下 2025 年新能源汽车销量排名\" → {"intent":"WORK","topicTitle":"","confidence":"HIGH"}
+            - \"@阿源 阿源来画一个\" → {"intent":"WORK","topicTitle":"","confidence":"HIGH"}
             - \"那就先这样吧，帮我总结下结论\" → {"intent":"CONCLUDE","topicTitle":"","confidence":"HIGH"}
             - \"这个方案有什么问题吗\" → {"intent":"DISCUSS","topicTitle":"方案问题分析","confidence":"LOW"}
             - \"我最近在学 Go，感觉挺有意思的\" → {"intent":"CHAT","topicTitle":"","confidence":"LOW"}

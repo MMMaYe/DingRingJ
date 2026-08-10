@@ -22,7 +22,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -147,18 +147,18 @@ public class ChatOrchestrator {
                 "previousStatus", previousStatus));
     }
 
-    /** 解析 @花名 提及 */
+    /** 解析 @花名 提及（按文本中出现顺序返回，保证首个被 @ 的 Agent 优先应答） */
     private List<Long> parseMentions(String content, List<Agent> groupAgents) {
         if (content == null || content.indexOf('@') < 0) {
             return List.of();
         }
-        List<Long> mentioned = new ArrayList<>();
-        for (Agent agent : groupAgents) {
-            if (content.contains("@" + agent.getName())) {
-                mentioned.add(agent.getId());
-            }
-        }
-        return mentioned;
+        // 按 @ 在文本中的出现顺序排序，而非群成员列表顺序：
+        // 否则 "@阿源...@老王..." 场景会选中群里排位靠前的老王，回错人
+        return groupAgents.stream()
+                .filter(agent -> content.contains("@" + agent.getName()))
+                .sorted(Comparator.comparingInt(agent -> content.indexOf("@" + agent.getName())))
+                .map(Agent::getId)
+                .toList();
     }
 
     /** 引用回复的目标 Agent（引用的不是 Agent 消息则 null） */

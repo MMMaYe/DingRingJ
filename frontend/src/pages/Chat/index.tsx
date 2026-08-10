@@ -64,6 +64,8 @@ export default function ChatPage() {
 
   const chatBodyRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  // 中文输入法组合输入（拼音选词）进行中：期间 Enter 用于确认候选词，不得触发发送
+  const composingRef = useRef(false);
   // 是否贴底：仅贴底时新消息才自动滚动，避免翻历史被拽回
   const stickToBottomRef = useRef(true);
 
@@ -404,6 +406,9 @@ export default function ChatPage() {
 
   // ---- 键盘：@提及浮层支持 ↑↓ 选择、Enter/Tab 确认、Esc 关闭 ----
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // 输入法组合输入中：Enter 是确认候选词（选字），交给输入法处理，不触发发送/选择
+    // （iOS Safari 的 isComposing 不可靠，用 keyCode 229 兜底）
+    if (composingRef.current || e.nativeEvent.isComposing || e.keyCode === 229) return;
     if (mentionState.open) {
       const len = mentionState.candidates.length;
       if (e.key === 'ArrowDown') { e.preventDefault(); setMentionIdx(i => (i + 1) % len); return; }
@@ -735,6 +740,8 @@ export default function ChatPage() {
                     rows={1}
                     value={inputText}
                     placeholder="输入消息，@ 可提及 Agent，@成员说「总结一下」可结束讨论并生成结论…"
+                    onCompositionStart={() => { composingRef.current = true; }}
+                    onCompositionEnd={() => { composingRef.current = false; }}
                     onKeyDown={handleKeyDown}
                     onChange={e => {
                       setInputText(e.target.value);
