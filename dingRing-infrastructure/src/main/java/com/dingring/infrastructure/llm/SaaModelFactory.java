@@ -23,7 +23,7 @@ import java.time.Duration;
  * <p>设计目的(Phase A):
  * <ul>
  *   <li>从 SpringAiLlmService 提取模型构建逻辑，chat()/chatStream() 只管调用</li>
- *   <li>Phase D 的 ReactAgentFactory 也需构建 Model，工厂复用避免重复 resolveUrl 逻辑</li>
+ *   <li>Phase D 统一入口 ReactAgentLlmService / ReactAgentFactory 均复用本工厂构建 Model，避免重复 resolveUrl 逻辑</li>
  * </ul>
  * <p>兼容 DeepSeek / StepFun / 智谱等 OpenAI 兼容厂商，resolveUrl 处理双重版本号 404 坑。
  */

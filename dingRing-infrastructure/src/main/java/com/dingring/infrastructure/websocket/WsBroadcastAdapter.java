@@ -15,7 +15,7 @@ import java.util.Set;
  * <p>拆分自原 {@code WsSessionManager} 的群广播职责。
  * <p>纯出站适配器：从 {@link WsSessionRegistry} 拿群内在线连接，序列化为 {@code {type, data}} 帧后逐个发送。
  * 与 {@link WsSessionRegistryImpl} 同在 infrastructure 层，复用其 {@code encode}/{@code sendSafely} 包级方法。
- * <p>与 {@code SpringAiLlmService}（实现 {@code LlmService} 出站端口）对称：都是 domain 端口的 infrastructure 实现。
+ * <p>与 {@code ReactAgentLlmService}（实现 {@code LlmService} 出站端口）对称：都是 domain 端口的 infrastructure 实现。
  */
 @Slf4j
 @Component

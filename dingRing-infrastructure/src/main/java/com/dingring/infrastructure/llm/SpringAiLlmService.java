@@ -25,14 +25,19 @@ import java.util.function.Consumer;
 
 /**
  * 基于 Spring AI OpenAI 兼容接口的 LLM 适配（DeepSeek / Kimi / GLM 等均走此实现）。
+ * <p><b>已废弃（Phase D 统一 LLM 调用入口）：</b>由 {@link ReactAgentLlmService} 替代，
+ * 所有 LLM 调用统一经由 SAA ReactAgent，避免同时维护两套 LLM 调用代码。
+ * 本类保留仅供回退参考，默认不注册为 Bean，需显式配置 {@code dingring.llm.legacy-spring-ai=true} 才启用
+ * （该实现仍保留真流式 {@link #chatStream}，ReactAgent 路径在 SAA 升级前暂回退非流式）。
  * <p>Phase A 改造：模型构建逻辑提取到 {@link SaaModelFactory}，本类只管调用与日志。
  * <p>按 Agent 配置（baseUrl/apiKey/model）动态构建 ChatModel，每个 Agent 可指向不同厂商。
  * <p>必须设置读超时：默认 RestClient 无超时，网关偶发挂起会永久卡死对话引擎线程。
  */
+@Deprecated(since = "Phase D", forRemoval = false)
 @Slf4j
 @Service
 @RequiredArgsConstructor
-@ConditionalOnProperty(name = "dingring.llm.mock", havingValue = "false", matchIfMissing = true)
+@ConditionalOnProperty(name = "dingring.llm.legacy-spring-ai", havingValue = "true")
 public class SpringAiLlmService implements LlmService {
 
     /** 模型构建工厂（Phase A 提取，Phase D ReactAgentFactory 复用） */

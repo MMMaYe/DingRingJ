@@ -9,7 +9,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * {@link SaaModelFactory#resolveUrl(String)} baseUrl 解析单元测试。
  * <p>背景：联调发现 Spring AI 默认在 baseUrl 后拼 /v1/chat/completions，
  * 带路径前缀的网关（StepFun step_plan、腾讯云 CloudBase）会 404。
- * <p>Phase A 改造：resolveUrl 从 SpringAiLlmService 迁移到 SaaModelFactory，
+ * <p>Phase A 改造：resolveUrl 从原 SpringAiLlmService 迁移到 SaaModelFactory，
  * 测试同步迁移，确保 baseUrl 解析逻辑行为不变。
  */
 @DisplayName("SaaModelFactory baseUrl 解析")
