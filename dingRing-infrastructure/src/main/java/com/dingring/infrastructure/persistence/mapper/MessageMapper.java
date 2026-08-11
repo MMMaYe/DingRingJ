@@ -3,6 +3,7 @@ package com.dingring.infrastructure.persistence.mapper;
 import com.dingring.domain.group.GroupMessage;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
+import java.util.Map;
 
 import java.util.List;
 
