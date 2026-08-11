@@ -71,7 +71,7 @@ public class MessageSummaryHandler {
                     return;
                 }
                 String raw = llmService.chat(summarizer, prompt, List.of(),
-                        new LlmService.CallOptions(0.0, 60, null, true, false));
+                        new LlmService.CallOptions(0.0, 200, null, true, false));
                 // 模板输出 JSON：{"has_viewpoint": true|false, "summary": "..."}
                 // （jsonMode=true 强制合法 JSON，先容忍 ```json 代码块包裹）
                 Map<String, Object> parsed = JsonHelper.toMap(stripCodeFence(raw));

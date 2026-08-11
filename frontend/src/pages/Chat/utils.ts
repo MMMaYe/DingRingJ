@@ -23,21 +23,37 @@ DOMPurify.addHook('afterSanitizeAttributes', node => {
  * 消息内容渲染：Markdown 解析 + 原生 HTML 透传，DOMPurify 消毒防 XSS，
  * 最后仅在文本节点上做 @提及高亮（跳过标签，避免污染属性或代码内容）。
  *
- * ```svg 代码块会被提取为原始 SVG 标签（块内换行折叠为空格，避免 marked
- * 注入 <p>/<br> 破坏 SVG 结构），再由 DOMPurify 消毒（允许基本图形/渐变/
+ * ```svg / ~~~svg 代码块还原为原始 SVG 标记，且为缺 viewBox 的 SVG 注入
+ * viewBox（窄容器自适应不裁剪），再由 DOMPurify 消毒（允许基本图形/渐变/
  * 滤镜，阻止脚本与外部资源）。
  */
 export function renderMarkdown(content: string, agentNames: string[] = []): string {
-  // 将 ```svg 代码块还原为原始 SVG，使 marked 识别为 HTML 块而非代码块。
-  // 注意：svg 不在 marked 的块级 HTML 标签列表里，原样透传会被当作行内 HTML，
-  // 块内的空白行会触发 marked 注入 <p>/<br>，浏览器解析时会跳出 SVG 命名空间，
-  // 导致 DOMPurify 把 rect/line/path/marker 等绝大多数元素剥离、SVG 无法渲染。
-  // 因此把 svg 块内部换行折叠为空格（SVG 对空白不敏感），使其整体作为一段行内 HTML 透传。
-  const processed = String(content ?? '').replace(/```svg\s*\n([\s\S]*?)```/g, (_, svg) =>
-    '\n\n' + svg.trim().replace(/\s*\n\s*/g, ' ') + '\n\n',
-  );
+  const processed = String(content ?? '')
+    // LLM 输出的字面 \n（backslash + n）转为真实换行，否则 marked 会原样保留，
+    // 导致用户看到 "\n\n" 而非段落分隔。
+    .replace(/\\n/g, '\n')
+    // ```svg / ~~~svg 代码块还原为原始 SVG 标记。svg 不在 marked 的块级 HTML
+    // 标签列表里，必须用空行把 <svg> 与上下文隔开，marked 才会整体透传而非
+    // 当作行内 HTML 逐行解析（否则空白行会注入 <p>/<br>，导致 SVG 结构被破坏）。
+    .replace(/(```|~~~)\s*svg[ \t]*\r?\n([\s\S]*?)\1/g, (_, _fence, code) => '\n\n' + code.trim() + '\n\n')
+    // 为缺少 viewBox 的 <svg> 注入 viewBox（依据 width/height 属性）。
+    // 聊天框较窄时 .md-body svg 的 max-width:100%;height:auto 只缩放元素盒子，
+    // 无 viewBox 的 SVG 内容不随之缩放，右侧会被整体裁剪；注入后内容等比缩放，
+    // 整图在任何容器宽度下完整显示。
+    .replace(/<svg\b([^>]*)>/g, (_, attrs) => {
+      if (/viewBox\s*=/.test(attrs)) return '<svg' + attrs + '>';
+      const w = attrs.match(/\bwidth\s*=\s*["']([\d.]+)/);
+      const h = attrs.match(/\bheight\s*=\s*["']([\d.]+)/);
+      if (w && h) return `<svg viewBox="0 0 ${w[1]} ${h[1]}"` + attrs + '>';
+      return '<svg' + attrs + '>';
+    });
   const raw = marked.parse(processed, { async: false }) as string;
-  const safe = DOMPurify.sanitize(raw, { ADD_ATTR: ['target'] });
+  // 显式启用 SVG profile，否则 DOMPurify 默认只处理 HTML，会把 rect/line/path/marker/defs
+  // 等 SVG 子元素以及 viewBox/fill/stroke/marker-end 等属性全部当作不安全标签清除。
+  const safe = DOMPurify.sanitize(raw, {
+    USE_PROFILES: { html: true, svg: true },
+    ADD_ATTR: ['target'],
+  });
   if (agentNames.length === 0) return safe;
   return safe.split(/(<[^>]*>)/g).map(part => {
     if (part.startsWith('<')) return part;
