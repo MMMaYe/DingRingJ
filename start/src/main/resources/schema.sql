@@ -69,7 +69,9 @@ CREATE TABLE IF NOT EXISTS message (
     message_type        VARCHAR(16) NOT NULL DEFAULT 'TEXT' COMMENT 'TEXT/IMAGE/FILE/SYSTEM_NOTICE',
     content             TEXT        NOT NULL COMMENT '消息内容',
     reply_to_message_id BIGINT      NULL COMMENT '引用回复的消息 ID',
-    feature             TEXT        NULL COMMENT '扩展字段(JSON)',
+    -- 消息标签(tag)与观点摘要(viewpoint)无独立列，统一存于 feature JSON：{"tag":"KEY|NOISE|VIEWPOINT","viewpoint":"摘要"}，
+    -- 由 GroupMessage#getTag()/getViewpoint() 便捷读写；查询观点列表见 MessageMapper.findViewpointsByTopicId（LIKE 匹配）
+    feature             TEXT        NULL COMMENT '扩展字段(JSON)：tag/viewpoint 标签亦存于此',
     create_time         DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time         DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间'
 );
@@ -102,6 +104,23 @@ CREATE TABLE IF NOT EXISTS user_profile (
     create_time  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
     INDEX idx_profile_user (user_id)
+);
+
+-- 话题级用户画像表（每次 TopicClosed 追加一条记录，多条记录=用户在该话题的进步轨迹）
+-- 不加唯一约束：同一话题标题允许多条记录（不同 topic_id），按 user_id + topic_title 回溯历史
+CREATE TABLE IF NOT EXISTS user_topic_profile (
+    id                 BIGINT       PRIMARY KEY AUTO_INCREMENT COMMENT '主键',
+    user_id            BIGINT       NOT NULL COMMENT '用户 ID',
+    topic_id           BIGINT       NOT NULL COMMENT '话题 ID',
+    group_id           BIGINT       NOT NULL COMMENT '群 ID',
+    topic_title        VARCHAR(200) NULL COMMENT '话题标题（按标题回溯历史）',
+    understanding_level VARCHAR(20) NULL COMMENT '理解程度: BEGINNER/INTERMEDIATE/ADVANCED',
+    weak_points        TEXT         NULL COMMENT '薄弱点（具体到行为，非笼统评价）',
+    strong_points      TEXT         NULL COMMENT '亮点',
+    suggested_focus    TEXT         NULL COMMENT '建议提升方向（可操作的建议）',
+    create_time        DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    update_time        DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
+    INDEX idx_upt_user_title (user_id, topic_title, create_time)
 );
 
 -- SKILL 表（技能 = 工具组 + 附加系统提示词；种子数据启动时由 skill-config.json 幂等写入，uk_name 兜底）

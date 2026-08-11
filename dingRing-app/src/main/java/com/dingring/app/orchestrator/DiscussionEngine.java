@@ -174,6 +174,7 @@ public class DiscussionEngine {
                     state.queue.clear();
                     DiscussionFlowResult result = advanceFlow(groupId, signal, state);
                     updateRuntimeState(state, result);
+                    pushTopicStatus(groupId, result);
 
                     if (result.concluded()) return;
 
@@ -203,6 +204,7 @@ public class DiscussionEngine {
                 if (StateKeys.MODE_DIVERGE.equals(state.discussMode)) {
                     DiscussionFlowResult result = advanceAuto(groupId, state);
                     updateRuntimeState(state, result);
+                    pushTopicStatus(groupId, result);
                     if (result.concluded()) return;
                     state.discussMode = result.discussMode();
                     continue;
@@ -262,6 +264,14 @@ public class DiscussionEngine {
                 "title", topicTitle,
                 "discussMode", StateKeys.MODE_CONCLUDE_PROPOSED,
                 "triggeredBy", "AGENT"));
+        // TOPIC_STATUS：驱动前端讨论状态横幅进入 CONCLUDE_PROPOSED，展示确认/继续按钮
+        groupBroadcastService.broadcast(groupId, WsConstants.TOPIC_STATUS, Map.of(
+                "groupId", groupId,
+                "discussMode", StateKeys.MODE_CONCLUDE_PROPOSED,
+                "topicTitle", topicTitle,
+                "divergeRounds", 0,
+                "maxDivergeRounds", rules.maxDivergeRounds(),
+                "restartHint", ""));
 
         // 等用户确认（5分钟超时兜底）
         UserSignal confirm = state.queue.poll(rules.concludeConfirmTimeoutMs(), TimeUnit.MILLISECONDS);
@@ -276,9 +286,26 @@ public class DiscussionEngine {
         state.queue.clear();
         DiscussionFlowResult confirmResult = advanceFlow(groupId, confirm, state);
         updateRuntimeState(state, confirmResult);
+        pushTopicStatus(groupId, confirmResult);
         if (confirmResult.concluded()) return true;
         state.discussMode = confirmResult.discussMode();
         return false;
+    }
+
+    /** 广播讨论状态（TOPIC_STATUS）：驱动前端讨论状态横幅实时更新 */
+    private void pushTopicStatus(Long groupId, DiscussionFlowResult result) {
+        if (result.state() == null) return;
+        String mode = result.discussMode();
+        Object title = result.state().get(StateKeys.TOPIC_TITLE);
+        Object rounds = result.state().get(StateKeys.DIVERGE_ROUNDS);
+        Object hint = result.state().get(StateKeys.RESTART_HINT);
+        groupBroadcastService.broadcast(groupId, WsConstants.TOPIC_STATUS, Map.of(
+                "groupId", groupId,
+                "discussMode", mode,
+                "topicTitle", title == null ? "" : title,
+                "divergeRounds", rounds instanceof Integer ? (Integer) rounds : 0,
+                "maxDivergeRounds", rules.maxDivergeRounds(),
+                "restartHint", hint == null ? "" : hint));
     }
 
     /* ==================== 运行时状态维护 ==================== */

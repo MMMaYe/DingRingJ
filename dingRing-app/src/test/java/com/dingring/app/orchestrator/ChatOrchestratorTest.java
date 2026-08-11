@@ -18,6 +18,7 @@ import com.dingring.domain.group.MemberType;
 import com.dingring.domain.group.MessageRepository;
 import com.dingring.domain.group.MessageType;
 import com.dingring.domain.group.SenderType;
+import com.dingring.domain.service.DomainEventPublisher;
 import com.dingring.domain.service.GroupBroadcastService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -54,6 +55,7 @@ class ChatOrchestratorTest {
     private AgentRepository agentRepository;
     private MessageAssembler messageAssembler;
     private GroupBroadcastService groupBroadcastService;
+    private DomainEventPublisher eventPublisher;
     private DiscussionEngine discussionEngine;
     private ChatOrchestrator orchestrator;
 
@@ -65,9 +67,10 @@ class ChatOrchestratorTest {
         agentRepository = mock(AgentRepository.class);
         messageAssembler = mock(MessageAssembler.class);
         groupBroadcastService = mock(GroupBroadcastService.class);
+        eventPublisher = mock(DomainEventPublisher.class);
         discussionEngine = mock(DiscussionEngine.class);
         orchestrator = new ChatOrchestrator(groupRepository, messageRepository, topicRepository,
-                agentRepository, messageAssembler, groupBroadcastService, discussionEngine);
+                agentRepository, messageAssembler, groupBroadcastService, eventPublisher, discussionEngine);
     }
 
     /* ==================== 辅助构造 ==================== */

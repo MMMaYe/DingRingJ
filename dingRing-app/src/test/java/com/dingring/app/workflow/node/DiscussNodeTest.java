@@ -106,7 +106,7 @@ class DiscussNodeTest {
         when(terminator.reachedMaxRounds(anyLong())).thenReturn(false);
         when(messageRepository.countByTopicIdAndSender(anyLong(), anyLong(), any())).thenReturn(0L);
         when(messageRepository.findLastByGroupId(1L)).thenReturn(Optional.empty());
-        when(contextBuilder.build(any(Agent.class), anyLong(), anyLong(), any()))
+        when(contextBuilder.buildForDiscuss(any(Agent.class), anyLong(), anyLong(), any(), anyString()))
                 .thenReturn(new ContextBuilder.LlmContext("测试systemPrompt", List.of()));
         // 默认所有 Agent 正常发言
         when(agentSpeakerService.call(any(Agent.class), anyString(), anyList(),

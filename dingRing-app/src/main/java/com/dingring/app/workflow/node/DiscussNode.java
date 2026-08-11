@@ -97,6 +97,8 @@ public class DiscussNode implements NodeAction {
         List<Long> mentionedAgentIds = state.value(StateKeys.MENTIONED_AGENT_IDS, List.<Long>of());
         boolean mentionHandled = state.value(StateKeys.MENTION_HANDLED, false);
         Long repliedToAgentId = state.<Long>value(StateKeys.REPLIED_TO_AGENT_ID).orElse(null);
+        // 话题重启时 EnsureTopicNode 注入的用户历史表现提示（无则为空）
+        String userHistoryHint = state.value(StateKeys.USER_HISTORY_HINT, "");
 
         // 用 HashMap 而非 Map.of：topicId/groupId 可能为 null（如未建题被误路由时），
         // Map.of 遇到 null 值会抛 NPE，反而遮蔽下方 groupId/topicId 的防御校验
@@ -169,7 +171,7 @@ public class DiscussNode implements NodeAction {
                 .speakCounts(speakCounts)
                 .build();
 
-        SpeakResult speakResult = speakOnce(candidates, all, ctx);
+        SpeakResult speakResult = speakOnce(candidates, all, ctx, userHistoryHint);
 
         // 根据发言结果写 discussMode
         Map<String, Object> result = new HashMap<>();
@@ -217,8 +219,11 @@ public class DiscussNode implements NodeAction {
     /**
      * 一次发言（降级链）：按评分降序依次尝试，失败接力下一个，全部失败才返回 FAILED。
      * <p>讨论态判定：空内容/[[PASS]]/重复内容 → PASSED；[[CONCLUDE]] → CONCLUDE_PROPOSED；正常 → SPOKE。
+     *
+     * @param userHistoryHint 话题重启的用户历史表现提示（无则为空）
      */
-    private SpeakResult speakOnce(List<Agent> candidates, List<Agent> members, MessageContext ctx) {
+    private SpeakResult speakOnce(List<Agent> candidates, List<Agent> members, MessageContext ctx,
+                                  String userHistoryHint) {
         List<SpeakerScheduler.ScoredAgent> ranked = speakerScheduler.rank(candidates, ctx);
         LogHelper.printLog(DiscussNode.class, "DiscussNode.speakOnce", "DISCUSS_NODE", "发言评分结果",
                 "groupId={} topicId={} 排序={}", ctx.getGroupId(), ctx.getTopicId(),
@@ -235,8 +240,10 @@ public class DiscussNode implements NodeAction {
             pushTyping(ctx.getGroupId(), agent, true);
             StreamEmitter emitter = streamingEnabled ? new StreamEmitter(ctx.getGroupId(), agent) : null;
             try {
-                ContextBuilder.LlmContext llmCtx = contextBuilder.build(
-                        agent, ctx.getGroupId(), ctx.getTopicId(), messageAssembler::resolveSenderName);
+                // 讨论态上下文（方案 6.3.6）：观点摘要列表 + 近期窗口，替代全量 200 条窗口
+                ContextBuilder.LlmContext llmCtx = contextBuilder.buildForDiscuss(
+                        agent, ctx.getGroupId(), ctx.getTopicId(),
+                        messageAssembler::resolveSenderName, userHistoryHint);
 
                 // 构建 ReactAgent 上下文（群记忆/用户画像/知识由 Hook 动态注入）
                 Map<String, Object> context = new HashMap<>();

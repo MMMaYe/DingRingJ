@@ -23,6 +23,7 @@ public final class StateKeys {
     public static final String TOPIC_ID = "topicId";                    // 当前话题 ID
     public static final String TOPIC_TITLE = "topicTitle";             // 当前话题标题
     public static final String RESTART_HINT = "restartHint";           // 话题重启提示（给前端展示）
+    public static final String USER_HISTORY_HINT = "userHistoryHint";  // 用户历史表现提示（给 Agent，EnsureTopicNode 产出）
 
     // === 意图 ===
     public static final String INTENT = "intent";                      // CHAT/DISCUSS/CONCLUDE

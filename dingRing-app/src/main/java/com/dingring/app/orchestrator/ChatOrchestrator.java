@@ -10,12 +10,14 @@ import com.dingring.domain.agent.Agent;
 import com.dingring.domain.agent.AgentRepository;
 import com.dingring.domain.discussion.Topic;
 import com.dingring.domain.discussion.TopicRepository;
+import com.dingring.domain.event.MessageSent;
 import com.dingring.domain.group.Group;
 import com.dingring.domain.group.GroupMessage;
 import com.dingring.domain.group.GroupRepository;
 import com.dingring.domain.group.MessageRepository;
 import com.dingring.domain.group.MessageType;
 import com.dingring.domain.group.SenderType;
+import com.dingring.domain.service.DomainEventPublisher;
 import com.dingring.domain.service.GroupBroadcastService;
 import com.dingring.infrastructure.aop.Event;
 import lombok.RequiredArgsConstructor;
@@ -45,6 +47,7 @@ public class ChatOrchestrator {
     private final AgentRepository agentRepository;
     private final MessageAssembler messageAssembler;
     private final GroupBroadcastService groupBroadcastService;
+    private final DomainEventPublisher eventPublisher;
     private final DiscussionEngine discussionEngine;
 
     /* ==================== 接收域 ==================== */
@@ -87,6 +90,10 @@ public class ChatOrchestrator {
             if (topicId == null) {
                 LogHelper.printLog(ChatOrchestrator.class, "ChatOrchestrator.onUserMessage", "ON_USER_MESSAGE", "无活跃主题", "groupId={}", groupId);
             }
+
+            // 补发 MessageSent：驱动消息打标签/摘要（MessageSummaryHandler 订阅）
+            eventPublisher.publish(new MessageSent(message.getId(), groupId, topicId, userId,
+                    SenderType.USER.name(), content, replyToMessageId, mentionedIds));
 
             // 投递信号：意图路由与应答由对话引擎异步驱动
             discussionEngine.onUserSignal(groupId, new DiscussionEngine.UserSignal(

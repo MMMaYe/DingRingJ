@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 话题级用户画像表 Mapper：追加写，保留用户在该话题的进步轨迹 -->
+<mapper namespace="com.dingring.infrastructure.persistence.mapper.UserTopicProfileMapper">
+
+    <resultMap id="profileMap" type="com.dingring.domain.user.UserTopicProfile">
+        <id column="id" property="id"/>
+        <result column="user_id" property="userId"/>
+        <result column="topic_id" property="topicId"/>
+        <result column="group_id" property="groupId"/>
+        <result column="topic_title" property="topicTitle"/>
+        <result column="understanding_level" property="understandingLevel"/>
+        <result column="weak_points" property="weakPoints"/>
+        <result column="strong_points" property="strongPoints"/>
+        <result column="suggested_focus" property="suggestedFocus"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+    </resultMap>
+
+    <sql id="columns">
+        id, user_id, topic_id, group_id, topic_title,
+        understanding_level, weak_points, strong_points, suggested_focus,
+        create_time, update_time
+    </sql>
+
+    <select id="findByUserIdAndTopicId" resultMap="profileMap">
+        SELECT <include refid="columns"/>
+        FROM user_topic_profile
+        WHERE user_id = #{userId} AND topic_id = #{topicId}
+        ORDER BY create_time DESC
+        LIMIT 1
+    </select>
+
+    <select id="findByUserIdAndTopicTitle" resultMap="profileMap">
+        SELECT <include refid="columns"/>
+        FROM user_topic_profile
+        WHERE user_id = #{userId} AND topic_title = #{topicTitle}
+        ORDER BY create_time DESC
+    </select>
+
+    <insert id="insert" parameterType="com.dingring.domain.user.UserTopicProfile"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO user_topic_profile
+            (user_id, topic_id, group_id, topic_title,
+             understanding_level, weak_points, strong_points, suggested_focus,
+             create_time, update_time)
+        VALUES
+            (#{userId}, #{topicId}, #{groupId}, #{topicTitle},
+             #{understandingLevel}, #{weakPoints}, #{strongPoints}, #{suggestedFocus},
+             #{createTime}, #{updateTime})
+    </insert>
+
+</mapper>

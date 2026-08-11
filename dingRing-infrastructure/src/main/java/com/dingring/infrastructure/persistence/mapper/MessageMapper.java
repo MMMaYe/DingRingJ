@@ -47,4 +47,15 @@ public interface MessageMapper {
     List<GroupMessage> findRecentChatByGroupId(@Param("groupId") Long groupId, @Param("limit") int limit);
 
     int updateTopicId(@Param("messageIds") List<Long> messageIds, @Param("topicId") Long topicId);
+
+    /** 主题内观点消息列表（feature 标签为 KEY/VIEWPOINT，取最新 N 条后时间升序返回） */
+    List<GroupMessage> findViewpointsByTopicId(@Param("topicId") Long topicId, @Param("limit") int limit);
+
+    /**
+     * 回写消息 feature（标签与观点摘要统一存于 feature JSON，见 GroupMessage.FEATURE_TAG）。
+     *
+     * @return 实际更新条数
+     */
+    int updateFeature(@Param("messageId") Long messageId,
+                      @Param("feature") Map<String, Object> feature);
 }

@@ -48,4 +48,19 @@ public interface MessageRepository {
      * @return 实际更新条数
      */
     int updateTopicId(List<Long> messageIds, Long topicId);
+
+    /**
+     * 查询主题内的观点消息列表（方案 6.3.6）：返回 tag 为 KEY 或 VIEWPOINT 的消息，
+     * 按时间升序，供讨论上下文"观点摘要列表"使用。
+     *
+     * @param limit 最多返回条数（取最新 N 条）
+     */
+    List<GroupMessage> findViewpointsByTopicId(Long topicId, int limit);
+
+    /**
+     * 更新消息标签与观点摘要（异步打标签/摘要后回写）。
+     *
+     * @return 实际更新条数
+     */
+    int updateTagAndViewpoint(Long messageId, MessageTag tag, String viewpoint);
 }

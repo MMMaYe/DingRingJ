@@ -59,6 +59,14 @@ public class ContextBuilder {
     @Value("${dingring.orchestrator.chat-context-window:20}")
     private int chatContextWindow;
 
+    /** 讨论态观点摘要列表条数上限（方案 6.3.6，取最新 N 条） */
+    @Value("${dingring.orchestrator.viewpoint-limit:20}")
+    private int viewpointLimit;
+
+    /** 讨论态近期原文窗口条数（方案 6.3.6，语气衔接用） */
+    @Value("${dingring.orchestrator.discuss-recent-window:8}")
+    private int discussRecentWindow;
+
     /**
      * 构建 Agent 发言的完整上下文（Phase D：只含静态系统提示词 + 消息历史）。
      * <p>动态部分（群记忆/用户画像/群成员名单）由 Hook 在 ReactAgent 调用 LLM 前注入。
@@ -83,6 +91,49 @@ public class ContextBuilder {
         LogHelper.printLog(ContextBuilder.class, "ContextBuilder.build", "BUILD", "构建完成",
                 "groupId={} topicId={} 消息条数={} systemPrompt长度={}",
                 groupId, topicId, turns.size(), systemPrompt.length());
+        return new LlmContext(systemPrompt, turns);
+    }
+
+    /**
+     * 构建讨论态发言上下文（方案 6.3.6）：观点摘要列表 + 近期原文窗口，替代全量 200 条窗口。
+     * <p>token 收益：50 轮讨论约 2450 token（对比全量窗口 ~10 万 token）。
+     * <ul>
+     *   <li>层1 观点摘要列表：tag=KEY/VIEWPOINT 的消息（VIEWPOINT 用 LLM 摘要，KEY 用原文），
+     *       拼入 system prompt 让 Agent 掌握讨论全貌而不必读全部原文</li>
+     *   <li>层2 近期窗口：最近 {@code discussRecentWindow} 条原文转对话轮次，保持语气衔接</li>
+     *   <li>userHistoryHint：话题重启时注入的用户历史表现提示（EnsureTopicNode 产出）</li>
+     * </ul>
+     *
+     * @param userHistoryHint 话题重启时的用户历史表现提示（无则传 null/空）
+     */
+    @Event(eventCode = "BUILD_DISCUSS_CONTEXT", eventName = "构建讨论态发言上下文")
+    public LlmContext buildForDiscuss(Agent agent, Long groupId, Long topicId,
+                                      Function<GroupMessage, String> senderNameOf, String userHistoryHint) {
+        StringBuilder sp = new StringBuilder(buildBaseSystemPrompt(agent, true));
+
+        // 层1：观点摘要列表（有摘要用摘要，否则回退原文；用户 KEY 消息天然是原文观点）
+        List<GroupMessage> viewpoints = messageRepository.findViewpointsByTopicId(topicId, viewpointLimit);
+        if (!viewpoints.isEmpty()) {
+            sp.append("\n\n讨论观点:\n");
+            for (GroupMessage m : viewpoints) {
+                String text = (m.getViewpoint() != null && !m.getViewpoint().isBlank())
+                        ? m.getViewpoint() : m.getContent();
+                sp.append(senderNameOf.apply(m)).append(": ").append(text).append('\n');
+            }
+        }
+
+        // 用户历史表现提示（话题重启）：Agent 据此针对性引导用户提升
+        if (userHistoryHint != null && !userHistoryHint.isBlank()) {
+            sp.append("\n\n").append(userHistoryHint);
+        }
+
+        // 层2：近期窗口（最近 N 条原文，转对话轮次保持语气衔接）
+        List<GroupMessage> recent = messageRepository.findRecentByTopicId(topicId, discussRecentWindow);
+        List<ChatTurn> turns = toTurns(agent, recent, senderNameOf);
+        String systemPrompt = sp.toString();
+        LogHelper.printLog(ContextBuilder.class, "ContextBuilder.buildForDiscuss", "BUILD_DISCUSS", "讨论上下文构建完成",
+                "groupId={} topicId={} 观点条数={} 近期窗口条数={} systemPrompt长度={}",
+                groupId, topicId, viewpoints.size(), recent.size(), systemPrompt.length());
         return new LlmContext(systemPrompt, turns);
     }
 

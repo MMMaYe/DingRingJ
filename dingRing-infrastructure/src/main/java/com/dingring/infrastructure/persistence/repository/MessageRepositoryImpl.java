@@ -2,6 +2,7 @@ package com.dingring.infrastructure.persistence.repository;
 
 import com.dingring.domain.group.GroupMessage;
 import com.dingring.domain.group.MessageRepository;
+import com.dingring.domain.group.MessageTag;
 import com.dingring.domain.group.SenderType;
 import com.dingring.infrastructure.persistence.mapper.MessageMapper;
 import lombok.RequiredArgsConstructor;
@@ -98,5 +99,22 @@ public class MessageRepositoryImpl implements MessageRepository {
             return 0;
         }
         return messageMapper.updateTopicId(messageIds, topicId);
+    }
+
+    @Override
+    public List<GroupMessage> findViewpointsByTopicId(Long topicId, int limit) {
+        return messageMapper.findViewpointsByTopicId(topicId, limit);
+    }
+
+    @Override
+    public int updateTagAndViewpoint(Long messageId, MessageTag tag, String viewpoint) {
+        // 标签与观点摘要统一存于 feature JSON：读-改-写，避免覆盖 feature 中其他业务键
+        GroupMessage msg = messageMapper.findById(messageId);
+        if (msg == null) {
+            return 0;
+        }
+        msg.setTag(tag);
+        msg.setViewpoint(viewpoint);
+        return messageMapper.updateFeature(messageId, msg.getFeature());
     }
 }

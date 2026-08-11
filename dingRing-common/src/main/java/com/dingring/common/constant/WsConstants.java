@@ -23,6 +23,8 @@ public final class WsConstants {
     /** 流式发言中途废弃 {streamId}，前端丢弃半成品气泡 */
     public static final String MESSAGE_ABORT = "MESSAGE_ABORT";
     public static final String TOPIC_STATUS_CHANGED = "TOPIC_STATUS_CHANGED";
+    /** 讨论状态实时推送 {groupId, discussMode, topicTitle, divergeRounds, maxDivergeRounds, restartHint}，驱动前端讨论状态横幅 */
+    public static final String TOPIC_STATUS = "TOPIC_STATUS";
     public static final String TOPIC_CREATED = "TOPIC_CREATED";
     public static final String TOPIC_CLOSED = "TOPIC_CLOSED";
     public static final String CARD_GENERATED = "CARD_GENERATED";

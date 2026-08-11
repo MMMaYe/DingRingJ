@@ -11,6 +11,7 @@
                 typeHandler="com.dingring.infrastructure.persistence.typehandler.JsonMapTypeHandler"/>
     </resultMap>
 
+    <!-- tag/viewpoint 无独立列，统一存于 feature JSON（见 GroupMessage.FEATURE_TAG） -->
     <sql id="columns">
         id, chat_group_id, topic_id, sender_id, sender_type, message_type, content,
         reply_to_message_id, feature, create_time, update_time
@@ -129,6 +130,28 @@
         <foreach collection="messageIds" item="mid" open="(" separator="," close=")">
             #{mid}
         </foreach>
+    </update>
+
+    <!-- 观点消息列表（方案 6.3.6）：feature 标签为 KEY/VIEWPOINT 的消息，取最新 N 条后时间升序返回。
+         JSON 存于 TEXT 列，用 LIKE 匹配 "tag":"KEY"/"tag":"VIEWPOINT"（Jackson 序列化键值紧邻） -->
+    <select id="findViewpointsByTopicId" resultMap="messageMap">
+        SELECT * FROM (
+            SELECT <include refid="columns"/>
+            FROM message
+            WHERE topic_id = #{topicId}
+              AND (feature LIKE '%"tag":"KEY"%' OR feature LIKE '%"tag":"VIEWPOINT"%')
+            ORDER BY create_time DESC, id DESC
+            LIMIT #{limit}
+        ) t
+        ORDER BY t.create_time ASC, t.id ASC
+    </select>
+
+    <!-- 回写消息 feature（标签与观点摘要统一存于 feature JSON） -->
+    <update id="updateFeature">
+        UPDATE message
+        SET feature = #{feature, typeHandler=com.dingring.infrastructure.persistence.typehandler.JsonMapTypeHandler},
+            update_time = NOW()
+        WHERE id = #{messageId}
     </update>
 
 </mapper>

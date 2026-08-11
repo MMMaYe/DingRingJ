@@ -1,12 +1,6 @@
 package com.dingring.infrastructure.workflow;
 
-import com.alibaba.cloud.ai.graph.CompileConfig;
-import com.alibaba.cloud.ai.graph.CompiledGraph;
-import com.alibaba.cloud.ai.graph.KeyStrategyFactory;
-import com.alibaba.cloud.ai.graph.NodeOutput;
-import com.alibaba.cloud.ai.graph.OverAllState;
-import com.alibaba.cloud.ai.graph.RunnableConfig;
-import com.alibaba.cloud.ai.graph.StateGraph;
+import com.alibaba.cloud.ai.graph.*;
 import com.alibaba.cloud.ai.graph.action.AsyncEdgeAction;
 import com.alibaba.cloud.ai.graph.action.AsyncNodeAction;
 import com.alibaba.cloud.ai.graph.checkpoint.config.SaverConfig;
@@ -82,14 +76,15 @@ public class SaaWorkflow implements DiscussionFlowService {
     private static final List<String> OBSERVABLE_STATE_KEYS = List.of(
             StateKeys.INTENT, StateKeys.CONFIDENCE, StateKeys.TOPIC_TITLE, StateKeys.TOPIC_ID,
             StateKeys.ENSURE_SUCCESS, StateKeys.DISCUSS_MODE, StateKeys.TRIGGERED_BY,
-            StateKeys.CONCLUDED, StateKeys.DIVERGE_ROUNDS, StateKeys.SPEAKER_AGENT_ID
+            StateKeys.CONCLUDED, StateKeys.DIVERGE_ROUNDS, StateKeys.SPEAKER_AGENT_ID,
+            StateKeys.RESTART_HINT, StateKeys.USER_HISTORY_HINT
     );
 
     @PostConstruct
     public void init() throws GraphStateException {
         // 1. KeyStrategyFactory：定义 OverAllState 的 key 策略
         KeyStrategyFactory keyStrategyFactory = () -> {
-            Map<String, com.alibaba.cloud.ai.graph.KeyStrategy> strategies = new HashMap<>();
+            Map<String, KeyStrategy> strategies = new HashMap<>();
             // 输入（替换策略）
             strategies.put(StateKeys.GROUP_ID, new ReplaceStrategy());
             strategies.put(StateKeys.INPUT, new ReplaceStrategy());
@@ -99,6 +94,7 @@ public class SaaWorkflow implements DiscussionFlowService {
             strategies.put(StateKeys.TOPIC_ID, new ReplaceStrategy());
             strategies.put(StateKeys.TOPIC_TITLE, new ReplaceStrategy());
             strategies.put(StateKeys.RESTART_HINT, new ReplaceStrategy());
+            strategies.put(StateKeys.USER_HISTORY_HINT, new ReplaceStrategy());
             // 意图（替换策略）
             strategies.put(StateKeys.INTENT, new ReplaceStrategy());
             strategies.put(StateKeys.CONFIDENCE, new ReplaceStrategy());

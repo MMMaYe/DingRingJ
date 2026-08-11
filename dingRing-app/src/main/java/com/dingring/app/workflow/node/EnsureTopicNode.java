@@ -3,6 +3,7 @@ package com.dingring.app.workflow.node;
 import com.alibaba.cloud.ai.graph.OverAllState;
 import com.alibaba.cloud.ai.graph.action.NodeAction;
 import com.dingring.app.orchestrator.MessageRouter;
+import com.dingring.app.service.GroupAppService;
 import com.dingring.common.constant.WsConstants;
 import com.dingring.common.util.JsonHelper;
 import com.dingring.common.util.LogHelper;
@@ -15,6 +16,8 @@ import com.dingring.domain.group.GroupRepository;
 import com.dingring.domain.group.MessageRepository;
 import com.dingring.domain.service.DomainEventPublisher;
 import com.dingring.domain.service.GroupBroadcastService;
+import com.dingring.domain.user.UserTopicProfile;
+import com.dingring.domain.user.UserTopicProfileRepository;
 import com.dingring.domain.workflow.StateKeys;
 import com.dingring.infrastructure.aop.Event;
 import lombok.RequiredArgsConstructor;
@@ -55,6 +58,7 @@ public class EnsureTopicNode implements NodeAction {
     private final MessageRepository messageRepository;
     private final DomainEventPublisher eventPublisher;
     private final GroupBroadcastService groupBroadcastService;
+    private final UserTopicProfileRepository topicProfileRepository;
 
     /**
      * 追溯式建题。
@@ -152,6 +156,23 @@ public class EnsureTopicNode implements NodeAction {
         // 回填上一个主题关闭之后的近期闲聊消息到新主题
         int backfilled = backfillChatMessages(groupId, topic.getId(), backfillLimit);
 
+        // 话题重启回溯（方案 6.3.7）：按标题查用户历史表现，生成给前端的 restartHint + 给 Agent 的 userHistoryHint
+        List<UserTopicProfile> history = topicProfileRepository
+                .findByUserIdAndTopicTitleOrderByCreatedAtDesc(GroupAppService.DEFAULT_USER_ID, topicTitle);
+        String restartHint = "新话题「" + topic.getTitle() + "」已开始，可以开始讨论";
+        String userHistoryHint = "";
+        if (!history.isEmpty()) {
+            UserTopicProfile latest = history.get(0);
+            restartHint = String.format("这是第%d次讨论「%s」，上次你在「%s」方面还需提升",
+                    history.size() + 1, topic.getTitle(),
+                    latest.getWeakPoints() == null || latest.getWeakPoints().isBlank()
+                            ? "知识深度" : latest.getWeakPoints());
+            userHistoryHint = formatHistoryHint(history);
+            LogHelper.printLog(EnsureTopicNode.class, "EnsureTopicNode.apply", "ENSURE_TOPIC", "话题重启回溯命中",
+                    "topicId={} title={} 历史次数={}",
+                    topic.getId(), topic.getTitle(), history.size());
+        }
+
         // 发布领域事件 + WS 广播
         eventPublisher.publish(new TopicCreated(topic.getId(), groupId, topic.getTitle()));
         groupBroadcastService.broadcast(groupId, WsConstants.TOPIC_CREATED, Map.of(
@@ -159,12 +180,14 @@ public class EnsureTopicNode implements NodeAction {
                 "topicId", topic.getId(),
                 "title", topic.getTitle(),
                 "status", topic.getStatus().name(),
-                "round", 0,
-                "restartHint", "新话题「" + topic.getTitle() + "」已开始，可以开始讨论"));
+                "round", history.size(),
+                "restartHint", restartHint));
 
         result.put(StateKeys.TOPIC_ID, topic.getId());
         result.put(StateKeys.TOPIC_TITLE, topic.getTitle());
         result.put(StateKeys.ENSURE_SUCCESS, true);
+        result.put(StateKeys.RESTART_HINT, restartHint);
+        result.put(StateKeys.USER_HISTORY_HINT, userHistoryHint);
 
         LogHelper.printLog(EnsureTopicNode.class, "EnsureTopicNode.apply", "ENSURE_TOPIC", "追溯式建题成功",
                 "groupId={} topicId={} title={} 回填条数={}",
@@ -188,6 +211,38 @@ public class EnsureTopicNode implements NodeAction {
         LogHelper.printLog(EnsureTopicNode.class, "EnsureTopicNode.backfillChatMessages", "ENSURE_TOPIC",
                 "回填完成", "topicId={} 回填条数={}", topicId, updated);
         return updated;
+    }
+
+    /**
+     * 格式化用户历史表现提示（给 Agent 看，注入 DiscussNode 的 system prompt）。
+     * <p>history 按 create_time 倒序，history.get(0) = 最近一次讨论；2 条以上追加进步轨迹，
+     * 让 Agent 感知用户是否在进步并调整引导力度。
+     */
+    private String formatHistoryHint(List<UserTopicProfile> history) {
+        UserTopicProfile latest = history.get(0);
+        StringBuilder sb = new StringBuilder();
+        sb.append("用户上次讨论「").append(latest.getTopicTitle()).append("」时:\n");
+        sb.append("- 理解程度: ").append(nullToDash(latest.getUnderstandingLevel())).append("\n");
+        sb.append("- 薄弱点: ").append(nullToDash(latest.getWeakPoints())).append("\n");
+        sb.append("- 建议提升: ").append(nullToDash(latest.getSuggestedFocus()));
+
+        // 2 条以上展示进步轨迹（最老在前），让 Agent 感知成长
+        if (history.size() >= 2) {
+            sb.append("\n\n进步轨迹:");
+            for (int i = history.size() - 1; i >= 0; i--) {
+                UserTopicProfile p = history.get(i);
+                sb.append("\n- 第").append(history.size() - i).append("次: ")
+                        .append(nullToDash(p.getUnderstandingLevel()))
+                        .append("(薄弱: ").append(nullToDash(p.getWeakPoints())).append(")");
+            }
+        }
+        sb.append("\n请在本次讨论中针对性地引导用户提升薄弱点。");
+        return sb.toString();
+    }
+
+    /** 空值渲染为占位符，避免提示词中出现 "null" 字样 */
+    private String nullToDash(String value) {
+        return value == null || value.isBlank() ? "—" : value;
     }
 
     private LocalDateTime lastClosedAt(Long groupId) {

@@ -190,4 +190,71 @@ class ContextBuilderTest {
                     .contains("Java 内存模型");                  // 主题标题
         }
     }
+
+    @Nested
+    @DisplayName("buildForDiscuss 讨论态上下文（方案 6.3.6）")
+    class BuildForDiscuss {
+
+        @BeforeEach
+        void setUp() throws Exception {
+            setField(contextBuilder, "viewpointLimit", 20);
+            setField(contextBuilder, "discussRecentWindow", 8);
+        }
+
+        @Test
+        @DisplayName("观点摘要列表拼入 systemPrompt，近期窗口转对话轮次")
+        void shouldMergeViewpointsIntoPromptAndRecentWindowIntoTurns() throws Exception {
+            Agent self = agent(10L, "老王", "你是后端专家");
+            GroupMessage viewpoint = agentMsg(1L, 20L, "Agent 长篇原文");
+            viewpoint.setViewpoint("建议用 Redis 缓存热点数据");
+            viewpoint.setTag(com.dingring.domain.group.MessageTag.VIEWPOINT);
+            when(messageRepository.findViewpointsByTopicId(100L, 20)).thenReturn(List.of(viewpoint));
+            when(messageRepository.findRecentByTopicId(100L, 8)).thenReturn(List.of(
+                    userMsg(2L, 1L, "用户", "最近一条提问")
+            ));
+
+            ContextBuilder.LlmContext ctx = contextBuilder.buildForDiscuss(
+                    self, 1L, 100L, m -> "用户", "");
+
+            // 观点摘要（用摘要而非原文）进入 systemPrompt
+            assertThat(ctx.systemPrompt())
+                    .contains("讨论观点:")
+                    .contains("建议用 Redis 缓存热点数据")
+                    .doesNotContain("Agent 长篇原文");
+            // 近期窗口转轮次
+            assertThat(ctx.turns()).extracting(ChatTurn::content)
+                    .contains("用户: 最近一条提问");
+        }
+
+        @Test
+        @DisplayName("观点无摘要时回退原文")
+        void shouldFallbackToRawContentWhenNoViewpointSummary() {
+            Agent self = agent(10L, "老王", null);
+            GroupMessage viewpoint = agentMsg(1L, 20L, "缓存穿透可以用布隆过滤器");
+            when(messageRepository.findViewpointsByTopicId(100L, 20)).thenReturn(List.of(viewpoint));
+            when(messageRepository.findRecentByTopicId(100L, 8)).thenReturn(List.of());
+
+            ContextBuilder.LlmContext ctx = contextBuilder.buildForDiscuss(
+                    self, 1L, 100L, m -> "用户", "");
+
+            assertThat(ctx.systemPrompt()).contains("缓存穿透可以用布隆过滤器");
+        }
+
+        @Test
+        @DisplayName("userHistoryHint 追加进 systemPrompt，空时不追加")
+        void shouldAppendUserHistoryHint() {
+            Agent self = agent(10L, "老王", null);
+            when(messageRepository.findViewpointsByTopicId(100L, 20)).thenReturn(List.of());
+            when(messageRepository.findRecentByTopicId(100L, 8)).thenReturn(List.of());
+
+            ContextBuilder.LlmContext withHint = contextBuilder.buildForDiscuss(
+                    self, 1L, 100L, m -> "用户", "用户上次讨论「缓存」时在一致性方面还需提升");
+            assertThat(withHint.systemPrompt())
+                    .contains("用户上次讨论「缓存」时在一致性方面还需提升");
+
+            ContextBuilder.LlmContext withoutHint = contextBuilder.buildForDiscuss(
+                    self, 1L, 100L, m -> "用户", "");
+            assertThat(withoutHint.systemPrompt()).doesNotContain("用户上次讨论");
+        }
+    }
 }
