@@ -3,6 +3,7 @@ package com.dingring.infrastructure.memory;
 import com.dingring.domain.discussion.Topic;
 import com.dingring.domain.discussion.TopicRepository;
 import com.dingring.domain.service.MemoryService;
+import com.dingring.infrastructure.aop.Event;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -16,11 +17,12 @@ import java.util.List;
 public class SimpleMemoryService implements MemoryService {
 
     /** 最多带入的历史结论条数，防止 Prompt 过长 */
-    private static final int MAX_MEMORY_TOPICS = 5;
+    private static final int MAX_MEMORY_TOPICS = 2;
 
     private final TopicRepository topicRepository;
 
     @Override
+    @Event(eventCode = "HOOK_MEMORY", eventName = "注入群历史记忆")
     public String retrieveMemory(Long groupId) {
         List<Topic> closedTopics = topicRepository.findClosedByGroupId(groupId);
         if (closedTopics == null || closedTopics.isEmpty()) {

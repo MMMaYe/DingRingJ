@@ -46,7 +46,7 @@ public class ProfileInjectionHook extends ModelHook {
         }
 
         LogHelper.printLog(ProfileInjectionHook.class, "ProfileInjectionHook.beforeModel",
-                "HOOK_PROFILE", "注入用户画像", "userId={} 长度={}", userId, profile.length());
+                "HOOK_PROFILE", "注入用户画像", "userId={} profile={}", userId, profile);
 
         return CompletableFuture.completedFuture(
                 Map.of("messages", new SystemMessage(

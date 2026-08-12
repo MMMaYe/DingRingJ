@@ -45,7 +45,7 @@ public class MemoryInjectionHook extends ModelHook {
         }
 
         LogHelper.printLog(MemoryInjectionHook.class, "MemoryInjectionHook.beforeModel",
-                "HOOK_MEMORY", "注入群历史记忆", "groupId={} 长度={}", groupId, memory.length());
+                "HOOK_MEMORY", "注入群历史记忆", "groupId={} memory={}", groupId, memory);
 
         // 方案 A：向 messages state key 追加 SystemMessage（AppendStrategy）
         // ReactAgent 内部会将此 SystemMessage 与字段级 systemPrompt 共存传给 ChatModel

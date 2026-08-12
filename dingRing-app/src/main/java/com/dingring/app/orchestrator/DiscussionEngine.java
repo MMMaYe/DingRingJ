@@ -155,8 +155,11 @@ public class DiscussionEngine {
      *   <li>CONCLUDE：流程内已收束，退出循环</li>
      * </ul>
      */
+    @Event(eventCode = "RUN_LOOP", eventName = "主循环")
     private void runLoop(Long groupId, GroupState state) throws InterruptedException {
-        LogHelper.putTrace(groupId, null);
+        //TODO：先取时间戳作为标识
+        long startTime = System.currentTimeMillis();
+        LogHelper.putTrace(groupId,  startTime);
         try {
             while (true) {
                 Optional<Topic> active = topicRepository.findActiveByGroupId(groupId)
@@ -165,6 +168,10 @@ public class DiscussionEngine {
                 // 闲聊态（无活跃话题）：poll 不等待，空即退出
                 // 讨论态：按 discussMode 决定 pace（DIVERGE=divergePaceMs，其他=阻塞等待）
                 long timeout = paceForMode(state, active.isPresent());
+                //打印超时日志
+                LogHelper.printLog(DiscussionEngine.class, "DiscussionEngine.runLoop",
+                        "RUN_LOOP_WAIT_TIME",
+                        "主循环等待时长","此次需要等：{}秒",timeout/1000);
                 UserSignal signal = active.isPresent()
                         ? state.queue.poll(timeout, TimeUnit.MILLISECONDS)
                         : state.queue.poll();
@@ -173,6 +180,8 @@ public class DiscussionEngine {
                     // 丢弃积压信号（已入库，意图分类从 DB 拉完整上下文）
                     state.queue.clear();
                     DiscussionFlowResult result = advanceFlow(groupId, signal, state);
+
+                    //TODO：图的状态应该维护在domain层？ 又或者stateGraph中？
                     updateRuntimeState(state, result);
                     pushTopicStatus(groupId, result);
 
@@ -220,6 +229,7 @@ public class DiscussionEngine {
     /* ==================== 流程调用 ==================== */
 
     /** 用户消息驱动流程：构建 inputs（含运行时状态）→ advance → 返回结果 */
+    @Event(eventCode = "ADVANCE_FLOW", eventName = "流程推进")
     private DiscussionFlowResult advanceFlow(Long groupId, UserSignal signal, GroupState state) {
         Map<String, Object> inputs = new HashMap<>();
         inputs.put(StateKeys.GROUP_ID, groupId);

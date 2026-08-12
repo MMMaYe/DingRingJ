@@ -48,6 +48,18 @@ public class SystemMessageMergeHook extends ModelHook {
             return CompletableFuture.completedFuture(Map.of());
         }
 
+        List<Message> merged = mergeMessage(state, messages);
+
+        if (merged == null) {
+            return CompletableFuture.completedFuture(Map.of());
+        }
+
+        // ReplaceAllWith 覆盖 messages 的 AppendStrategy：整体替换而非追加
+        return CompletableFuture.completedFuture(Map.of(MESSAGES_KEY, ReplaceAllWith.of(merged)));
+    }
+
+    @Event(eventCode = "BEFORE_MODEL", eventName = "合并SystemMessage")
+    private List<Message> mergeMessage(OverAllState state, List<Message> messages) {
         // 基础系统提示词（Agent 人设 + 协作协议），由 AgentSpeakerServiceImpl 写入 state
         String basePrompt = state.value(BASE_SYSTEM_PROMPT_KEY, "");
 
@@ -74,15 +86,13 @@ public class SystemMessageMergeHook extends ModelHook {
 
         // 既无基础提示词也无 Hook 注入内容，无需合并
         if (systemText.length() == 0) {
-            return CompletableFuture.completedFuture(Map.of());
+            return null;
         }
 
         merged.add(0, new SystemMessage(systemText.toString()));
         LogHelper.printLog(SystemMessageMergeHook.class, "SystemMessageMergeHook.beforeModel",
                 "HOOK_MERGE_SYSTEM", "合并 SystemMessage",
-                "合并条数={} system长度={} 总消息数={}", systemCount, systemText.length(), merged.size());
-
-        // ReplaceAllWith 覆盖 messages 的 AppendStrategy：整体替换而非追加
-        return CompletableFuture.completedFuture(Map.of(MESSAGES_KEY, ReplaceAllWith.of(merged)));
+                "合并条数={} system长度={} merged={}", systemCount, systemText.length(), merged);
+        return merged;
     }
 }
