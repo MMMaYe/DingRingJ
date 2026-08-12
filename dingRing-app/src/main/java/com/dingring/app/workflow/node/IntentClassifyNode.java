@@ -87,9 +87,9 @@ public class IntentClassifyNode implements NodeAction {
         // 调用 MessageRouter 做意图判定（复用现有业务逻辑）
         MessageRouter.Route route = messageRouter.route(judge, input, activeTopicTitle);
 
-        // 路由修正：有活跃话题时，CHAT 强制重映射为 DISCUSS
+        // 路由修正：有活跃话题时，强制重映射为 DISCUSS
         // 原因：ChatNode 是闲聊节点不携带话题上下文，IN_PROGRESS 期间的消息应进入讨论节点推进深度
-        if (route.intent() == MessageRouter.Intent.CHAT && activeTopicTitle != null) {
+        if ((route.intent() == MessageRouter.Intent.CHAT || route.intent() == MessageRouter.Intent.WORK) && activeTopicTitle != null) {
             LogHelper.printLog(IntentClassifyNode.class, "IntentClassifyNode.apply", "INTENT_CLASSIFY",
                     "活跃话题期间CHAT重映射为DISCUSS",
                     "activeTopic={} originalIntent={}", activeTopicTitle, route.intent());
