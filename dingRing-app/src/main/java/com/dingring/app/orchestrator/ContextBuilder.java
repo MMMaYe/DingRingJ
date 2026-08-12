@@ -122,6 +122,10 @@ public class ContextBuilder {
             }
         }
 
+        // 讨论进度引导：根据已有观点数和 Agent 发言轮次，注入数据驱动的深度推进指令
+        // 早期鼓励发表观点，中期要求深化/反驳，后期引导综合/总结
+        sp.append(buildDiscussionProgressGuide(topicId, viewpoints.size()));
+
         // 用户历史表现提示（话题重启）：Agent 据此针对性引导用户提升
         if (userHistoryHint != null && !userHistoryHint.isBlank()) {
             sp.append("\n\n").append(userHistoryHint);
@@ -135,6 +139,36 @@ public class ContextBuilder {
                 "groupId={} topicId={} 观点条数={} 近期窗口条数={} systemPrompt长度={}",
                 groupId, topicId, viewpoints.size(), recent.size(), systemPrompt.length());
         return new LlmContext(systemPrompt, turns);
+    }
+
+    /**
+     * 构建讨论进度引导：根据已有观点数和 Agent 发言轮次，输出数据驱动的深度推进指令。
+     * <ul>
+     *   <li>早期（观点 ≤2 或 Agent 发言 ≤3）：鼓励积极发表独立观点</li>
+     *   <li>中期（观点 3~6 或 Agent 发言 4~8）：要求提出新视角、反驳已有观点、或深化论据</li>
+     *   <li>后期（观点 ≥7 或 Agent 发言 ≥9）：引导综合不同观点、找出共性与分歧、或提出整合方案</li>
+     * </ul>
+     * 这不是单纯的 prompt 提示——进度数据来自 DB（观点数 + Agent 发言轮次），
+     * 使引导随讨论进展动态变化，避免 Agent 在后期仍在重复初期风格的泛泛发言。
+     */
+    private String buildDiscussionProgressGuide(Long topicId, int viewpointCount) {
+        long agentMessages = messageRepository.countByTopicIdAndSenderType(topicId, SenderType.AGENT);
+        String phase;
+        String guide;
+        if (viewpointCount <= 2 || agentMessages <= 3) {
+            phase = "早期";
+            guide = "讨论刚开始，请围绕主题积极发表你的独立观点，避免与已有观点重复。";
+        } else if (viewpointCount <= 6 || agentMessages <= 8) {
+            phase = "中期";
+            guide = "讨论已展开，请尝试以下方式推进深度：提出与已有观点不同的新视角、"
+                    + "反驳或质疑某个观点并给出理由、为某个观点补充更具体的论据或示例。";
+        } else {
+            phase = "后期";
+            guide = "讨论已深入，请尝试：综合不同观点的共性与分歧、指出核心争议点、"
+                    + "提出能整合多方视角的方案或结论。如果你认为讨论已充分，可以输出 [[CONCLUDE]] 提议收束。";
+        }
+        return String.format("\n\n讨论进度: %s（已发言%d轮，已有%d个观点）\n%s",
+                phase, agentMessages, viewpointCount, guide);
     }
 
     /** 讨论态附带少量闲聊：主题窗口前合并最近 N 条未归属主题的消息（近期群氛围） */

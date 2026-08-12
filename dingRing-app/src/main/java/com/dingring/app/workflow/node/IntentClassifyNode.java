@@ -87,6 +87,16 @@ public class IntentClassifyNode implements NodeAction {
         // 调用 MessageRouter 做意图判定（复用现有业务逻辑）
         MessageRouter.Route route = messageRouter.route(judge, input, activeTopicTitle);
 
+        // 路由修正：有活跃话题时，CHAT 强制重映射为 DISCUSS
+        // 原因：ChatNode 是闲聊节点不携带话题上下文，IN_PROGRESS 期间的消息应进入讨论节点推进深度
+        if (route.intent() == MessageRouter.Intent.CHAT && activeTopicTitle != null) {
+            LogHelper.printLog(IntentClassifyNode.class, "IntentClassifyNode.apply", "INTENT_CLASSIFY",
+                    "活跃话题期间CHAT重映射为DISCUSS",
+                    "activeTopic={} originalIntent={}", activeTopicTitle, route.intent());
+            route = new MessageRouter.Route(
+                    MessageRouter.Intent.DISCUSS, activeTopicTitle, route.confidence());
+        }
+
         Map<String, Object> result = new HashMap<>();
         result.put(StateKeys.INTENT, route.intent().name());
 
@@ -94,6 +104,7 @@ public class IntentClassifyNode implements NodeAction {
         result.put(StateKeys.CONFIDENCE, route.confidence().name());
 
         // DISCUSS 时写入拟定的 topicTitle（供 EnsureTopicNode 建题用）
+        // 活跃话题期间重映射的 DISCUSS 使用现有话题标题，不新建议题
         if (route.intent() == MessageRouter.Intent.DISCUSS && !route.topicTitle().isBlank()) {
             result.put(StateKeys.TOPIC_TITLE, route.topicTitle());
         }

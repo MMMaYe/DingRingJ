@@ -110,8 +110,8 @@ public class ChatNode implements NodeAction {
             return Map.of();
         }
 
-        // 选 Agent：统一走调度评分（@提及 +800 大权重加分通常优先，但不再硬选首个）
-        List<SpeakerScheduler.ScoredAgent> ranked = rankSpeakers(members, mentionedAgentIds, groupId);
+        // 选 Agent：统一走调度评分（@提及 +800 / 引用回复 +500 大权重加分通常优先，但不再硬选首个）
+        List<SpeakerScheduler.ScoredAgent> ranked = rankSpeakers(members, mentionedAgentIds, groupId, repliedToAgentId);
         if (ranked.isEmpty()) {
             LogHelper.printWarnLog(ChatNode.class, "ChatNode.apply", "CHAT_NODE", "无可用发言Agent跳过",
                     "groupId={} 成员数={} mentionedCount={}", groupId, members.size(), mentionedAgentIds.size());
@@ -152,14 +152,16 @@ public class ChatNode implements NodeAction {
     /**
      * 候选 Agent 评分排序：统一走 {@link SpeakerScheduler}（@提及 +800 大权重加分通常优先，
      * 但不再硬选首个被 @ 者），返回按分数降序的完整候选列表供级联发言。
+     * <p>引用回复的 Agent 通过 REPLY_BONUS=500 加分通常优先被调度。
      */
-    private List<SpeakerScheduler.ScoredAgent> rankSpeakers(List<Agent> members, List<Long> mentionedAgentIds, Long groupId) {
+    private List<SpeakerScheduler.ScoredAgent> rankSpeakers(List<Agent> members, List<Long> mentionedAgentIds,
+                                                             Long groupId, Long repliedToAgentId) {
         MessageContext ctx = MessageContext.builder()
                 .groupId(groupId)
                 .topicId(null)
                 .content("")
                 .mentionedAgentIds(mentionedAgentIds)
-                .repliedToAgentId(null)
+                .repliedToAgentId(repliedToAgentId)
                 .speakCounts(Map.of())
                 .build();
         return speakerScheduler.rank(members, ctx);

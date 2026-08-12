@@ -174,8 +174,19 @@ public class ChatOrchestrator {
             return null;
         }
         return messageRepository.findById(replyToMessageId)
-                .filter(m -> m.getSenderType() == SenderType.AGENT)
-                .map(GroupMessage::getSenderId)
+                .map(m -> {
+                    if (m.getSenderType() == SenderType.AGENT) {
+                        LogHelper.printLog(ChatOrchestrator.class, "ChatOrchestrator.resolveRepliedAgent",
+                                "ON_USER_MESSAGE", "引用回复目标为Agent消息",
+                                "replyToMessageId={} senderType={} agentId={}",
+                                replyToMessageId, m.getSenderType(), m.getSenderId());
+                        return m.getSenderId();
+                    }
+                    LogHelper.printLog(ChatOrchestrator.class, "ChatOrchestrator.resolveRepliedAgent",
+                            "ON_USER_MESSAGE", "引用回复目标非Agent消息忽略",
+                            "replyToMessageId={} senderType={}", replyToMessageId, m.getSenderType());
+                    return null;
+                })
                 .orElse(null);
     }
 }
