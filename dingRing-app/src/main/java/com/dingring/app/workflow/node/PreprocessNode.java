@@ -31,7 +31,7 @@ import java.util.Optional;
  * </ul>
  */
 @Slf4j
-@Component("preprocessHandler")
+@Component
 @RequiredArgsConstructor
 public class PreprocessNode implements NodeAction {
 
@@ -86,6 +86,20 @@ public class PreprocessNode implements NodeAction {
             result.put(StateKeys.TOPIC_TITLE, topic.getTitle());
             LogHelper.printLog(PreprocessNode.class, "PreprocessNode.apply", "PREPROCESS", "存在活跃话题",
                     "groupId={} topicId={} title={}", groupId, topic.getId(), topic.getTitle());
+        } else if (state.<Long>value(StateKeys.TOPIC_ID).isPresent()) {
+            // 收束流程（runConcludeFlow）通过 inputs 显式传入 topicId：此时话题已流转为
+            // CONCLUDING，findActiveByGroupId（仅查 IN_PROGRESS）查不到属正常路径。
+            // 若此处把 topicId 覆盖为 null，ConcludeNode 会因缺少必要参数 topicId 崩溃
+            // （复现：logs/dingring.log 08:14:34 "ConcludeNode 缺少必要参数 topicId"）。
+            // 从库中按传入的 topicId 加载，保证收束路径 state 完整（含 title 供前端展示）。
+            Long presetId = state.<Long>value(StateKeys.TOPIC_ID).get();
+            topicRepository.findById(presetId).ifPresent(t -> {
+                result.put(StateKeys.TOPIC_ID, t.getId());
+                result.put(StateKeys.TOPIC_TITLE, t.getTitle());
+                LogHelper.printLog(PreprocessNode.class, "PreprocessNode.apply", "PREPROCESS",
+                        "话题已由调用方指定（收束流程），从库中加载",
+                        "groupId={} topicId={} title={}", groupId, t.getId(), t.getTitle());
+            });
         } else {
             result.put(StateKeys.TOPIC_ID, null);
             result.put(StateKeys.TOPIC_TITLE, null);

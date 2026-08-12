@@ -48,7 +48,7 @@ import java.util.Map;
  * </ul>
  */
 @Slf4j
-@Component("workHandler")
+@Component
 @RequiredArgsConstructor
 public class WorkNode implements NodeAction {
 

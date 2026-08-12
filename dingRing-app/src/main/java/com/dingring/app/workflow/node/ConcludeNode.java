@@ -45,7 +45,7 @@ import java.util.Optional;
  * <p>失败回退：rollbackToInProgress + 广播 ERROR，discussMode 保持 CONCLUDE 但 concluded=false。
  */
 @Slf4j
-@Component("concludeHandler")
+@Component
 @RequiredArgsConstructor
 public class ConcludeNode implements NodeAction {
 

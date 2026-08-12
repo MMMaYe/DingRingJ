@@ -46,7 +46,7 @@ import java.util.Optional;
  * <p>条件边：SaaWorkflow 中 ensure-topic 节点按 ensureSuccess 分流到 discuss / chat。
  */
 @Slf4j
-@Component("ensureTopicHandler")
+@Component
 @RequiredArgsConstructor
 public class EnsureTopicNode implements NodeAction {
 

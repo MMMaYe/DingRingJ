@@ -52,7 +52,7 @@ import java.util.UUID;
  * <p>注意：闲聊态不处理 [[CONCLUDE]]/[[PASS]] 标记（仅讨论态有意义），直接剥离后入库。
  */
 @Slf4j
-@Component("chatHandler")
+@Component
 @RequiredArgsConstructor
 public class ChatNode implements NodeAction {
 

@@ -34,7 +34,7 @@ import java.util.Optional;
  * <p>条件边：SaaWorkflow 中 intent-classify 节点的条件边按 intent 值分流到 chat/ensure-topic/work/conclude。
  */
 @Slf4j
-@Component("intentClassifyHandler")
+@Component
 @RequiredArgsConstructor
 public class IntentClassifyNode implements NodeAction {
 

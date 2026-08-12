@@ -24,7 +24,7 @@ import java.util.Map;
  * </ul>
  */
 @Slf4j
-@Component("sedimentHandler")
+@Component
 @RequiredArgsConstructor
 public class SedimentNode implements NodeAction {
 

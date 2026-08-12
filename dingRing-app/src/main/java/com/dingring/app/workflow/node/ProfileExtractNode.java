@@ -35,7 +35,7 @@ import java.util.stream.Collectors;
  * </ul>
  */
 @Slf4j
-@Component("profileExtractHandler")
+@Component
 @RequiredArgsConstructor
 public class ProfileExtractNode implements NodeAction {
 

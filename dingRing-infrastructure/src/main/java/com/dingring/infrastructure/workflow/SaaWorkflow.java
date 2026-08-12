@@ -125,23 +125,23 @@ public class SaaWorkflow implements DiscussionFlowService {
 
         // 3. 添加节点（通过 NodeHandlerRegistry 按 Bean 名查找 NodeAction）
         graph.addNode("preprocess", AsyncNodeAction.node_async(
-                nodeRegistry.getHandler("preprocessHandler")));
+                nodeRegistry.getHandler("preprocessNode")));
         graph.addNode("intent-classify", AsyncNodeAction.node_async(
-                nodeRegistry.getHandler("intentClassifyHandler")));
+                nodeRegistry.getHandler("intentClassifyNode")));
         graph.addNode("chat", AsyncNodeAction.node_async(
-                nodeRegistry.getHandler("chatHandler")));
+                nodeRegistry.getHandler("chatNode")));
         graph.addNode("ensure-topic", AsyncNodeAction.node_async(
-                nodeRegistry.getHandler("ensureTopicHandler")));
+                nodeRegistry.getHandler("ensureTopicNode")));
         graph.addNode("discuss", AsyncNodeAction.node_async(
-                nodeRegistry.getHandler("discussHandler")));
+                nodeRegistry.getHandler("discussNode")));
         graph.addNode("conclude", AsyncNodeAction.node_async(
-                nodeRegistry.getHandler("concludeHandler")));
+                nodeRegistry.getHandler("concludeNode")));
         graph.addNode("sediment", AsyncNodeAction.node_async(
-                nodeRegistry.getHandler("sedimentHandler")));
+                nodeRegistry.getHandler("sedimentNode")));
         graph.addNode("profile-extract", AsyncNodeAction.node_async(
-                nodeRegistry.getHandler("profileExtractHandler")));
+                nodeRegistry.getHandler("profileExtractNode")));
         graph.addNode("work", AsyncNodeAction.node_async(
-                nodeRegistry.getHandler("workHandler")));
+                nodeRegistry.getHandler("workNode")));
 
         // 4. 添加边
         // 入口

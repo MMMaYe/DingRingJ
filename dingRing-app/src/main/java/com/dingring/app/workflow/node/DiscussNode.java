@@ -58,7 +58,7 @@ import java.util.UUID;
  * <p>降级链：单个 Agent LLM 调用失败时接力下一个候选，所有候选失败才标记 FAILED。
  */
 @Slf4j
-@Component("discussHandler")
+@Component
 @RequiredArgsConstructor
 public class DiscussNode implements NodeAction {
 
