@@ -51,6 +51,9 @@ export default function ChatPage() {
   const searchInputRef = useRef<HTMLInputElement>(null);
   // 群列表搜索
   const [groupKw, setGroupKw] = useState('');
+  // 侧栏收起状态（localStorage 持久化，刷新后保持）
+  const [leftCollapsed, setLeftCollapsed] = useState(() => localStorage.getItem('dingring.chat.leftCollapsed') === '1');
+  const [rightCollapsed, setRightCollapsed] = useState(() => localStorage.getItem('dingring.chat.rightCollapsed') === '1');
 
   // modals
   const [showCreateGroup, setShowCreateGroup] = useState(false);
@@ -153,6 +156,10 @@ export default function ChatPage() {
   }, []);
 
   useEffect(() => { loadGroups(); }, [loadGroups]);
+
+  // 侧栏收起状态持久化
+  useEffect(() => { localStorage.setItem('dingring.chat.leftCollapsed', leftCollapsed ? '1' : '0'); }, [leftCollapsed]);
+  useEffect(() => { localStorage.setItem('dingring.chat.rightCollapsed', rightCollapsed ? '1' : '0'); }, [rightCollapsed]);
 
   // ---- 为所有群建立 WS 连接（群列表变化时同步） ----
   useEffect(() => {
@@ -560,7 +567,7 @@ export default function ChatPage() {
   return (
     <div className="app-shell">
       {/* 左侧：导航 + 群列表 */}
-      <Sidebar showGroupLabel onSearch={setGroupKw} footer={<button className="sidebar__new-group" onClick={openCreateGroup}><IconPlus /> 新建群组</button>}>
+      <Sidebar showGroupLabel className={leftCollapsed ? 'is-collapsed' : undefined} onSearch={setGroupKw} footer={<button className="sidebar__new-group" onClick={openCreateGroup}><IconPlus /> 新建群组</button>}>
         <div className="group-list">
           {!groups.length ? (
             <div className="empty"><div className="empty__icon">👥</div>还没有群，点击下方按钮创建</div>
@@ -597,6 +604,29 @@ export default function ChatPage() {
 
       {/* 中间：聊天窗口 */}
       <section className="chat-window">
+        {/* 侧栏收起开关（悬浮于聊天窗口左右边缘） */}
+        <button
+          className={`edge-toggle edge-toggle--left${leftCollapsed ? ' is-collapsed' : ''}`}
+          onClick={() => setLeftCollapsed(c => !c)}
+          title={leftCollapsed ? '展开左侧栏' : '收起左侧栏'}
+          aria-label={leftCollapsed ? '展开左侧栏' : '收起左侧栏'}
+        >
+          {leftCollapsed
+            ? <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M4.5 2.5L8 6l-3.5 3.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            : <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M7.5 2.5L4 6l3.5 3.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+        </button>
+        {group && (
+          <button
+            className={`edge-toggle edge-toggle--right${rightCollapsed ? ' is-collapsed' : ''}`}
+            onClick={() => setRightCollapsed(c => !c)}
+            title={rightCollapsed ? '展开右侧栏' : '收起右侧栏'}
+            aria-label={rightCollapsed ? '展开右侧栏' : '收起右侧栏'}
+          >
+            {rightCollapsed
+              ? <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M7.5 2.5L4 6l3.5 3.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              : <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M4.5 2.5L8 6l-3.5 3.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+          </button>
+        )}
         {!group ? (
           <div className="chat-placeholder">
             <div className="chat-placeholder__logo">D</div>
@@ -781,7 +811,7 @@ export default function ChatPage() {
 
       {/* 右侧：信息面板（对齐设计稿） */}
       {group && (
-        <aside className="info-panel">
+        <aside className={`info-panel${rightCollapsed ? ' is-collapsed' : ''}`}>
           {/* 群成员 */}
           <div className="info-panel__section">
             <div className="info-panel__heading">群成员</div>

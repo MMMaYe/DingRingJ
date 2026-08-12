@@ -41,6 +41,7 @@
 
 /* 聊天窗口 */
 .chat-window {
+  position: relative;
   flex: 1; min-width: 0;
   display: flex; flex-direction: column;
   background: var(--bg-base-default);
@@ -430,7 +431,35 @@
   overflow-y: auto; border-left: 1px solid var(--border-neutral-l1);
   background: var(--bg-base-secondary);
   display: flex; flex-direction: column;
+  transition: width .22s ease, min-width .22s ease, border-color .22s ease;
 }
+/* 收起态：折叠为 0 宽，内容裁剪（由聊天窗口右边缘按钮恢复） */
+.info-panel.is-collapsed {
+  width: 0; min-width: 0; overflow: hidden;
+  border-left-color: transparent;
+}
+
+/* 侧栏收起开关：悬浮在聊天窗口左右边缘，垂直居中 */
+.edge-toggle {
+  position: absolute; top: 50%; transform: translateY(-50%);
+  z-index: 40;
+  width: 22px; height: 22px; padding: 0;
+  display: flex; align-items: center; justify-content: center;
+  border: 1px solid var(--border-neutral-l2); border-radius: 50%;
+  background: var(--bg-base-secondary);
+  color: var(--text-secondary);
+  box-shadow: 0 1px 4px rgba(0,0,0,.10);
+  cursor: pointer;
+  transition: background .15s, color .15s, border-color .15s, transform .15s;
+}
+.edge-toggle:hover {
+  background: var(--bg-base-tertiary);
+  border-color: var(--border-neutral-l3);
+  color: var(--text-default);
+}
+.edge-toggle:active { transform: translateY(-50%) scale(.92); }
+.edge-toggle--left { left: 6px; }
+.edge-toggle--right { right: 6px; }
 .info-panel__section { padding: 16px; border-bottom: 1px solid var(--border-neutral-l1); }
 .info-panel__section:last-child { border-bottom: none; }
 .info-panel__heading {

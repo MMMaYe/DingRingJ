@@ -36,11 +36,13 @@ interface SidebarProps {
   searchPlaceholder?: string;
   /** 知识卡片角标数量 */
   cardBadge?: number;
+  /** 附加类名（如 is-collapsed 收起态） */
+  className?: string;
 }
 
-export default function Sidebar({ children, footer, showGroupLabel, onSearch, searchPlaceholder = '搜索群组...', cardBadge }: SidebarProps) {
+export default function Sidebar({ children, footer, showGroupLabel, onSearch, searchPlaceholder = '搜索群组...', cardBadge, className }: SidebarProps) {
   return (
-    <aside className="sidebar">
+    <aside className={`sidebar${className ? ` ${className}` : ''}`}>
       <div className="sidebar__header">
         <Logo size={28} animate />
         <div className="sidebar__brand">

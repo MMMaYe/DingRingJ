@@ -28,6 +28,12 @@ input, textarea, select { font-family: inherit; color: var(--text-default); }
   display: flex; flex-direction: column;
   background: var(--bg-base-secondary);
   border-right: 1px solid var(--border-neutral-l1);
+  transition: width .22s ease, min-width .22s ease, border-color .22s ease;
+}
+/* 收起态：折叠为 0 宽，内容裁剪（由页面边缘的展开按钮恢复） */
+.sidebar.is-collapsed {
+  width: 0; min-width: 0; overflow: hidden;
+  border-right-color: transparent;
 }
 .sidebar__header { display: flex; align-items: center; gap: 10px; padding: 16px; }
 .sidebar__title { font-size: 16px; font-weight: 600; color: var(--text-default); letter-spacing: -0.01em; }
