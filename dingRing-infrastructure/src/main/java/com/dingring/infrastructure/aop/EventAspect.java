@@ -60,7 +60,8 @@ public class EventAspect {
         String eventName = event.eventName().isEmpty() ? signature.getName() : event.eventName();
         String logPrefix = "[" + methodName + "][" + eventCode + "][" + eventName + "]";
 
-        // 打印入参
+        // 先准备入参 JSON，延迟到方法返回后与出参一起打印，确保入参出参落在同一条日志上
+        String argsJson = null;
         if (event.logArgs()) {
             String[] paramNames = signature.getParameterNames();
             Class<?>[] paramTypes = signature.getParameterTypes();
@@ -78,15 +79,19 @@ public class EventAspect {
                     printable.add(sanitizeForLog(arg));
                 }
             }
-            String argsJson = safeToJson(printable);
-            log.info("{} request={}", logPrefix, argsJson);
+            argsJson = safeToJson(printable);
         }
 
         try {
             Object result = joinPoint.proceed();
 
-            // 打印出参
-            if (event.logResult()) {
+            // 入参和出参合并到同一条日志，避免分散在两行难以关联
+            if (event.logArgs() && event.logResult()) {
+                String resultJson = safeToJson(sanitizeForLog(result));
+                log.info("{} request={} result={}", logPrefix, argsJson, resultJson);
+            } else if (event.logArgs()) {
+                log.info("{} request={}", logPrefix, argsJson);
+            } else if (event.logResult()) {
                 String resultJson = safeToJson(sanitizeForLog(result));
                 log.info("{} result={}", logPrefix, resultJson);
             }
