@@ -1,11 +1,12 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo, type KeyboardEvent as ReactKeyboardEvent, type MouseEvent as ReactMouseEvent } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import Sidebar, { IconPlus } from '../../components/Sidebar';
 import Avatar from '../../components/Avatar';
 import MessageItem from './MessageItem';
 import DiscussionStatus from '../../components/DiscussionStatus';
 import FlowSteps from '../../components/FlowSteps';
-import { formatTime, renderMarkdown } from './utils';
+import { formatTime, renderMarkdown, findExpandableSvg } from './utils';
+import SvgLightbox from './SvgLightbox';
 import Modal from '../../components/Modal';
 import GroupSettings from '../../components/GroupSettings';
 import { toast } from '../../components/Toast';
@@ -55,6 +56,7 @@ export default function ChatPage() {
   const [showCreateGroup, setShowCreateGroup] = useState(false);
   const [showConclusion, setShowConclusion] = useState<ConclusionDTO | null>(null);
   const [conclusionCards, setConclusionCards] = useState<KnowledgeCardDTO[]>([]);
+  const [expandedSvg, setExpandedSvg] = useState<{ markup: string; trigger: SVGSVGElement } | null>(null);
   // 群设置抽屉
   const [showGroupSettings, setShowGroupSettings] = useState(false);
 
@@ -537,6 +539,23 @@ export default function ChatPage() {
   // 流式半成品气泡不支持引用回复（尚未落库无消息 id）
   const noopReply = useCallback(() => {}, []);
 
+  const openSvgLightbox = useCallback((svg: SVGSVGElement) => {
+    setExpandedSvg({ markup: svg.outerHTML, trigger: svg });
+  }, []);
+
+  const handleSvgClick = useCallback((event: ReactMouseEvent<HTMLDivElement>) => {
+    const svg = findExpandableSvg(event.target);
+    if (svg) openSvgLightbox(svg);
+  }, [openSvgLightbox]);
+
+  const handleSvgKeyDown = useCallback((event: ReactKeyboardEvent<HTMLDivElement>) => {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    const svg = findExpandableSvg(event.target);
+    if (!svg) return;
+    event.preventDefault();
+    openSvgLightbox(svg);
+  }, [openSvgLightbox]);
+
   // ---- Render ----
   return (
     <div className="app-shell">
@@ -654,7 +673,7 @@ export default function ChatPage() {
             )}
 
             <div className="chat-body-wrap">
-              <div className="chat-body" ref={chatBodyRef} onScroll={handleBodyScroll}>
+              <div className="chat-body" ref={chatBodyRef} onScroll={handleBodyScroll} onClick={handleSvgClick} onKeyDown={handleSvgKeyDown}>
                 {msgLoading ? (
                   /* 骨架屏：切群时占位，避免旧消息闪现与空白跳动 */
                   <>
@@ -982,6 +1001,8 @@ export default function ChatPage() {
         footer={<button className="btn btn--ghost" onClick={() => setShowConclusion(null)}>关闭</button>}>
         <div
           className="conclusion-box md-body"
+          onClick={handleSvgClick}
+          onKeyDown={handleSvgKeyDown}
           dangerouslySetInnerHTML={{ __html: showConclusion ? renderMarkdown(showConclusion.conclusion) : '' }}
         />
         <div className="conclusion-cards">
@@ -1007,6 +1028,14 @@ export default function ChatPage() {
           group={group}
           agents={agents}
           onUpdated={detail => { setGroup(detail); setActiveTopic(detail.activeTopic ?? null); }}
+        />
+      )}
+
+      {expandedSvg && (
+        <SvgLightbox
+          svgMarkup={expandedSvg.markup}
+          restoreFocus={expandedSvg.trigger}
+          onClose={() => setExpandedSvg(null)}
         />
       )}
     </div>

@@ -81,12 +81,28 @@ export function renderMarkdown(content: string, agentNames: string[] = []): stri
     USE_PROFILES: { html: true, svg: true },
     ADD_ATTR: ['target'],
   });
-  if (agentNames.length === 0) return safe;
+  let markSvgDepth = 0;
+  const markedSafe = safe.replace(/<\/?svg\b[^>]*>/gi, (tag: string) => {
+    if (/^<\//.test(tag)) {
+      markSvgDepth = Math.max(0, markSvgDepth - 1);
+      return tag;
+    }
+    const isRoot = markSvgDepth === 0;
+    markSvgDepth++;
+    if (!isRoot) return tag;
+    const attrs = tag.slice(4, -1);
+    const cleanAttrs = attrs.replace(
+      /\s(?:data-chat-svg|role|tabindex|aria-label)(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+))?/gi,
+      '',
+    );
+    return `<svg${cleanAttrs} data-chat-svg="true" role="button" tabindex="0" aria-label="点击放大图形">`;
+  });
+  if (agentNames.length === 0) return markedSafe;
   // 提及高亮：仅在普通文本上替换。用标签切分后逐段处理，
   // 同时维护 <svg> 嵌套深度——svg 内部的 <text> 是 SVG 元素，若插入 HTML <span>
   // 会触发浏览器 foreign-content 规则、破坏 SVG 结构，因此 svg 内文本跳过替换。
   let svgDepth = 0;
-  return safe.split(/(<[^>]*>)/g).map(part => {
+  return markedSafe.split(/(<[^>]*>)/g).map(part => {
     if (part.startsWith('<')) {
       if (/^<svg[\s>]/i.test(part)) svgDepth++;
       if (/^<\/svg\s*>/i.test(part) && svgDepth > 0) svgDepth--;
@@ -98,6 +114,13 @@ export function renderMarkdown(content: string, agentNames: string[] = []): stri
       part,
     );
   }).join('');
+}
+
+/** 查找消息富文本中的可放大 SVG，避免误触发应用自身的图标。 */
+export function findExpandableSvg(target: EventTarget | null): SVGSVGElement | null {
+  if (!(target instanceof Element)) return null;
+  const svg = target.closest('svg[data-chat-svg]');
+  return svg instanceof SVGSVGElement ? svg : null;
 }
 
 export function formatTime(iso: string | null) {

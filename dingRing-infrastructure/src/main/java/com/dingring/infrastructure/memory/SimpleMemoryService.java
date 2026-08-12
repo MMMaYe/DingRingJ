@@ -17,7 +17,7 @@ import java.util.List;
 public class SimpleMemoryService implements MemoryService {
 
     /** 最多带入的历史结论条数，防止 Prompt 过长 */
-    private static final int MAX_MEMORY_TOPICS = 2;
+    private static final int MAX_MEMORY_TOPICS = 5;
 
     private final TopicRepository topicRepository;
 

@@ -44,10 +44,18 @@ public class Agent {
     }
 
     public int maxTokens() {
+        return maxTokens(DEFAULT_MAX_TOKENS);
+    }
+
+    /**
+     * 返回输出 token 上限：Agent 显式配置优先，否则使用调用方提供的默认值。
+     * <p>调用方可为普通发言配置更大的预算，同时保持路由、摘要等场景的专用预算不变。
+     */
+    public int maxTokens(int fallback) {
         if (feature != null && feature.get("maxTokens") instanceof Number n) {
             return n.intValue();
         }
-        return DEFAULT_MAX_TOKENS;
+        return fallback;
     }
 
     /**

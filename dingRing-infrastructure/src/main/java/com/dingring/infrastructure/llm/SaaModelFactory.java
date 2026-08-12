@@ -39,6 +39,10 @@ public class SaaModelFactory {
     @Value("${dingring.llm.read-timeout-seconds:120}")
     private long readTimeoutSeconds;
 
+    /** 业务发言未单独配置 maxTokens 时的默认输出预算，普通发言需支持较长的 SVG/文档结果。 */
+    @Value("${dingring.llm.default-max-tokens:16384}")
+    private int defaultMaxTokens;
+
     /**
      * 构建 OpenAiChatModel，参数优先级:CallOptions > Agent 配置 > 全局默认。
      * <p>单次覆盖参数用于意图分类等确定性任务（低温/小 maxTokens/短超时），
@@ -52,10 +56,16 @@ public class SaaModelFactory {
         double temperature = options != null && options.temperature() != null
                 ? options.temperature() : agent.temperature();
         int maxTokens = options != null && options.maxTokens() != null
-                ? options.maxTokens() : agent.maxTokens();
+                ? options.maxTokens() : agent.maxTokens(defaultMaxTokens);
         long readTimeout = options != null && options.readTimeoutSeconds() != null
                 && options.readTimeoutSeconds() > 0
                 ? options.readTimeoutSeconds() : readTimeoutSeconds;
+
+        log.debug("构建 LLM 模型 agent={} model={} maxTokens={} source={}",
+                agent.getName(), agent.getModelName(), maxTokens,
+                options != null && options.maxTokens() != null ? "callOptions"
+                        : agent.getFeature() != null && agent.getFeature().get("maxTokens") instanceof Number
+                                ? "agentFeature" : "default");
 
         UrlParts parts = resolveUrl(agent.getBaseUrl());
 

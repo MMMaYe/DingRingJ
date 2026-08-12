@@ -32,7 +32,7 @@ import org.springframework.stereotype.Component;
  * （文本为空，实测日志 "内容长度=0 hasToolCalls=true"）。
  * <p>场景配置：
  * <ul>
- *   <li>讨论场景（CHAT/DISCUSS/CONCLUDE）：recursionLimit=24，支撑 1 次工具往返（20 步）+ 4 步缓冲，不深陷工具循环</li>
+ *   <li>讨论场景（CHAT/DISCUSS/CONCLUDE）：recursionLimit=40，支撑 1 次工具往返（20 步）+ 20 步缓冲，不深陷工具循环</li>
  *   <li>工作场景（WORK）：recursionLimit=40，深度 ReAct，支撑约 3 轮模型推理</li>
  * </ul>
  * <p>Hook 为单例 Bean，通过 OverAllState（per-call）读取 groupId 等参数，无共享可变状态。
@@ -42,8 +42,8 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class SaaReactAgentFactory {
 
-    /** 讨论场景 ReAct 上限：一次工具往返（实测需 limit≥20，19 时第二轮被掐断）+ 4 步缓冲 */
-    private static final int DISCUSS_RECURSION_LIMIT = 24;
+    /** 讨论场景 ReAct 上限：一次工具往返（实测需 limit≥20，19 时第二轮被掐断）+ 20 步缓冲 */
+    private static final int DISCUSS_RECURSION_LIMIT = 40;
 
     /** 工作场景 ReAct 上限：深度 ReAct，支撑约 3 轮模型推理（每轮约 10 步） */
     private static final int WORK_RECURSION_LIMIT = 40;

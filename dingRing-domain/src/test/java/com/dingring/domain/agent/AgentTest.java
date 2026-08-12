@@ -71,13 +71,23 @@ class AgentTest {
         }
 
         @Test
-        @DisplayName("feature.maxTokens 为数字时使用自定义值")
-        void customMaxTokensShouldBeUsed() {
+        @DisplayName("无 feature 配置时使用调用方提供的 fallback")
+        void customFallbackShouldBeUsed() {
+            Agent a = new Agent();
+            a.setFeature(null);
+
+            assertThat(a.maxTokens(16384)).isEqualTo(16384);
+        }
+
+        @Test
+        @DisplayName("feature.maxTokens 优先于调用方 fallback")
+        void customMaxTokensShouldOverrideFallback() {
             Agent a = new Agent();
             a.setFeature(Map.of("maxTokens", 8192));
 
-            assertThat(a.maxTokens()).isEqualTo(8192);
+            assertThat(a.maxTokens(16384)).isEqualTo(8192);
         }
+
 
         @Test
         @DisplayName("feature.maxTokens 为浮点数时取整")

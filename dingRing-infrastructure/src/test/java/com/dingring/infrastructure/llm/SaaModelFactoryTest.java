@@ -1,18 +1,22 @@
 package com.dingring.infrastructure.llm;
 
+import com.dingring.domain.agent.Agent;
+import com.dingring.domain.service.LlmService.CallOptions;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.ai.openai.OpenAiChatModel;
+import org.springframework.ai.openai.OpenAiChatOptions;
+import org.springframework.test.util.ReflectionTestUtils;
+
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * {@link SaaModelFactory#resolveUrl(String)} baseUrl 解析单元测试。
- * <p>背景：联调发现 Spring AI 默认在 baseUrl 后拼 /v1/chat/completions，
- * 带路径前缀的网关（StepFun step_plan、腾讯云 CloudBase）会 404。
- * <p>Phase A 改造：resolveUrl 从原 SpringAiLlmService 迁移到 SaaModelFactory，
- * 测试同步迁移，确保 baseUrl 解析逻辑行为不变。
+ * {@link SaaModelFactory} 单元测试。
+ * <p>同时覆盖 baseUrl 解析和 LLM 输出预算的优先级，防止普通 Agent 发言被默认预算截断。
  */
-@DisplayName("SaaModelFactory baseUrl 解析")
+@DisplayName("SaaModelFactory")
 class SaaModelFactoryTest {
 
     @Test
@@ -54,5 +58,61 @@ class SaaModelFactoryTest {
         var parts = SaaModelFactory.resolveUrl("https://api.deepseek.com/v1/");
         assertThat(parts.baseUrl()).isEqualTo("https://api.deepseek.com");
         assertThat(parts.completionsPath()).isEqualTo("/v1/chat/completions");
+    }
+
+    @Test
+    @DisplayName("无 Agent maxTokens 时使用配置默认预算")
+    void shouldUseConfiguredDefaultMaxTokens() {
+        SaaModelFactory factory = factoryWithDefaultMaxTokens(16384);
+        Agent agent = agentWithFeature(null);
+
+        OpenAiChatOptions options = defaultOptions(factory.buildChatModel(agent, null));
+
+        assertThat(options.getMaxTokens()).isEqualTo(16384);
+    }
+
+    @Test
+    @DisplayName("Agent feature.maxTokens 优先于配置默认预算")
+    void shouldPreferAgentMaxTokens() {
+        SaaModelFactory factory = factoryWithDefaultMaxTokens(16384);
+        Agent agent = agentWithFeature(Map.of("maxTokens", 8192));
+
+        OpenAiChatOptions options = defaultOptions(factory.buildChatModel(agent, null));
+
+        assertThat(options.getMaxTokens()).isEqualTo(8192);
+    }
+
+    @Test
+    @DisplayName("CallOptions.maxTokens 优先于 Agent 与配置默认预算")
+    void shouldPreferCallOptionsMaxTokens() {
+        SaaModelFactory factory = factoryWithDefaultMaxTokens(16384);
+        Agent agent = agentWithFeature(Map.of("maxTokens", 8192));
+        CallOptions callOptions = new CallOptions(0.0, 1024, null);
+
+        OpenAiChatOptions options = defaultOptions(factory.buildChatModel(agent, callOptions));
+
+        assertThat(options.getMaxTokens()).isEqualTo(1024);
+    }
+
+    private static Agent agentWithFeature(Map<String, Object> feature) {
+        Agent agent = new Agent();
+        agent.setName("test-agent");
+        agent.setModelName("test-model");
+        agent.setBaseUrl("https://api.example.com");
+        agent.setApiKey("test-key");
+        agent.setFeature(feature);
+        return agent;
+    }
+
+    private static SaaModelFactory factoryWithDefaultMaxTokens(int maxTokens) {
+        SaaModelFactory factory = new SaaModelFactory();
+        ReflectionTestUtils.setField(factory, "connectTimeoutSeconds", 10L);
+        ReflectionTestUtils.setField(factory, "readTimeoutSeconds", 120L);
+        ReflectionTestUtils.setField(factory, "defaultMaxTokens", maxTokens);
+        return factory;
+    }
+
+    private static OpenAiChatOptions defaultOptions(OpenAiChatModel model) {
+        return (OpenAiChatOptions) model.getDefaultOptions();
     }
 }

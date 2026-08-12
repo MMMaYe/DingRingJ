@@ -290,6 +290,90 @@
   background: var(--bg-overlay-l1);
 }
 .md-body svg + svg { margin-top: 4px; }
+.md-body svg[data-chat-svg] {
+  cursor: zoom-in;
+  outline: none;
+}
+.md-body svg[data-chat-svg]:focus-visible {
+  outline: 2px solid var(--border-brand);
+  outline-offset: 3px;
+}
+
+/* SVG 图形放大预览 */
+.svg-lightbox {
+  position: fixed; inset: 0; z-index: 220;
+  display: flex; align-items: center; justify-content: center;
+  padding: 24px;
+  background: rgba(0, 0, 0, .78);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  animation: svg-lightbox-fade-in .18s ease-out;
+}
+.svg-lightbox__surface {
+  width: min(1200px, calc(100vw - 48px));
+  height: min(860px, calc(100vh - 48px));
+  max-width: 100%; max-height: 100%;
+  display: flex; flex-direction: column;
+  overflow: hidden;
+  background: var(--bg-base-secondary);
+  border: 1px solid var(--border-neutral-l2);
+  border-radius: 14px;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, .5), 0 0 0 1px rgba(255, 255, 255, .04) inset;
+  animation: svg-lightbox-rise .24s cubic-bezier(.16, 1, .3, 1);
+}
+.svg-lightbox__header {
+  display: flex; align-items: center; justify-content: space-between;
+  flex: none; padding: 14px 18px;
+  border-bottom: 1px solid var(--border-neutral-l1);
+}
+.svg-lightbox__title {
+  color: var(--text-default-hover);
+  font-size: 14px; font-weight: 600;
+}
+.svg-lightbox__close {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 30px; height: 30px; padding: 0;
+  border: 1px solid transparent; border-radius: 7px;
+  background: transparent; color: var(--text-secondary);
+  font-size: 24px; line-height: 1; cursor: pointer;
+  transition: background .15s, color .15s, border-color .15s;
+}
+.svg-lightbox__close:hover {
+  background: var(--bg-overlay-l2); color: var(--text-default);
+}
+.svg-lightbox__close:focus-visible {
+  outline: 2px solid var(--border-brand);
+  outline-offset: 2px;
+}
+.svg-lightbox__viewport {
+  flex: 1; min-height: 0;
+  display: flex; align-items: center; justify-content: center;
+  overflow: auto; padding: 24px;
+  background: var(--bg-base-default);
+}
+.svg-lightbox__graphic {
+  display: flex; align-items: center; justify-content: center;
+  max-width: 100%; max-height: 100%;
+}
+.svg-lightbox__graphic > svg {
+  display: block; width: auto; height: auto;
+  max-width: 100%; max-height: 100%;
+  margin: 0; border-radius: 8px;
+  background: var(--bg-overlay-l1);
+}
+@keyframes svg-lightbox-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes svg-lightbox-rise {
+  from { opacity: 0; transform: scale(.96) translateY(8px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+@media (max-width: 640px) {
+  .svg-lightbox { padding: 10px; }
+  .svg-lightbox__surface { width: 100%; height: calc(100vh - 20px); border-radius: 10px; }
+  .svg-lightbox__viewport { padding: 12px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .svg-lightbox, .svg-lightbox__surface { animation: none; }
+}
 
 /* 正在输入 */
 .typing-bar { min-height: 22px; padding: 0 20px 4px; font-size: 12px; color: var(--text-brand); }
