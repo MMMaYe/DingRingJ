@@ -36,7 +36,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  *   <li>每次循环调用 {@link DiscussionFlowService#advance} 推进流程，根据返回的 discussMode 决定后续行为</li>
  * </ul>
  * <p>三态循环逻辑已迁移到 SAA StateGraph 节点（PreprocessNode/IntentClassifyNode/ChatNode/EnsureTopicNode/
- * DiscussNode/ConcludeNode/SedimentNode/ProfileExtractNode/WorkNode），本类只负责"驱动"和"状态维护"。
+ * DiscussNode/ConcludeNode/ProfileExtractNode/WorkNode），本类只负责"驱动"和"状态维护"。
  */
 @Slf4j
 @Component

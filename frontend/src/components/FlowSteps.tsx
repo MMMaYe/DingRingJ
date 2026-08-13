@@ -15,7 +15,6 @@ const NODE_ORDER = [
   'discuss',
   'work',
   'conclude',
-  'sediment',
   'profile-extract',
 ];
 

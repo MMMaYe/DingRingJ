@@ -45,10 +45,10 @@ import java.util.Map;
  *       CONVERGE/DIVERGE → END (DiscussionEngine 主循环决定后续推进)
  *       WAIT → END (阻塞等用户)
  *       CONCLUDE_PROPOSED → END (等用户确认)
- *       CONCLUDE → conclude → sediment → END
+ *       CONCLUDE → conclude → END
  *     false → chat (回退闲聊应答)
- *   WORK → work → sediment → END
- *   CONCLUDE → conclude → sediment → END
+ *   WORK → work → END
+ *   CONCLUDE → conclude → END
  * </pre>
  */
 @Slf4j
@@ -69,7 +69,6 @@ public class SaaWorkflow implements DiscussionFlowService {
             "discuss", "讨论推进",
             "work", "任务执行",
             "conclude", "总结陈词",
-            "sediment", "沉淀入库",
             "profile-extract", "画像提炼"
     );
 
@@ -137,8 +136,6 @@ public class SaaWorkflow implements DiscussionFlowService {
                 nodeRegistry.getHandler("discussNode")));
         graph.addNode("conclude", AsyncNodeAction.node_async(
                 nodeRegistry.getHandler("concludeNode")));
-        graph.addNode("sediment", AsyncNodeAction.node_async(
-                nodeRegistry.getHandler("sedimentNode")));
         graph.addNode("profile-extract", AsyncNodeAction.node_async(
                 nodeRegistry.getHandler("profileExtractNode")));
         graph.addNode("work", AsyncNodeAction.node_async(
@@ -195,11 +192,10 @@ public class SaaWorkflow implements DiscussionFlowService {
                 ));
 
         // 收束路径
-        graph.addEdge("conclude", "sediment");
-        graph.addEdge("sediment", StateGraph.END);
+        graph.addEdge("conclude", StateGraph.END);
 
         // 工作路径
-        graph.addEdge("work", "sediment");
+        graph.addEdge("work", StateGraph.END);
 
         // 5. 编译
         // 空 SaverConfig 禁用 checkpoint：本应用每次 advance() 都是独立无状态执行，
@@ -212,7 +208,7 @@ public class SaaWorkflow implements DiscussionFlowService {
         compiledGraph = graph.compile(CompileConfig.builder()
                 .saverConfig(SaverConfig.builder().build())
                 .build());
-        log.info("SaaWorkflow StateGraph 编译完成，节点: preprocess/intent-classify/chat/ensure-topic/discuss/conclude/sediment/profile-extract/work");
+        log.info("SaaWorkflow StateGraph 编译完成，节点: preprocess/intent-classify/chat/ensure-topic/discuss/conclude/profile-extract/work");
     }
 
     @Override
