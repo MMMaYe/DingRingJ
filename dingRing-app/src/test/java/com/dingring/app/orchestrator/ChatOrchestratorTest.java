@@ -211,60 +211,26 @@ class ChatOrchestratorTest {
         }
 
         @Test
-        @DisplayName("乐观锁更新失败时抛 TOPIC_NOT_IN_PROGRESS")
-        void optimisticLockFailShouldThrow() {
-            Topic t = new Topic();
-            t.setId(1L);
-            t.setStatus(TopicStatus.IN_PROGRESS);
-            when(topicRepository.findById(1L)).thenReturn(Optional.of(t));
-            when(topicRepository.update(t)).thenReturn(false);
-
-            assertThatThrownBy(() -> orchestrator.conclude(1L, 1L, "USER"))
-                    .isInstanceOf(BizException.class)
-                    .hasMessageContaining("主题状态已变更");
-        }
-
-        @Test
-        @DisplayName("成功流转 CONCLUDING 并广播状态变更 + 异步触发收束流程")
-        void shouldTransitToConcludingAndTriggerAsyncConclude() {
+        @DisplayName("委托 DiscussionEngine.runConcludeFlow（状态流转与异步生成移交 ConclusionService）")
+        void shouldDelegateToRunConcludeFlow() {
             Topic t = new Topic();
             t.setId(1L);
             t.setChatGroupId(10L);
             t.setTitle("Java 内存模型");
             t.setStatus(TopicStatus.IN_PROGRESS);
             when(topicRepository.findById(1L)).thenReturn(Optional.of(t));
-            when(topicRepository.update(t)).thenReturn(true);
 
             orchestrator.conclude(1L, 1L, "USER", 77L);
 
-            // 同步：状态流转到 CONCLUDING
-            assertThat(t.getStatus()).isEqualTo(TopicStatus.CONCLUDING);
-            verify(groupBroadcastService).broadcast(eq(10L), eq(WsConstants.TOPIC_STATUS_CHANGED), any());
-            // 异步：排队收束任务到群串行执行器
-            verify(discussionEngine).execute(eq(10L), anyString(), any(Runnable.class));
-        }
-
-        @Test
-        @DisplayName("已是 CONCLUDING 状态时跳过状态流转但仍异步触发收束")
-        void alreadyConcludingShouldSkipTransitionButTriggerAsync() {
-            Topic t = new Topic();
-            t.setId(1L);
-            t.setChatGroupId(10L);
-            t.setTitle("已收束中");
-            t.setStatus(TopicStatus.CONCLUDING);
-            when(topicRepository.findById(1L)).thenReturn(Optional.of(t));
-
-            orchestrator.conclude(1L, 1L, "USER", 77L);
-
-            // 不应再 update（避免重复状态流转）
+            // 编排器只负责取 groupId + 委托；不再自己流转状态、不再排队群串行执行器
+            verify(discussionEngine).runConcludeFlow(1L, 10L, "USER", 77L);
+            verify(discussionEngine, never()).execute(any(), anyString(), any());
             verify(topicRepository, never()).update(any(Topic.class));
-            verify(groupBroadcastService, never()).broadcast(eq(10L), eq(WsConstants.TOPIC_STATUS_CHANGED), any());
-            // 但仍应异步触发收束流程（ConcludeNode 检测已 CONCLUDING 直接生成结论）
-            verify(discussionEngine).execute(eq(10L), anyString(), any(Runnable.class));
+            assertThat(t.getStatus()).isEqualTo(TopicStatus.IN_PROGRESS);
         }
 
         @Test
-        @DisplayName("三参数重载 conclude：concluderAgentId 默认 null")
+        @DisplayName("三参数重载 conclude：concluderAgentId 默认 null 透传")
         void threeArgConcludeShouldDelegateToFourArg() {
             Topic t = new Topic();
             t.setId(1L);
@@ -272,12 +238,10 @@ class ChatOrchestratorTest {
             t.setTitle("三参数重载");
             t.setStatus(TopicStatus.IN_PROGRESS);
             when(topicRepository.findById(1L)).thenReturn(Optional.of(t));
-            when(topicRepository.update(t)).thenReturn(true);
 
             orchestrator.conclude(1L, 1L, "MAX_ROUNDS");
 
-            assertThat(t.getStatus()).isEqualTo(TopicStatus.CONCLUDING);
-            verify(discussionEngine).execute(eq(10L), anyString(), any(Runnable.class));
+            verify(discussionEngine).runConcludeFlow(1L, 10L, "MAX_ROUNDS", null);
         }
     }
 }

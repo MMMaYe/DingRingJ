@@ -52,13 +52,13 @@ public class SedimentNode implements NodeAction {
         LogHelper.printLog(SedimentNode.class, "SedimentNode.apply", "SEDIMENT_NODE", "讨论沉淀",
                 "request={}", JsonHelper.mapToJsonStr(logFields));
 
-        if (Boolean.TRUE.equals(concluded) && conclusion != null) {
-            // 结论已生成：知识卡片由 CardEventHandler 监听 TopicClosed 事件异步生成
+        if (Boolean.TRUE.equals(concluded)) {
+            // 收束已触发：结论由 ConclusionService 异步生成，知识卡片由 CardEventHandler 监听 TopicClosed 事件异步生成
             // 后续可在此扩展：调用 MemoryService 沉淀结论到长期记忆
-            LogHelper.printLog(SedimentNode.class, "SedimentNode.apply", "SEDIMENT_NODE", "讨论结论已沉淀",
-                    "topicId={} 结论长度={} 知识卡片异步生成中", topicId, conclusion.length());
+            LogHelper.printLog(SedimentNode.class, "SedimentNode.apply", "SEDIMENT_NODE", "收束已触发，结论异步生成中",
+                    "topicId={}", topicId);
         } else {
-            LogHelper.printLog(SedimentNode.class, "SedimentNode.apply", "SEDIMENT_NODE", "收束失败跳过沉淀",
+            LogHelper.printLog(SedimentNode.class, "SedimentNode.apply", "SEDIMENT_NODE", "未触发收束跳过沉淀",
                     "topicId={}", topicId);
         }
 

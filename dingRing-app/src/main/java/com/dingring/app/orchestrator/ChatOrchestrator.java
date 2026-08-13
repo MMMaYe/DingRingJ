@@ -26,7 +26,6 @@ import org.springframework.stereotype.Component;
 
 import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -118,41 +117,21 @@ public class ChatOrchestrator {
 
     /**
      * 触发结束讨论（指定总结 Agent）。
-     * <p>同步完成 IN_PROGRESS→CONCLUDING 状态流转（保证 REST API 即时响应），
-     * 异步排队收束流程（ConcludeNode 检测已是 CONCLUDING 跳过状态流转，直接生成结论）。
+     * <p>委托 {@link DiscussionEngine#runConcludeFlow} → {@link com.dingring.app.workflow.ConclusionService#triggerAsync}：
+     * 同步完成 IN_PROGRESS→CONCLUDING 状态流转（保证 REST API 即时响应 + 乐观锁防并发），
+     * 结论 LLM 生成提交到独立 {@link com.dingring.app.workflow.ConclusionExecutor}，不占用群串行执行器。
      *
      * @param concluderAgentId 总结 Agent ID（null = 调度评分最高者兜底）
      */
     @Event(eventCode = "CONCLUDE", eventName = "触发讨论收束")
     public void conclude(Long topicId, Long operatorId, String triggeredBy, Long concluderAgentId) {
-        Topic topic = topicRepository.findById(topicId)
-                .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "主题不存在: " + topicId));
-
-        // 同步状态流转（ConcludeNode 会检测已是 CONCLUDING 跳过此步）
-        if (topic.isInProgress()) {
-            topic.startConcluding();
-            if (!topicRepository.update(topic)) {
-                throw new BizException(ErrorCode.TOPIC_NOT_IN_PROGRESS, "主题状态已变更，请刷新后重试");
-            }
-            pushTopicStatus(topic, "IN_PROGRESS");
-        }
-
-        // 异步触发收束流程（排在群串行执行器上，保证与主循环串行）
-        Long groupId = topic.getChatGroupId();
-        discussionEngine.execute(groupId, "结论生成",
-                () -> discussionEngine.runConcludeFlow(topicId, groupId, triggeredBy, concluderAgentId));
+        Long groupId = topicRepository.findById(topicId)
+                .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "主题不存在: " + topicId))
+                .getChatGroupId();
+        discussionEngine.runConcludeFlow(topicId, groupId, triggeredBy, concluderAgentId);
     }
 
     /* ==================== 私有辅助 ==================== */
-
-    private void pushTopicStatus(Topic topic, String previousStatus) {
-        groupBroadcastService.broadcast(topic.getChatGroupId(), WsConstants.TOPIC_STATUS_CHANGED, Map.of(
-                "groupId", topic.getChatGroupId(),
-                "topicId", topic.getId(),
-                "title", topic.getTitle(),
-                "status", topic.getStatus().name(),
-                "previousStatus", previousStatus));
-    }
 
     /** 解析 @花名 提及（按文本中出现顺序返回，保证首个被 @ 的 Agent 优先应答） */
     private List<Long> parseMentions(String content, List<Agent> groupAgents) {

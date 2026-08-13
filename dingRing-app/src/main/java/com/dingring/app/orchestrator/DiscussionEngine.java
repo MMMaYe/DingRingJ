@@ -1,5 +1,6 @@
 package com.dingring.app.orchestrator;
 
+import com.dingring.app.workflow.ConclusionService;
 import com.dingring.common.constant.WsConstants;
 import com.dingring.common.util.JsonHelper;
 import com.dingring.common.util.LogHelper;
@@ -67,6 +68,7 @@ public class DiscussionEngine {
     private final DiscussionRules rules;
     private final TopicRepository topicRepository;
     private final GroupBroadcastService groupBroadcastService;
+    private final ConclusionService conclusionService;
 
     private final Map<Long, GroupState> states = new ConcurrentHashMap<>();
     private final Map<Long, ExecutorService> groupExecutors = new ConcurrentHashMap<>();
@@ -74,11 +76,13 @@ public class DiscussionEngine {
     public DiscussionEngine(DiscussionFlowService discussionFlowService,
                            DiscussionRules rules,
                            TopicRepository topicRepository,
-                           GroupBroadcastService groupBroadcastService) {
+                           GroupBroadcastService groupBroadcastService,
+                           ConclusionService conclusionService) {
         this.discussionFlowService = discussionFlowService;
         this.rules = rules;
         this.topicRepository = topicRepository;
         this.groupBroadcastService = groupBroadcastService;
+        this.conclusionService = conclusionService;
     }
 
     /* ==================== 对外入口 ==================== */
@@ -100,31 +104,23 @@ public class DiscussionEngine {
         }
     }
 
-    /** 在群串行执行器上排队执行任务（收束域结论生成复用，保证与循环串行） */
+    /** 在群串行执行器上排队执行任务（与循环串行；结论生成已改用 ConclusionService，不再走此队列） */
     public void execute(Long groupId, String taskName, Runnable task) {
         executorOf(groupId).execute(() -> safeRun(taskName, groupId, task));
     }
 
     /**
-     * 触发收束流程（供 ChatOrchestrator 异步调用）。
-     * <p>ChatOrchestrator 同步完成 IN_PROGRESS→CONCLUDING 状态流转后，通过 execute() 排队调用本方法。
-     * ConcludeNode 检测到已是 CONCLUDING 会跳过状态流转，直接生成结论。
+     * 触发收束流程（供 ChatOrchestrator 调用）。
+     * <p>委托 {@link ConclusionService#triggerAsync}：同步完成 IN_PROGRESS→CONCLUDING 状态流转，
+     * 结论 LLM 生成提交到独立 {@link ConclusionExecutor}，不再占用群串行执行器。
      */
     @Event(eventCode = "RUN_CONCLUDE_FLOW", eventName = "触发收束流程")
     public void runConcludeFlow(Long topicId, Long groupId, String triggeredBy, Long concluderAgentId) {
-        Map<String, Object> inputs = new HashMap<>();
-        inputs.put(StateKeys.GROUP_ID, groupId);
-        inputs.put(StateKeys.TOPIC_ID, topicId);
-        inputs.put(StateKeys.INTENT, "CONCLUDE");
-        inputs.put(StateKeys.TRIGGERED_BY, triggeredBy);
-        if (concluderAgentId != null) {
-            inputs.put(StateKeys.CONCLUDER_AGENT_ID, concluderAgentId);
-        }
         LogHelper.printLog(DiscussionEngine.class, "DiscussionEngine.runConcludeFlow",
                 "RUN_CONCLUDE_FLOW", "触发收束流程",
                 "topicId={} groupId={} triggeredBy={} concluderAgentId={}",
                 topicId, groupId, triggeredBy, concluderAgentId);
-        discussionFlowService.advance(rules, inputs);
+        conclusionService.triggerAsync(topicId, groupId, triggeredBy, concluderAgentId);
     }
 
     /* ==================== 主循环 ==================== */

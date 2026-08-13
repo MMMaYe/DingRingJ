@@ -1,5 +1,6 @@
 package com.dingring.app.orchestrator;
 
+import com.dingring.app.workflow.ConclusionService;
 import com.dingring.common.constant.WsConstants;
 import com.dingring.domain.discussion.Topic;
 import com.dingring.domain.discussion.TopicRepository;
@@ -46,6 +47,7 @@ class DiscussionEngineTest {
     private DiscussionFlowService discussionFlowService;
     private TopicRepository topicRepository;
     private GroupBroadcastService groupBroadcastService;
+    private ConclusionService conclusionService;
     private DiscussionEngine engine;
 
     /** 测试用规则：超短超时让阻塞场景快速返回 */
@@ -64,8 +66,9 @@ class DiscussionEngineTest {
         discussionFlowService = mock(DiscussionFlowService.class);
         topicRepository = mock(TopicRepository.class);
         groupBroadcastService = mock(GroupBroadcastService.class);
+        conclusionService = mock(ConclusionService.class);
         engine = new DiscussionEngine(discussionFlowService, rules,
-                topicRepository, groupBroadcastService);
+                topicRepository, groupBroadcastService, conclusionService);
     }
 
     /* ==================== 辅助构造 ==================== */
@@ -124,34 +127,19 @@ class DiscussionEngineTest {
     class RunConcludeFlow {
 
         @Test
-        @DisplayName("调用 advance 传入 CONCLUDE 意图和正确的输入参数")
-        void shouldCallAdvanceWithConcludeIntent() {
-            when(discussionFlowService.advance(any(), any()))
-                    .thenReturn(result(true, StateKeys.MODE_CONCLUDE, null));
-
+        @DisplayName("委托 ConclusionService.triggerAsync 传入正确的收束参数")
+        void shouldDelegateToConclusionService() {
             engine.runConcludeFlow(100L, 1L, "USER", 77L);
 
-            ArgumentCaptor<Map<String, Object>> inputsCaptor = ArgumentCaptor.forClass(Map.class);
-            verify(discussionFlowService).advance(eq(rules), inputsCaptor.capture());
-            Map<String, Object> inputs = inputsCaptor.getValue();
-            assertThat(inputs.get(StateKeys.GROUP_ID)).isEqualTo(1L);
-            assertThat(inputs.get(StateKeys.TOPIC_ID)).isEqualTo(100L);
-            assertThat(inputs.get(StateKeys.INTENT)).isEqualTo("CONCLUDE");
-            assertThat(inputs.get(StateKeys.TRIGGERED_BY)).isEqualTo("USER");
-            assertThat(inputs.get(StateKeys.CONCLUDER_AGENT_ID)).isEqualTo(77L);
+            verify(conclusionService).triggerAsync(100L, 1L, "USER", 77L);
         }
 
         @Test
-        @DisplayName("concluderAgentId 为 null 时不写入 CONCLUDER_AGENT_ID")
-        void nullConcluderShouldOmitKey() {
-            when(discussionFlowService.advance(any(), any()))
-                    .thenReturn(result(true, StateKeys.MODE_CONCLUDE, null));
-
+        @DisplayName("concluderAgentId 为 null 时原样透传")
+        void nullConcluderShouldPassThrough() {
             engine.runConcludeFlow(100L, 1L, "MAX_ROUNDS", null);
 
-            ArgumentCaptor<Map<String, Object>> inputsCaptor = ArgumentCaptor.forClass(Map.class);
-            verify(discussionFlowService).advance(eq(rules), inputsCaptor.capture());
-            assertThat(inputsCaptor.getValue()).doesNotContainKey(StateKeys.CONCLUDER_AGENT_ID);
+            verify(conclusionService).triggerAsync(100L, 1L, "MAX_ROUNDS", null);
         }
     }
 
@@ -208,7 +196,7 @@ class DiscussionEngineTest {
         }
 
         @Test
-        @DisplayName("CONCLUDE_PROPOSED 模式：广播提议 → 超时自动收束 → advance 调用两次")
+        @DisplayName("CONCLUDE_PROPOSED 模式：广播提议 → 超时自动收束 → 委托 ConclusionService")
         void concludeProposedTimeoutShouldAutoConclude() {
             Topic topic = activeTopic(100L, 1L);
             when(topicRepository.findActiveByGroupId(1L)).thenReturn(Optional.of(topic));
@@ -219,8 +207,7 @@ class DiscussionEngineTest {
             proposedState.put(StateKeys.TOPIC_TITLE, "收束中主题");
             proposedState.put(StateKeys.CONCLUDER_AGENT_ID, 77L);
             when(discussionFlowService.advance(any(), any()))
-                    .thenReturn(result(false, StateKeys.MODE_CONCLUDE_PROPOSED, proposedState))
-                    .thenReturn(result(true, StateKeys.MODE_CONCLUDE, null));
+                    .thenReturn(result(false, StateKeys.MODE_CONCLUDE_PROPOSED, proposedState));
 
             engine.onUserSignal(1L, signal("可以总结了吗"));
 
@@ -229,9 +216,9 @@ class DiscussionEngineTest {
             // 广播提议收束状态
             verify(groupBroadcastService, timeout(WAIT))
                     .broadcast(eq(1L), eq(WsConstants.TOPIC_STATUS_CHANGED), any());
-            // 超时后 runConcludeFlow 调用 advance 第二次（CONCLUDE 意图）
-            verify(discussionFlowService, timeout(WAIT + rules.concludeConfirmTimeoutMs()).times(2))
-                    .advance(eq(rules), any());
+            // 超时后 runConcludeFlow 委托 ConclusionService 触发收束（TIMEOUT）
+            verify(conclusionService, timeout(WAIT + rules.concludeConfirmTimeoutMs()))
+                    .triggerAsync(eq(100L), eq(1L), eq("TIMEOUT"), eq(77L));
         }
     }
 }
