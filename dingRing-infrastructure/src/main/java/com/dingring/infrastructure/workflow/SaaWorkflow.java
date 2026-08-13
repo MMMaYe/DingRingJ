@@ -8,6 +8,7 @@ import com.alibaba.cloud.ai.graph.exception.GraphStateException;
 import com.alibaba.cloud.ai.graph.state.strategy.ReplaceStrategy;
 import com.alibaba.cloud.ai.graph.state.strategy.AppendStrategy;
 import com.dingring.common.constant.WsConstants;
+import com.dingring.common.util.LogHelper;
 import com.dingring.domain.service.DiscussionFlowService;
 import com.dingring.domain.service.GroupBroadcastService;
 import com.dingring.domain.workflow.DiscussionFlowResult;
@@ -207,6 +208,7 @@ public class SaaWorkflow implements DiscussionFlowService {
         // 残留 state（如 intent=CONCLUDE）会被下一次 advance 的 getInitialState 合并恢复，
         // 导致普通消息被错误路由进 ConcludeNode 并反复崩溃——形成自愈不了的崩溃循环（Phase G bug2 的复发形态）。
         // 禁用后 getInitialState 恒为纯 inputs，预设意图（runConcludeFlow/advanceAuto）仍通过 inputs 透传。
+        //TODO：checkpoint先弃用，单次执行图状态独立，不依赖前一次状态
         compiledGraph = graph.compile(CompileConfig.builder()
                 .saverConfig(SaverConfig.builder().build())
                 .build());
@@ -226,7 +228,11 @@ public class SaaWorkflow implements DiscussionFlowService {
         allInputs.put("contextWindow", rules.contextWindow());
         allInputs.put("concludeConfirmTimeoutMs", rules.concludeConfirmTimeoutMs());
 
-        log.info("SaaWorkflow.advance 开始执行, inputs={}", allInputs.keySet());
+        LogHelper.printLog(SaaWorkflow.class,
+                "SaaWorkflow.advance",
+                "GRAPH_START",
+                "图执行开始", "allInputs", allInputs );
+
         // groupId 恒在 inputs 中，用于 FLOW_EVENT 定向广播
         Long groupId = inputs.get(StateKeys.GROUP_ID) instanceof Number n ? n.longValue() : null;
         long[] lastNodeTs = { System.currentTimeMillis() };

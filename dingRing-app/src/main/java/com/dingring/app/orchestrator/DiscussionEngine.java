@@ -181,7 +181,7 @@ public class DiscussionEngine {
                     state.queue.clear();
                     DiscussionFlowResult result = advanceFlow(groupId, signal, state);
 
-                    //TODO：图的状态应该维护在domain层？ 又或者stateGraph中？
+                    //TODO：群的状态应该维护在domain层？ 又或者stateGraph中？
                     updateRuntimeState(state, result);
                     pushTopicStatus(groupId, result);
 
@@ -244,6 +244,8 @@ public class DiscussionEngine {
         // @提及一次性发言权：新用户消息含提及时重置（重新豁免一次），否则透传原值
         boolean hasMention = signal.mentionedAgentIds() != null && !signal.mentionedAgentIds().isEmpty();
         inputs.put(StateKeys.MENTION_HANDLED, hasMention ? Boolean.FALSE : state.mentionHandled);
+        LogHelper.printLog(DiscussionEngine.class, "DiscussionEngine.advanceFlow",
+                "ADVANCE_FLOW_INPUTS", "构建inputs内容", "inputs", inputs);
         return discussionFlowService.advance(rules, inputs);
     }
 
