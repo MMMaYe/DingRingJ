@@ -15,7 +15,7 @@ import com.dingring.domain.group.GroupRepository;
 import com.dingring.domain.group.MessageRepository;
 import com.dingring.domain.group.MessageType;
 import com.dingring.domain.group.SenderType;
-import com.dingring.domain.service.AgentSpeakerService;
+import com.dingring.domain.service.LlmService;
 import com.dingring.domain.service.GroupBroadcastService;
 import com.dingring.domain.service.LlmService.ChatTurn;
 import com.dingring.domain.workflow.StateKeys;
@@ -43,7 +43,7 @@ import java.util.Map;
  * <ul>
  *   <li>单 Agent 模式：选群首成员作为工作 Agent（后续可配置专职工作 Agent）</li>
  *   <li>Supervisor 模式：选群首成员作为编排者（模型配置来源），其余成员作为执行者</li>
- *   <li>调用 agentSpeakerService.call() with ToolSet.WORK（recursionLimit=40，深度 ReAct）</li>
+ *   <li>调用 llmService.chat() with ToolSet.WORK（recursionLimit=40，深度 ReAct）</li>
  *   <li>工作产出入库广播</li>
  * </ul>
  */
@@ -56,7 +56,7 @@ public class WorkNode implements NodeAction {
     private final AgentRepository agentRepository;
     private final MessageRepository messageRepository;
     private final MessageAssembler messageAssembler;
-    private final AgentSpeakerService agentSpeakerService;
+    private final LlmService llmService;
     private final GroupBroadcastService groupBroadcastService;
     private final SupervisorAgentFactory supervisorAgentFactory;
 
@@ -173,10 +173,10 @@ public class WorkNode implements NodeAction {
             LogHelper.printLog(WorkNode.class, "WorkNode.executeWithSingleAgent", "WORK_NODE",
                     "开始调用工作 Agent 深度 ReAct", "groupId={} agent={} inputLen={}",
                     groupId, workAgent.getName(), input.length());
-            AgentSpeakerService.AgentResult result = agentSpeakerService.call(
+            LlmService.AgentResult result = llmService.chat(
                     workAgent, systemPrompt,
                     List.of(ChatTurn.user(input)),
-                    AgentSpeakerService.ToolSet.WORK, context);
+                    LlmService.ToolSet.WORK, context);
             LogHelper.printLog(WorkNode.class, "WorkNode.executeWithSingleAgent", "WORK_NODE",
                     "工作 Agent 调用完成", "groupId={} agent={} 耗时={}ms",
                     groupId, workAgent.getName(), System.currentTimeMillis() - callStart);

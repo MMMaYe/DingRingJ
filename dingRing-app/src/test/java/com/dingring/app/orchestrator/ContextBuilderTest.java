@@ -52,7 +52,7 @@ class ContextBuilderTest {
                 .thenAnswer(inv -> "群聊语境：你的花名是「" + ((Map<?, ?>) inv.getArgument(1)).get("agentName") + "」");
         when(promptLoader.render(eq("collaboration-protocol"), any())).thenReturn("协作协议 [[CONCLUDE]]/[[PASS]]");
         when(promptLoader.render(eq("conclude"), any()))
-                .thenAnswer(inv -> "STAR 框架总结，主题：「" + ((Map<?, ?>) inv.getArgument(1)).get("topicTitle") + "」");
+                .thenAnswer(inv -> "知识蒸馏总结，主题：「" + ((Map<?, ?>) inv.getArgument(1)).get("topicTitle") + "」");
     }
 
     private void setField(Object target, String field, Object value) throws Exception {
@@ -189,18 +189,43 @@ class ContextBuilderTest {
     class BuildForConclusion {
 
         @Test
-        @DisplayName("systemPrompt 含 STAR 框架指令与主题标题")
-        void shouldContainStarFrameworkAndTopicTitle() {
+        @DisplayName("systemPrompt 含知识蒸馏指令、主题标题与观点摘要，近期消息仍进入 turns")
+        void shouldContainKnowledgeDistillationAndViewpoints() throws Exception {
+            setField(contextBuilder, "viewpointLimit", 20);
             Agent expert = agent(99L, "专家", "你是领域专家");
-            when(messageRepository.findRecentByTopicId(100L, 200)).thenReturn(List.of());
+            GroupMessage viewpoint = agentMsg(1L, 20L, "观点原文");
+            viewpoint.setViewpoint("Redis 适合热点数据，但需要考虑淘汰策略");
+            when(messageRepository.findViewpointsByTopicId(100L, 20)).thenReturn(List.of(viewpoint));
+            when(messageRepository.findRecentByTopicId(100L, 200)).thenReturn(List.of(
+                    userMsg(2L, 1L, "用户", "请核对淘汰策略")
+            ));
 
             ContextBuilder.LlmContext ctx = contextBuilder.buildForConclusion(
                     expert, 1L, 100L, "Java 内存模型", m -> "用户");
 
             assertThat(ctx.systemPrompt())
-                    .contains("你是领域专家")                    // 原人设
-                    .contains("STAR 框架")                       // STAR 指令
-                    .contains("Java 内存模型");                  // 主题标题
+                    .contains("知识蒸馏")
+                    .contains("Java 内存模型")
+                    .contains("讨论观点（含发言人归属，为主要输入）：")
+                    .contains("Redis 适合热点数据，但需要考虑淘汰策略")
+                    .doesNotContain("观点原文");
+            assertThat(ctx.turns()).extracting(ChatTurn::content)
+                    .contains("用户: 请核对淘汰策略");
+        }
+
+        @Test
+        @DisplayName("结论观点无摘要时回退原文")
+        void shouldFallbackToRawContentWhenConclusionViewpointHasNoSummary() throws Exception {
+            setField(contextBuilder, "viewpointLimit", 20);
+            Agent expert = agent(99L, "专家", null);
+            GroupMessage viewpoint = agentMsg(1L, 20L, "缓存穿透可以用布隆过滤器");
+            when(messageRepository.findViewpointsByTopicId(100L, 20)).thenReturn(List.of(viewpoint));
+            when(messageRepository.findRecentByTopicId(100L, 200)).thenReturn(List.of());
+
+            ContextBuilder.LlmContext ctx = contextBuilder.buildForConclusion(
+                    expert, 1L, 100L, "缓存方案", m -> "专家");
+
+            assertThat(ctx.systemPrompt()).contains("专家: 缓存穿透可以用布隆过滤器");
         }
     }
 

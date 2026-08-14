@@ -22,14 +22,14 @@ import java.util.concurrent.CompletableFuture;
  * 之后），导致模型收到 3~5 条 SystemMessage、且 system 消息不在首位的非法结构。SAA 会告警
  * （Detected N SystemMessages），部分模型（如 stepfun）行为异常甚至返回空内容。
  * <p>方案：本 Hook 必须注册在各注入 Hook 之后（ReactAgent 按注册顺序执行 Hook），读取 state.messages，
- * 将字段级基础提示词（{@link #BASE_SYSTEM_PROMPT_KEY}，由 AgentSpeakerServiceImpl 写入 state）与所有
+ * 将字段级基础提示词（{@link #BASE_SYSTEM_PROMPT_KEY}，统一 LlmService 的带工具 chat 方法写入 state）与所有
  * SystemMessage 文本按序拼接为单条 SystemMessage 置顶，并通过 {@link ReplaceAllWith} 整体替换 messages
  * （覆盖 AppendStrategy 的追加语义）。ReAct 多轮循环中每次模型调用前均执行，天然幂等。
  */
 @Component
 public class SystemMessageMergeHook extends ModelHook {
 
-    /** state 中基础系统提示词 key（由 AgentSpeakerServiceImpl 写入，供本 Hook 合并） */
+    /** state 中基础系统提示词 key（由统一 LlmService 的带工具 chat 写入，供本 Hook 合并） */
     public static final String BASE_SYSTEM_PROMPT_KEY = "baseSystemPrompt";
 
     /** 消息列表 key（与 ReactAgent 默认 messages key 一致） */
@@ -60,7 +60,7 @@ public class SystemMessageMergeHook extends ModelHook {
 
     @Event(eventCode = "BEFORE_MODEL", eventName = "合并SystemMessage")
     private List<Message> mergeMessage(OverAllState state, List<Message> messages) {
-        // 基础系统提示词（Agent 人设 + 协作协议），由 AgentSpeakerServiceImpl 写入 state
+        // 基础系统提示词（Agent 人设 + 协作协议），统一 LlmService 的带工具 chat 方法写入 state
         String basePrompt = state.value(BASE_SYSTEM_PROMPT_KEY, "");
 
         List<Message> merged = new ArrayList<>(messages.size());

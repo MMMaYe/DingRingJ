@@ -17,7 +17,7 @@ import com.dingring.domain.group.GroupRepository;
 import com.dingring.domain.group.MemberRole;
 import com.dingring.domain.group.MemberType;
 import com.dingring.domain.group.MessageRepository;
-import com.dingring.domain.service.AgentSpeakerService;
+import com.dingring.domain.service.LlmService;
 import com.dingring.domain.service.DomainEventPublisher;
 import com.dingring.domain.service.GroupBroadcastService;
 import org.junit.jupiter.api.BeforeEach;
@@ -57,7 +57,7 @@ class ConclusionServiceTest {
     private SpeakerScheduler speakerScheduler;
     private ContextBuilder contextBuilder;
     private MessageAssembler messageAssembler;
-    private AgentSpeakerService agentSpeakerService;
+    private LlmService llmService;
     private DomainEventPublisher eventPublisher;
     private GroupBroadcastService groupBroadcastService;
     private ConclusionExecutor conclusionExecutor;
@@ -76,12 +76,12 @@ class ConclusionServiceTest {
         speakerScheduler = mock(SpeakerScheduler.class);
         contextBuilder = mock(ContextBuilder.class);
         messageAssembler = mock(MessageAssembler.class);
-        agentSpeakerService = mock(AgentSpeakerService.class);
+        llmService = mock(LlmService.class);
         eventPublisher = mock(DomainEventPublisher.class);
         groupBroadcastService = mock(GroupBroadcastService.class);
         conclusionExecutor = mock(ConclusionExecutor.class);
         service = new ConclusionService(topicRepository, groupRepository, agentRepository, messageRepository,
-                speakerScheduler, contextBuilder, messageAssembler, agentSpeakerService,
+                speakerScheduler, contextBuilder, messageAssembler, llmService,
                 eventPublisher, groupBroadcastService, conclusionExecutor);
     }
 
@@ -118,8 +118,8 @@ class ConclusionServiceTest {
                 .thenReturn(List.of(new SpeakerScheduler.ScoredAgent(agent(), 100, "FREE_SCHEDULE")));
         when(contextBuilder.buildForConclusion(any(), any(), any(), any(), any()))
                 .thenReturn(new ContextBuilder.LlmContext("sp", List.of()));
-        when(agentSpeakerService.call(any(), any(), any(), any(), any()))
-                .thenReturn(AgentSpeakerService.AgentResult.of("结论内容"));
+        when(llmService.chat(any(), any(), any(), any(), any()))
+                .thenReturn(LlmService.AgentResult.of("结论内容"));
         when(topicRepository.update(t)).thenReturn(true);
         when(messageRepository.countByTopicId(TOPIC_ID)).thenReturn(2L);
     }
@@ -205,8 +205,8 @@ class ConclusionServiceTest {
                 .thenReturn(List.of(new SpeakerScheduler.ScoredAgent(agent(), 100, "FREE_SCHEDULE")));
         when(contextBuilder.buildForConclusion(any(), any(), any(), any(), any()))
                 .thenReturn(new ContextBuilder.LlmContext("sp", List.of()));
-        when(agentSpeakerService.call(any(), any(), any(), any(), any()))
-                .thenReturn(AgentSpeakerService.AgentResult.of(""));
+        when(llmService.chat(any(), any(), any(), any(), any()))
+                .thenReturn(LlmService.AgentResult.of(""));
 
         service.generate(TOPIC_ID, GROUP_ID, "USER", null);
 
@@ -223,7 +223,7 @@ class ConclusionServiceTest {
 
         service.generate(TOPIC_ID, GROUP_ID, "USER", null);
 
-        verify(agentSpeakerService, never()).call(any(), any(), any(), any(), any());
+        verify(llmService, never()).chat(any(), any(), any(), any(), any());
         verify(groupBroadcastService, never()).broadcast(eq(GROUP_ID), eq(WsConstants.TOPIC_CLOSED), any());
     }
 
@@ -252,7 +252,7 @@ class ConclusionServiceTest {
         }
 
         // 两个任务并发执行，per-topic CAS 只放行一个进入 generate
-        verify(agentSpeakerService, times(1)).call(any(), any(), any(), any(), any());
+        verify(llmService, times(1)).chat(any(), any(), any(), any(), any());
         verify(groupBroadcastService, times(1)).broadcast(eq(GROUP_ID), eq(WsConstants.TOPIC_CLOSED), any());
     }
 }

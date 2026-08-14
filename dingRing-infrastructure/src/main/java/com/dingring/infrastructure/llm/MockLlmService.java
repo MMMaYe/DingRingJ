@@ -7,6 +7,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Consumer;
 
@@ -14,6 +15,7 @@ import java.util.function.Consumer;
  * Mock LLM 实现（dingring.llm.mock=true 启用），无需真实 API Key 即可演示核心闭环。
  * <p>根据 systemPrompt 中的任务标记返回模拟发言 / STAR 结论 / 卡片 JSON。
  */
+@Deprecated
 @Service
 @ConditionalOnProperty(name = "dingring.llm.mock", havingValue = "true")
 public class MockLlmService implements LlmService {
@@ -52,6 +54,19 @@ public class MockLlmService implements LlmService {
             }
         }
         return reply;
+    }
+
+    @Override
+    public AgentResult chat(Agent agent, String systemPrompt, List<ChatTurn> messages,
+                            ToolSet toolSet, Map<String, Object> context) {
+        throw new UnsupportedOperationException("MockLlmService 仅支持无工具 chat");
+    }
+
+    @Override
+    public AgentResult chatStream(Agent agent, String systemPrompt, List<ChatTurn> messages,
+                                  ToolSet toolSet, Map<String, Object> context,
+                                  Consumer<String> onDelta) {
+        throw new UnsupportedOperationException("MockLlmService 仅支持无工具 chat");
     }
 
     private String mockReply(Agent agent, String lastUser) {

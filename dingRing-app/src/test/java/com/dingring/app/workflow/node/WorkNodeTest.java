@@ -13,7 +13,7 @@ import com.dingring.domain.group.GroupRepository;
 import com.dingring.domain.group.MemberRole;
 import com.dingring.domain.group.MemberType;
 import com.dingring.domain.group.MessageRepository;
-import com.dingring.domain.service.AgentSpeakerService;
+import com.dingring.domain.service.LlmService;
 import com.dingring.domain.service.GroupBroadcastService;
 import com.dingring.infrastructure.agent.runtime.SupervisorAgentFactory;
 import org.junit.jupiter.api.BeforeEach;
@@ -56,7 +56,7 @@ class WorkNodeTest {
     private AgentRepository agentRepository;
     private MessageRepository messageRepository;
     private MessageAssembler messageAssembler;
-    private AgentSpeakerService agentSpeakerService;
+    private LlmService llmService;
     private GroupBroadcastService groupBroadcastService;
     private SupervisorAgentFactory supervisorAgentFactory;
     private WorkNode node;
@@ -67,11 +67,11 @@ class WorkNodeTest {
         agentRepository = mock(AgentRepository.class);
         messageRepository = mock(MessageRepository.class);
         messageAssembler = mock(MessageAssembler.class);
-        agentSpeakerService = mock(AgentSpeakerService.class);
+        llmService = mock(LlmService.class);
         groupBroadcastService = mock(GroupBroadcastService.class);
         supervisorAgentFactory = mock(SupervisorAgentFactory.class);
         node = new WorkNode(groupRepository, agentRepository, messageRepository, messageAssembler,
-                agentSpeakerService, groupBroadcastService, supervisorAgentFactory);
+                llmService, groupBroadcastService, supervisorAgentFactory);
     }
 
     private void setSupervisorEnabled(boolean enabled) {
@@ -113,9 +113,9 @@ class WorkNodeTest {
         Long groupId = 1L;
         when(groupRepository.findById(groupId)).thenReturn(Optional.of(groupWithAgentIds(groupId, List.of(10L, 20L))));
         when(agentRepository.findByIds(List.of(10L, 20L))).thenReturn(List.of(agent(10L, "柯南"), agent(20L, "灰原")));
-        when(agentSpeakerService.call(any(Agent.class), anyString(), anyList(),
-                any(AgentSpeakerService.ToolSet.class), any(Map.class)))
-                .thenReturn(AgentSpeakerService.AgentResult.of("单 Agent 结果"));
+        when(llmService.chat(any(Agent.class), anyString(), anyList(),
+                any(LlmService.ToolSet.class), any(Map.class)))
+                .thenReturn(LlmService.AgentResult.of("单 Agent 结果"));
 
         Map<String, Object> result = node.apply(stateWith(groupId, "帮我查一下资料"));
 
@@ -135,9 +135,9 @@ class WorkNodeTest {
         Long groupId = 1L;
         when(groupRepository.findById(groupId)).thenReturn(Optional.of(groupWithAgentIds(groupId, List.of(10L))));
         when(agentRepository.findByIds(List.of(10L))).thenReturn(List.of(agent(10L, "柯南")));
-        when(agentSpeakerService.call(any(Agent.class), anyString(), anyList(),
-                any(AgentSpeakerService.ToolSet.class), any(Map.class)))
-                .thenReturn(AgentSpeakerService.AgentResult.of("单 Agent 结果"));
+        when(llmService.chat(any(Agent.class), anyString(), anyList(),
+                any(LlmService.ToolSet.class), any(Map.class)))
+                .thenReturn(LlmService.AgentResult.of("单 Agent 结果"));
 
         Map<String, Object> result = node.apply(stateWith(groupId, "帮我查一下资料"));
 
@@ -162,7 +162,7 @@ class WorkNodeTest {
 
         assertThat(result).containsEntry("workResult", "Supervisor 汇总结果");
         verify(supervisorAgentFactory).buildSupervisor(any(Agent.class), anyString(), anyList());
-        verify(agentSpeakerService, never()).call(any(), anyString(), anyList(), any(), any());
+        verify(llmService, never()).chat(any(), anyString(), anyList(), any(), any());
         verify(messageRepository).save(any(com.dingring.domain.group.GroupMessage.class));
         verify(groupBroadcastService).broadcast(anyLong(), org.mockito.ArgumentMatchers.eq(WsConstants.NEW_MESSAGE), any());
 
@@ -184,15 +184,15 @@ class WorkNodeTest {
         when(supervisorAgentFactory.buildSupervisor(any(Agent.class), anyString(), anyList()))
                 .thenReturn(supervisor);
         when(supervisor.call(any(Map.class))).thenThrow(new RuntimeException("Supervisor LLM 故障"));
-        when(agentSpeakerService.call(any(Agent.class), anyString(), anyList(),
-                any(AgentSpeakerService.ToolSet.class), any(Map.class)))
-                .thenReturn(AgentSpeakerService.AgentResult.of("降级结果"));
+        when(llmService.chat(any(Agent.class), anyString(), anyList(),
+                any(LlmService.ToolSet.class), any(Map.class)))
+                .thenReturn(LlmService.AgentResult.of("降级结果"));
 
         Map<String, Object> result = node.apply(stateWith(groupId, "生成一份调研报告"));
 
         assertThat(result).containsEntry("workResult", "降级结果");
-        verify(agentSpeakerService).call(any(Agent.class), anyString(), anyList(),
-                org.mockito.ArgumentMatchers.eq(AgentSpeakerService.ToolSet.WORK), any(Map.class));
+        verify(llmService).chat(any(Agent.class), anyString(), anyList(),
+                org.mockito.ArgumentMatchers.eq(LlmService.ToolSet.WORK), any(Map.class));
     }
 
     @Test
@@ -201,16 +201,16 @@ class WorkNodeTest {
         Long groupId = 1L;
         when(groupRepository.findById(groupId)).thenReturn(Optional.of(groupWithAgentIds(groupId, List.of(10L, 20L))));
         when(agentRepository.findByIds(List.of(10L, 20L))).thenReturn(List.of(agent(10L, "柯南"), agent(20L, "灰原")));
-        when(agentSpeakerService.call(any(Agent.class), anyString(), anyList(),
-                any(AgentSpeakerService.ToolSet.class), any(Map.class)))
-                .thenReturn(AgentSpeakerService.AgentResult.of("被 @ 者结果"));
+        when(llmService.chat(any(Agent.class), anyString(), anyList(),
+                any(LlmService.ToolSet.class), any(Map.class)))
+                .thenReturn(LlmService.AgentResult.of("被 @ 者结果"));
 
         Map<String, Object> result = node.apply(stateWithMentioned(groupId, "@灰原 帮我画个图", List.of(20L)));
 
         assertThat(result).containsEntry("workResult", "被 @ 者结果");
         ArgumentCaptor<Agent> agentCaptor = ArgumentCaptor.forClass(Agent.class);
-        verify(agentSpeakerService).call(agentCaptor.capture(), anyString(), anyList(),
-                org.mockito.ArgumentMatchers.eq(AgentSpeakerService.ToolSet.WORK), any(Map.class));
+        verify(llmService).chat(agentCaptor.capture(), anyString(), anyList(),
+                org.mockito.ArgumentMatchers.eq(LlmService.ToolSet.WORK), any(Map.class));
         assertThat(agentCaptor.getValue().getId()).isEqualTo(20L);
         assertThat(agentCaptor.getValue().getName()).isEqualTo("灰原");
     }
@@ -221,16 +221,16 @@ class WorkNodeTest {
         Long groupId = 1L;
         when(groupRepository.findById(groupId)).thenReturn(Optional.of(groupWithAgentIds(groupId, List.of(10L, 20L))));
         when(agentRepository.findByIds(List.of(10L, 20L))).thenReturn(List.of(agent(10L, "柯南"), agent(20L, "灰原")));
-        when(agentSpeakerService.call(any(Agent.class), anyString(), anyList(),
-                any(AgentSpeakerService.ToolSet.class), any(Map.class)))
-                .thenReturn(AgentSpeakerService.AgentResult.of("群首结果"));
+        when(llmService.chat(any(Agent.class), anyString(), anyList(),
+                any(LlmService.ToolSet.class), any(Map.class)))
+                .thenReturn(LlmService.AgentResult.of("群首结果"));
 
         Map<String, Object> result = node.apply(stateWithMentioned(groupId, "@路人 帮我查资料", List.of(99L)));
 
         assertThat(result).containsEntry("workResult", "群首结果");
         ArgumentCaptor<Agent> agentCaptor = ArgumentCaptor.forClass(Agent.class);
-        verify(agentSpeakerService).call(agentCaptor.capture(), anyString(), anyList(),
-                org.mockito.ArgumentMatchers.eq(AgentSpeakerService.ToolSet.WORK), any(Map.class));
+        verify(llmService).chat(agentCaptor.capture(), anyString(), anyList(),
+                org.mockito.ArgumentMatchers.eq(LlmService.ToolSet.WORK), any(Map.class));
         assertThat(agentCaptor.getValue().getId()).isEqualTo(10L);
     }
 

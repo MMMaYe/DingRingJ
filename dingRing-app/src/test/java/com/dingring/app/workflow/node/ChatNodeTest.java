@@ -14,7 +14,7 @@ import com.dingring.domain.group.GroupRepository;
 import com.dingring.domain.group.MemberRole;
 import com.dingring.domain.group.MemberType;
 import com.dingring.domain.group.MessageRepository;
-import com.dingring.domain.service.AgentSpeakerService;
+import com.dingring.domain.service.LlmService;
 import com.dingring.domain.service.DomainEventPublisher;
 import com.dingring.domain.service.GroupBroadcastService;
 import com.dingring.domain.workflow.StateKeys;
@@ -59,7 +59,7 @@ class ChatNodeTest {
     private SpeakerScheduler speakerScheduler;
     private ContextBuilder contextBuilder;
     private MessageAssembler messageAssembler;
-    private AgentSpeakerService agentSpeakerService;
+    private LlmService llmService;
     private DomainEventPublisher eventPublisher;
     private GroupBroadcastService groupBroadcastService;
     private ChatNode node;
@@ -72,11 +72,11 @@ class ChatNodeTest {
         speakerScheduler = new SpeakerScheduler();
         contextBuilder = mock(ContextBuilder.class);
         messageAssembler = mock(MessageAssembler.class);
-        agentSpeakerService = mock(AgentSpeakerService.class);
+        llmService = mock(LlmService.class);
         eventPublisher = mock(DomainEventPublisher.class);
         groupBroadcastService = mock(GroupBroadcastService.class);
         node = new ChatNode(groupRepository, agentRepository, messageRepository, speakerScheduler,
-                contextBuilder, messageAssembler, agentSpeakerService, eventPublisher, groupBroadcastService);
+                contextBuilder, messageAssembler, llmService, eventPublisher, groupBroadcastService);
     }
 
     private Group groupWithAgentIds(Long groupId, List<Long> memberAgentIds) {
@@ -103,9 +103,9 @@ class ChatNodeTest {
         when(contextBuilder.build(any(Agent.class), anyLong(), eq(null), any()))
                 .thenReturn(new ContextBuilder.LlmContext("测试systemPrompt", List.of()));
         // 默认所有 Agent 都正常回答
-        when(agentSpeakerService.call(any(Agent.class), anyString(), anyList(),
-                eq(AgentSpeakerService.ToolSet.CHAT), any(Map.class)))
-                .thenReturn(AgentSpeakerService.AgentResult.of("正常回答"));
+        when(llmService.chat(any(Agent.class), anyString(), anyList(),
+                eq(LlmService.ToolSet.CHAT), any(Map.class)))
+                .thenReturn(LlmService.AgentResult.of("正常回答"));
     }
 
     private OverAllState state(String input, List<Long> mentioned) {
@@ -125,8 +125,8 @@ class ChatNodeTest {
 
         // 首位发言成功即停止级联：只有灰原被调用
         ArgumentCaptor<Agent> agentCaptor = ArgumentCaptor.forClass(Agent.class);
-        verify(agentSpeakerService, times(1)).call(agentCaptor.capture(), anyString(), anyList(),
-                eq(AgentSpeakerService.ToolSet.CHAT), any(Map.class));
+        verify(llmService, times(1)).chat(agentCaptor.capture(), anyString(), anyList(),
+                eq(LlmService.ToolSet.CHAT), any(Map.class));
         assertThat(agentCaptor.getValue().getId()).isEqualTo(20L);
         assertThat(result).containsEntry(StateKeys.CHAT_BUFFER, 1);
         verify(groupBroadcastService, never()).broadcast(anyLong(), eq(WsConstants.ERROR), any());
@@ -137,21 +137,21 @@ class ChatNodeTest {
     void shouldCascadeToNextWhenMentionedSilent() {
         mockCommon();
         // 灰原(被@)空内容，柯南正常回答
-        when(agentSpeakerService.call(any(Agent.class), anyString(), anyList(),
-                eq(AgentSpeakerService.ToolSet.CHAT), any(Map.class)))
+        when(llmService.chat(any(Agent.class), anyString(), anyList(),
+                eq(LlmService.ToolSet.CHAT), any(Map.class)))
                 .thenAnswer(invocation -> {
                     Agent a = invocation.getArgument(0);
                     return a.getId().equals(20L)
-                            ? AgentSpeakerService.AgentResult.of("")
-                            : AgentSpeakerService.AgentResult.of("柯南的回答");
+                            ? LlmService.AgentResult.of("")
+                            : LlmService.AgentResult.of("柯南的回答");
                 });
 
         Map<String, Object> result = node.apply(state("@灰原 帮我分析下", List.of(20L)));
 
         // 灰原先被尝试，空内容后顺延柯南发言成功
         ArgumentCaptor<Agent> agentCaptor = ArgumentCaptor.forClass(Agent.class);
-        verify(agentSpeakerService, times(2)).call(agentCaptor.capture(), anyString(), anyList(),
-                eq(AgentSpeakerService.ToolSet.CHAT), any(Map.class));
+        verify(llmService, times(2)).chat(agentCaptor.capture(), anyString(), anyList(),
+                eq(LlmService.ToolSet.CHAT), any(Map.class));
         assertThat(agentCaptor.getAllValues().stream().map(Agent::getId)).containsExactly(20L, 10L);
 
         ArgumentCaptor<GroupMessage> msgCaptor = ArgumentCaptor.forClass(GroupMessage.class);
@@ -166,9 +166,9 @@ class ChatNodeTest {
     @DisplayName("全部候选都发言失败才广播 ALL_AGENTS_FAILED")
     void shouldBroadcastErrorWhenAllSilent() {
         mockCommon();
-        when(agentSpeakerService.call(any(Agent.class), anyString(), anyList(),
-                eq(AgentSpeakerService.ToolSet.CHAT), any(Map.class)))
-                .thenReturn(AgentSpeakerService.AgentResult.of(""));
+        when(llmService.chat(any(Agent.class), anyString(), anyList(),
+                eq(LlmService.ToolSet.CHAT), any(Map.class)))
+                .thenReturn(LlmService.AgentResult.of(""));
 
         node.apply(state("有人回答吗", List.of()));
 
@@ -185,8 +185,8 @@ class ChatNodeTest {
 
         // 无提及：首位评分最高者正常发言，消息入库
         ArgumentCaptor<Agent> agentCaptor = ArgumentCaptor.forClass(Agent.class);
-        verify(agentSpeakerService, times(1)).call(agentCaptor.capture(), anyString(), anyList(),
-                eq(AgentSpeakerService.ToolSet.CHAT), any(Map.class));
+        verify(llmService, times(1)).chat(agentCaptor.capture(), anyString(), anyList(),
+                eq(LlmService.ToolSet.CHAT), any(Map.class));
         verify(messageRepository).save(any(GroupMessage.class));
         assertThat(result).containsEntry(StateKeys.CHAT_BUFFER, 1);
     }

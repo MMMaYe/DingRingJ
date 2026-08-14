@@ -206,6 +206,18 @@ public class ContextBuilder {
         }
         sp.append(promptLoader.render("conclude", Map.of("topicTitle", topicTitle)));
 
+        // 层1：观点摘要清单（带归属，为主要输入；原文仅用于查证细节）
+        List<GroupMessage> viewpoints = messageRepository.findViewpointsByTopicId(topicId, viewpointLimit);
+        if (!viewpoints.isEmpty()) {
+            sp.append("\n\n讨论观点（含发言人归属，为主要输入）：\n");
+            for (GroupMessage m : viewpoints) {
+                String text = (m.getViewpoint() != null && !m.getViewpoint().isBlank())
+                        ? m.getViewpoint() : m.getContent();
+                sp.append(senderNameOf.apply(m)).append(": ").append(text).append('\n');
+            }
+        }
+
+        // 原文窗口保留用于核对细节与出处，不作为主要总结输入
         List<GroupMessage> all = messageRepository.findRecentByTopicId(topicId, contextWindow);
         String spFinal = sp.toString();
         LogHelper.printLog(ContextBuilder.class, "ContextBuilder.buildForConclusion", "BUILD_FOR_CONCLUSION", "结论上下文",

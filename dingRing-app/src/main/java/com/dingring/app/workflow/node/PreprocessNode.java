@@ -10,6 +10,7 @@ import com.dingring.domain.group.Group;
 import com.dingring.domain.group.GroupRepository;
 import com.dingring.domain.workflow.StateKeys;
 import com.dingring.infrastructure.aop.Event;
+import com.google.common.collect.Maps;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -55,6 +56,7 @@ public class PreprocessNode implements NodeAction {
         Map<String, Object> logMap = new HashMap<>();
         logMap.put("groupId", groupId);
         logMap.put("inputLen", input == null ? 0 : input.length());
+        logMap.put("input", input);
         LogHelper.printLog(PreprocessNode.class, "PreprocessNode.apply", "PREPROCESS", "预处理开始",
                 "request={}", JsonHelper.mapToJsonStr(logMap));
 

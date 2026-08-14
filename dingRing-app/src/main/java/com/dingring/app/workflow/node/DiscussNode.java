@@ -23,7 +23,7 @@ import com.dingring.domain.group.GroupRepository;
 import com.dingring.domain.group.MessageRepository;
 import com.dingring.domain.group.MessageType;
 import com.dingring.domain.group.SenderType;
-import com.dingring.domain.service.AgentSpeakerService;
+import com.dingring.domain.service.LlmService;
 import com.dingring.domain.service.DomainEventPublisher;
 import com.dingring.domain.service.GroupBroadcastService;
 import com.dingring.domain.workflow.StateKeys;
@@ -69,7 +69,7 @@ public class DiscussNode implements NodeAction {
     private final SpeakerScheduler speakerScheduler;
     private final ContextBuilder contextBuilder;
     private final MessageAssembler messageAssembler;
-    private final AgentSpeakerService agentSpeakerService;
+    private final LlmService llmService;
     private final DomainEventPublisher eventPublisher;
     private final GroupBroadcastService groupBroadcastService;
     private final Terminator terminator;
@@ -261,14 +261,14 @@ public class DiscussNode implements NodeAction {
                 context.put("ragQuery", ctx.getContent());
 
                 // Agent 发言（失败重试 1 次）；流式模式下重试前废弃旧流、换新 streamId 重开
-                AgentSpeakerService.AgentResult result;
+                LlmService.AgentResult result;
                 long llmStart = System.currentTimeMillis();
                 try {
                     result = streamingEnabled
-                            ? agentSpeakerService.callStream(agent, llmCtx.systemPrompt(), llmCtx.turns(),
-                                    AgentSpeakerService.ToolSet.DISCUSS, context, emitter::onDelta)
-                            : agentSpeakerService.call(agent, llmCtx.systemPrompt(), llmCtx.turns(),
-                                    AgentSpeakerService.ToolSet.DISCUSS, context);
+                            ? llmService.chatStream(agent, llmCtx.systemPrompt(), llmCtx.turns(),
+                                    LlmService.ToolSet.DISCUSS, context, emitter::onDelta)
+                            : llmService.chat(agent, llmCtx.systemPrompt(), llmCtx.turns(),
+                                    LlmService.ToolSet.DISCUSS, context);
                 } catch (Exception first) {
                     LogHelper.printWarnLog(DiscussNode.class, "DiscussNode.speakOnce", "DISCUSS_NODE", "Agent首次失败重试",
                             "agent={} 失败原因: {}", agent.getName(), first.getMessage());
@@ -276,10 +276,10 @@ public class DiscussNode implements NodeAction {
                         emitter.reset();
                     }
                     result = streamingEnabled
-                            ? agentSpeakerService.callStream(agent, llmCtx.systemPrompt(), llmCtx.turns(),
-                                    AgentSpeakerService.ToolSet.DISCUSS, context, emitter::onDelta)
-                            : agentSpeakerService.call(agent, llmCtx.systemPrompt(), llmCtx.turns(),
-                                    AgentSpeakerService.ToolSet.DISCUSS, context);
+                            ? llmService.chatStream(agent, llmCtx.systemPrompt(), llmCtx.turns(),
+                                    LlmService.ToolSet.DISCUSS, context, emitter::onDelta)
+                            : llmService.chat(agent, llmCtx.systemPrompt(), llmCtx.turns(),
+                                    LlmService.ToolSet.DISCUSS, context);
                 }
                 String content = result.content();
                 LogHelper.printLog(DiscussNode.class, "DiscussNode.speakOnce", "DISCUSS_NODE", "LLM调用完成",

@@ -7,6 +7,8 @@ import com.dingring.common.util.LogHelper;
 import com.dingring.domain.agent.Agent;
 import com.dingring.domain.service.LlmService;
 import com.dingring.infrastructure.aop.Event;
+import com.dingring.infrastructure.agent.hook.SystemMessageMergeHook;
+import com.dingring.infrastructure.agent.runtime.SaaReactAgentFactory;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.messages.AssistantMessage;
@@ -17,6 +19,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
@@ -24,14 +27,13 @@ import java.util.function.Consumer;
 /**
  * 基于 SAA ReactAgent 的 {@link LlmService} 实现（Phase D 统一 LLM 调用入口）。
  * <p>替代 Phase C 的裸 {@code OpenAiChatModel} 直调（{@code SpringAiLlmService} 已废弃保留，
- * 默认不激活）：所有 LLM 调用统一经由 ReactAgent——本类构建「无工具 ReactAgent」服务意图分类/摘要/重排等
- * 确定性任务，发言场景由 {@link com.dingring.infrastructure.agent.runtime.AgentSpeakerServiceImpl}
- * 构建「带工具 ReactAgent」，两条路径共享同一 Agent 运行时，无第二套 LLM 调用代码。
+ * 默认不激活）：所有 LLM 调用统一经由 ReactAgent——本类构建无工具 ReactAgent 服务意图分类/摘要/重排等
+ * 确定性任务，也构建带工具 ReactAgent 服务 Agent 发言，两条路径共享同一 Agent 运行时，无第二套 LLM 调用代码。
  * <p>参数覆盖（temperature/maxTokens/readTimeout/jsonMode）已由 {@link SaaModelFactory#buildChatModel}
  * 装配进 model 的 defaultOptions；ReactAgent 未指定 chatOptions 时复用 model 默认 options，
  * 因此无需在 Agent 层重复处理。
  * <p>流式：SAA 1.1.2.3 的 ReactAgent 无公共流式入口，chatStream 统一回退非流式
- * （与 {@code AgentSpeakerServiceImpl.callStream} 语义一致，整段回调 onDelta）。
+ * （与无工具 chatStream 语义一致，整段回调 onDelta）。
  */
 @Slf4j
 @Service
@@ -41,6 +43,8 @@ public class ReactAgentLlmService implements LlmService {
 
     /** 模型构建工厂（参数覆盖 + 超时在此装配进 ChatModel defaultOptions） */
     private final SaaModelFactory modelFactory;
+    /** 带工具 Agent 构建工厂（Hook、工具集和 recursionLimit 由工厂统一装配） */
+    private final SaaReactAgentFactory agentFactory;
 
     @Override
     public String chat(Agent agent, String systemPrompt, List<ChatTurn> messages) {
@@ -93,20 +97,75 @@ public class ReactAgentLlmService implements LlmService {
                     e, agent.getName(), agent.getModelName(),
                     System.currentTimeMillis() - startAt, e.getMessage());
             throw new BizException(ErrorCode.LLM_API_ERROR,
-                    "LLM 调用失败: " + agent.getName() + " - " + e.getMessage());
+                    "LLM 调用失败: " + agent.getName() + " - " + e.getMessage(), e);
         }
+    }
+
+    @Override
+    @Event(eventCode = "AGENT_SPEAK", eventName = "Agent同事发言")
+    public AgentResult chat(Agent agent, String systemPrompt, List<ChatTurn> messages,
+                            ToolSet toolSet, Map<String, Object> context) {
+        long startAt = System.currentTimeMillis();
+        try {
+            ReactAgent reactAgent = toolSet == ToolSet.WORK
+                    ? agentFactory.buildWorkAgent(agent)
+                    : agentFactory.buildDiscussAgent(agent, toolSet);
+            Map<String, Object> inputs = buildAgentInputs(systemPrompt, messages, context);
+            LogHelper.printLog(ReactAgentLlmService.class, "ReactAgentLlmService.chatAgent", "AGENT_SPEAK",
+                    "Agent发言开始", "agent={} toolSet={} 消息数={} context={}",
+                    agent.getName(), toolSet, messages.size(), context == null ? List.of() : context.keySet());
+            AssistantMessage response = reactAgent.call(inputs);
+            String content = response.getText() == null ? "" : response.getText();
+            boolean hasToolCalls = response.getToolCalls() != null && !response.getToolCalls().isEmpty();
+            LogHelper.printLog(ReactAgentLlmService.class, "ReactAgentLlmService.chatAgent", "AGENT_SPEAK",
+                    "Agent发言完成", "agent={} 内容长度={} hasToolCalls={} 耗时={}ms",
+                    agent.getName(), content.length(), hasToolCalls, System.currentTimeMillis() - startAt);
+            return new AgentResult(content, hasToolCalls, List.of());
+        } catch (BizException e) {
+            throw e;
+        } catch (Exception e) {
+            LogHelper.printWarnLog(ReactAgentLlmService.class, "ReactAgentLlmService.chatAgent", "AGENT_SPEAK",
+                    "Agent发言失败", "agent={} 错误: {}", agent.getName(), e.getMessage());
+            throw new BizException(ErrorCode.LLM_API_ERROR,
+                    "LLM 调用失败: " + agent.getName() + " - " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    @Event(eventCode = "AGENT_SPEAK", eventName = "流式Agent发言")
+    public AgentResult chatStream(Agent agent, String systemPrompt, List<ChatTurn> messages,
+                                  ToolSet toolSet, Map<String, Object> context, Consumer<String> onDelta) {
+        AgentResult result = chat(agent, systemPrompt, messages, toolSet, context);
+        if (onDelta != null && result.content() != null && !result.content().isEmpty()) {
+            onDelta.accept(result.content());
+        }
+        return result;
+    }
+
+    private Map<String, Object> buildAgentInputs(String systemPrompt, List<ChatTurn> messages,
+                                                  Map<String, Object> context) {
+        Map<String, Object> inputs = new HashMap<>();
+        inputs.put("messages", toAiMessages(messages));
+        inputs.put(SystemMessageMergeHook.BASE_SYSTEM_PROMPT_KEY,
+                systemPrompt == null ? "" : systemPrompt);
+        if (context != null) {
+            inputs.putAll(context);
+        }
+        return inputs;
     }
 
     @Override
     @Event(eventCode = "CHAT_TO_LLM", eventName = "流式调用LLM")
     public String chatStream(Agent agent, String systemPrompt, List<ChatTurn> messages, Consumer<String> onDelta) {
-        // 统一入口：SAA 1.1.2.3 ReactAgent 无公共流式 API，回退非流式（与 AgentSpeakerServiceImpl.callStream 一致）
+        // SAA ReactAgent 无公共流式 API，回退非流式；整段内容只回调一次。
         String text = chat(agent, systemPrompt, messages, null);
         if (onDelta != null && !text.isEmpty()) {
             onDelta.accept(text);
         }
         return text;
     }
+
+    /** 带工具 Agent 的消息转换与无工具路径共用同一实现。 */
 
     /**
      * 构建无工具 ReactAgent。

@@ -7,8 +7,10 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * {@link MockLlmService} 单元测试。
@@ -91,5 +93,21 @@ class MockLlmServiceTest {
 
         // 模板里会把用户内容作为 topicHint，过长会截断到 40 字符
         assertThat(result).doesNotContain("a".repeat(100));
+    }
+
+    @Test
+    @DisplayName("带工具 chat 明确不支持")
+    void toolChatShouldBeUnsupported() {
+        assertThatThrownBy(() -> service.chat(agent("专家"), "讨论", List.of(),
+                LlmService.ToolSet.DISCUSS, Map.of()))
+                .isInstanceOf(UnsupportedOperationException.class);
+    }
+
+    @Test
+    @DisplayName("带工具 chatStream 明确不支持")
+    void toolChatStreamShouldBeUnsupported() {
+        assertThatThrownBy(() -> service.chatStream(agent("专家"), "讨论", List.of(),
+                LlmService.ToolSet.DISCUSS, Map.of(), chunk -> {}))
+                .isInstanceOf(UnsupportedOperationException.class);
     }
 }

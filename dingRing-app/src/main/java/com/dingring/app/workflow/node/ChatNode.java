@@ -22,7 +22,7 @@ import com.dingring.domain.group.GroupRepository;
 import com.dingring.domain.group.MessageRepository;
 import com.dingring.domain.group.MessageType;
 import com.dingring.domain.group.SenderType;
-import com.dingring.domain.service.AgentSpeakerService;
+import com.dingring.domain.service.LlmService;
 import com.dingring.domain.service.DomainEventPublisher;
 import com.dingring.domain.service.GroupBroadcastService;
 import com.dingring.domain.workflow.StateKeys;
@@ -62,7 +62,7 @@ public class ChatNode implements NodeAction {
     private final SpeakerScheduler speakerScheduler;
     private final ContextBuilder contextBuilder;
     private final MessageAssembler messageAssembler;
-    private final AgentSpeakerService agentSpeakerService;
+    private final LlmService llmService;
     private final DomainEventPublisher eventPublisher;
     private final GroupBroadcastService groupBroadcastService;
 
@@ -213,13 +213,13 @@ public class ChatNode implements NodeAction {
             context.put("ragQuery", input);
 
             // Agent 发言（失败重试 1 次）；流式模式下重试前废弃旧流、换新 streamId 重开
-            AgentSpeakerService.AgentResult result;
+            LlmService.AgentResult result;
             try {
                 result = streamingEnabled
-                        ? agentSpeakerService.callStream(agent, llmCtx.systemPrompt(), llmCtx.turns(),
-                                AgentSpeakerService.ToolSet.CHAT, context, emitter::onDelta)
-                        : agentSpeakerService.call(agent, llmCtx.systemPrompt(), llmCtx.turns(),
-                                AgentSpeakerService.ToolSet.CHAT, context);
+                        ? llmService.chatStream(agent, llmCtx.systemPrompt(), llmCtx.turns(),
+                                LlmService.ToolSet.CHAT, context, emitter::onDelta)
+                        : llmService.chat(agent, llmCtx.systemPrompt(), llmCtx.turns(),
+                                LlmService.ToolSet.CHAT, context);
             } catch (Exception first) {
                 LogHelper.printWarnLog(ChatNode.class, "ChatNode.speakOnce", "CHAT_NODE", "Agent首次失败重试",
                         "agent={} 失败原因: {}", agent.getName(), first.getMessage());
@@ -227,10 +227,10 @@ public class ChatNode implements NodeAction {
                     emitter.reset();
                 }
                 result = streamingEnabled
-                        ? agentSpeakerService.callStream(agent, llmCtx.systemPrompt(), llmCtx.turns(),
-                                AgentSpeakerService.ToolSet.CHAT, context, emitter::onDelta)
-                        : agentSpeakerService.call(agent, llmCtx.systemPrompt(), llmCtx.turns(),
-                                AgentSpeakerService.ToolSet.CHAT, context);
+                        ? llmService.chatStream(agent, llmCtx.systemPrompt(), llmCtx.turns(),
+                                LlmService.ToolSet.CHAT, context, emitter::onDelta)
+                        : llmService.chat(agent, llmCtx.systemPrompt(), llmCtx.turns(),
+                                LlmService.ToolSet.CHAT, context);
             }
             String content = result.content();
 

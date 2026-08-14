@@ -20,7 +20,7 @@ import com.dingring.domain.group.GroupRepository;
 import com.dingring.domain.group.MessageRepository;
 import com.dingring.domain.group.MessageType;
 import com.dingring.domain.group.SenderType;
-import com.dingring.domain.service.AgentSpeakerService;
+import com.dingring.domain.service.LlmService;
 import com.dingring.domain.service.DomainEventPublisher;
 import com.dingring.domain.service.GroupBroadcastService;
 import com.dingring.infrastructure.aop.Event;
@@ -57,7 +57,7 @@ public class ConclusionService {
     private final SpeakerScheduler speakerScheduler;
     private final ContextBuilder contextBuilder;
     private final MessageAssembler messageAssembler;
-    private final AgentSpeakerService agentSpeakerService;
+    private final LlmService llmService;
     private final DomainEventPublisher eventPublisher;
     private final GroupBroadcastService groupBroadcastService;
     private final ConclusionExecutor conclusionExecutor;
@@ -168,16 +168,16 @@ public class ConclusionService {
             context.put("speakerAgentId", concluder.getId());
             // RAG 检索词：以主题标题为查询（RagInjectionHook 读取，让结论引用知识库）
             context.put("ragQuery", topic.getTitle());
-            AgentSpeakerService.AgentResult agentResult;
+            LlmService.AgentResult agentResult;
             try {
-                agentResult = agentSpeakerService.call(concluder, ctx.systemPrompt(), ctx.turns(),
-                        AgentSpeakerService.ToolSet.CONCLUDE, context);
+                agentResult = llmService.chat(concluder, ctx.systemPrompt(), ctx.turns(),
+                        LlmService.ToolSet.CONCLUDE, context);
             } catch (Exception first) {
                 LogHelper.printWarnLog(ConclusionService.class, "ConclusionService.generate",
                         "GENERATE_CONCLUSION", "LLM首次失败重试", "agent={} 失败原因: {}",
                         concluder.getName(), first.getMessage());
-                agentResult = agentSpeakerService.call(concluder, ctx.systemPrompt(), ctx.turns(),
-                        AgentSpeakerService.ToolSet.CONCLUDE, context);
+                agentResult = llmService.chat(concluder, ctx.systemPrompt(), ctx.turns(),
+                        LlmService.ToolSet.CONCLUDE, context);
             }
             String conclusion = agentResult.content();
             if (conclusion == null || conclusion.isBlank()) {

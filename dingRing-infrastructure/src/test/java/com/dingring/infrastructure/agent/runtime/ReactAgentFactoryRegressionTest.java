@@ -6,7 +6,7 @@ import com.dingring.domain.agent.AgentRepository;
 import com.dingring.domain.discussion.TopicRepository;
 import com.dingring.domain.group.Group;
 import com.dingring.domain.group.GroupRepository;
-import com.dingring.domain.service.AgentSpeakerService.ToolSet;
+import com.dingring.domain.service.LlmService.ToolSet;
 import com.dingring.domain.service.MemoryService;
 import com.dingring.domain.service.ProfileService;
 import com.dingring.domain.service.RagService;

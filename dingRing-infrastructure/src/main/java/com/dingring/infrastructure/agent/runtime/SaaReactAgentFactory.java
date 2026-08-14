@@ -4,7 +4,7 @@ import com.alibaba.cloud.ai.graph.CompileConfig;
 import com.alibaba.cloud.ai.graph.agent.ReactAgent;
 import com.dingring.common.util.LogHelper;
 import com.dingring.domain.agent.Agent;
-import com.dingring.domain.service.AgentSpeakerService.ToolSet;
+import com.dingring.domain.service.LlmService.ToolSet;
 import com.dingring.infrastructure.agent.hook.GroupRosterHook;
 import com.dingring.infrastructure.agent.hook.MemoryInjectionHook;
 import com.dingring.infrastructure.agent.hook.ProfileInjectionHook;
@@ -60,7 +60,7 @@ public class SaaReactAgentFactory {
 
     /**
      * 构建讨论场景 ReactAgent（轻量工具）。
-     * <p>系统提示词不再挂载为 ReactAgent 字段级 systemPrompt，而是由 AgentSpeakerServiceImpl
+     * <p>系统提示词不再挂载为 ReactAgent 字段级 systemPrompt，而是由统一 LlmService
      * 写入 state（{@link SystemMessageMergeHook#BASE_SYSTEM_PROMPT_KEY}），由合并 Hook 与其他
      * 注入的 SystemMessage 拼成单条，避免多 SystemMessage 干扰模型。
      *
