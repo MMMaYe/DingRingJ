@@ -21,10 +21,9 @@ import java.util.Map;
  * <ul>
  *   <li>封装 SAA {@link ConfigurablePromptTemplateFactory}，提供统一的 render(name, vars) 接口</li>
  *   <li>有 Nacos 时：从 Nacos 实时加载最新模板（热更新，无需重启）</li>
- *   <li>无 Nacos 时：降级为 classpath:/prompt-config.json 本地加载</li>
- *   <li>两者都失败时返回空字符串，调用方降级到 PromptConstants 常量（Phase C 迁移前）</li>
+ *   <li>无 Nacos 或模板渲染失败时：降级为 classpath:/prompt-config.json 本地加载</li>
  * </ul>
- * <p>Phase A 阶段此组件可被注入但暂无调用方；Phase C 迁移时各调用方从 PromptConstants 切换到此 Loader。
+ * <p>提示词的单一来源：各调用方统一走 {@link #render}，不再硬编码常量。
  * <p>占位符语法：{@code {varName}}（SAA ConfigurablePromptTemplate 原生支持，比 Java {@code %s} 更安全）
  */
 @Slf4j

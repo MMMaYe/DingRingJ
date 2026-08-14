@@ -34,7 +34,8 @@ public class Agent {
     private LocalDateTime updateTime;
 
     private static final double DEFAULT_TEMPERATURE = 1.0;
-    private static final int DEFAULT_MAX_TOKENS = 4096;
+    /** 未配置 feature.maxTokens 时的全局默认输出上限（统一 100000） */
+    private static final int DEFAULT_MAX_TOKENS = 100_000;
 
     public double temperature() {
         if (feature != null && feature.get("temperature") instanceof Number n) {

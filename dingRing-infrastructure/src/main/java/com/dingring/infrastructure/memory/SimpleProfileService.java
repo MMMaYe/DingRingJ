@@ -1,12 +1,12 @@
 package com.dingring.infrastructure.memory;
 
-import com.dingring.common.constant.PromptConstants;
 import com.dingring.common.util.LogHelper;
 import com.dingring.domain.agent.Agent;
 import com.dingring.domain.service.LlmService;
 import com.dingring.domain.service.ProfileService;
 import com.dingring.domain.user.UserProfile;
 import com.dingring.domain.user.UserProfileRepository;
+import com.dingring.infrastructure.prompt.PromptTemplateLoader;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -24,6 +24,8 @@ public class SimpleProfileService implements ProfileService {
 
     private final UserProfileRepository userProfileRepository;
     private final LlmService llmService;
+    /** 提示词模板加载器：Nacos 优先，失效兜底 prompt-config.json（提示词单一来源） */
+    private final PromptTemplateLoader promptLoader;
 
     /** 用户维度串行锁 */
     private final Map<Long, Object> userLocks = new ConcurrentHashMap<>();
@@ -47,7 +49,7 @@ public class SimpleProfileService implements ProfileService {
                 String existing = getProfile(userId);
                 String input = "已有画像：\n" + (existing.isBlank() ? "（暂无）" : existing)
                         + "\n\n最近对话（来自群「" + groupName + "」）：\n" + recentDialogue;
-                String merged = llmService.chat(extractor, PromptConstants.USER_PROFILE_EXTRACT,
+                String merged = llmService.chat(extractor, promptLoader.render("profile-extract", Map.of()),
                         List.of(LlmService.ChatTurn.user(input)));
                 if (merged == null || merged.isBlank()) {
                     LogHelper.printWarnLog(SimpleProfileService.class, "SimpleProfileService.extractProfile", "PROFILE_EMPTY", "画像提炼返回空，跳过写回", "userId={}", userId);

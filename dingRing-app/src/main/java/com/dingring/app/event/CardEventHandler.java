@@ -1,7 +1,6 @@
 package com.dingring.app.event;
 
 import com.dingring.common.constant.WsConstants;
-import com.dingring.common.constant.PromptConstants;
 import com.dingring.common.util.LogHelper;
 import com.dingring.domain.agent.Agent;
 import com.dingring.domain.agent.AgentRepository;
@@ -12,6 +11,7 @@ import com.dingring.domain.event.TopicClosed;
 import com.dingring.domain.service.DomainEventPublisher;
 import com.dingring.domain.service.GroupBroadcastService;
 import com.dingring.domain.service.LlmService;
+import com.dingring.infrastructure.prompt.PromptTemplateLoader;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -39,6 +39,8 @@ public class CardEventHandler {
     private final DomainEventPublisher eventPublisher;
     private final GroupBroadcastService groupBroadcastService;
     private final ObjectMapper objectMapper;
+    /** 提示词模板加载器：Nacos 优先，失效兜底 prompt-config.json（提示词单一来源） */
+    private final PromptTemplateLoader promptLoader;
 
     @EventListener
     public void onTopicClosed(TopicClosed event) {
@@ -61,7 +63,7 @@ public class CardEventHandler {
         }
         for (int attempt = 1; attempt <= MAX_RETRY; attempt++) {
             try {
-                String raw = llmService.chat(concluder, PromptConstants.KNOWLEDGE_EXTRACT,
+                String raw = llmService.chat(concluder, promptLoader.render("sediment", Map.of()),
                         List.of(LlmService.ChatTurn.user("讨论主题：" + event.getTitle()
                                 + "\n\n讨论结论：\n" + event.getConclusion())),
                         new LlmService.CallOptions(0.0, 2048, null,

@@ -5,6 +5,7 @@ import com.dingring.domain.agent.Agent;
 import com.dingring.domain.discussion.Topic;
 import com.dingring.domain.group.MessageRepository;
 import com.dingring.domain.service.LlmService;
+import com.dingring.infrastructure.prompt.PromptTemplateLoader;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -37,6 +38,7 @@ class ModeratorServiceTest {
     private LlmService llmService;
     private MessageRepository messageRepository;
     private MessageAssembler messageAssembler;
+    private PromptTemplateLoader promptLoader;
     private ModeratorService service;
 
     private Topic topic;
@@ -47,7 +49,9 @@ class ModeratorServiceTest {
         llmService = mock(LlmService.class);
         messageRepository = mock(MessageRepository.class);
         messageAssembler = mock(MessageAssembler.class);
-        service = new ModeratorService(llmService, new ObjectMapper(), messageRepository, messageAssembler);
+        promptLoader = mock(PromptTemplateLoader.class);
+        service = new ModeratorService(llmService, new ObjectMapper(), messageRepository, messageAssembler, promptLoader);
+        when(promptLoader.render(eq("moderator"), any())).thenReturn("主持人判定模板");
         setField("enabled", true);
         setField("model", "");
         setField("contextWindow", 30);

@@ -1,13 +1,13 @@
 package com.dingring.app.orchestrator;
 
 import com.dingring.app.service.MessageAssembler;
-import com.dingring.common.constant.PromptConstants;
 import com.dingring.common.util.LogHelper;
 import com.dingring.domain.agent.Agent;
 import com.dingring.domain.discussion.Topic;
 import com.dingring.domain.group.GroupMessage;
 import com.dingring.domain.group.MessageRepository;
 import com.dingring.domain.service.LlmService;
+import com.dingring.infrastructure.prompt.PromptTemplateLoader;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -51,6 +51,8 @@ public class ModeratorService {
     private final ObjectMapper objectMapper;
     private final MessageRepository messageRepository;
     private final MessageAssembler messageAssembler;
+    /** 提示词模板加载器：Nacos 优先，失效兜底 prompt-config.json（提示词单一来源） */
+    private final PromptTemplateLoader promptLoader;
 
     /** 主持人开关：false 时完全走 Phase 1 评分调度 */
     @Value("${dingring.moderator.enabled:false}")
@@ -78,9 +80,9 @@ public class ModeratorService {
             return null;
         }
         try {
-            String raw = llmService.chat(moderatorAgent(members.get(0)), PromptConstants.HOST_DECISION,
+            String raw = llmService.chat(moderatorAgent(members.get(0)), promptLoader.render("moderator", Map.of()),
                     List.of(LlmService.ChatTurn.user(buildInput(topic, members, speakCounts))),
-                    new LlmService.CallOptions(0.0, 1024, 15L,
+                    new LlmService.CallOptions(0.0, 100_000, 15L,
                             true, false));  // jsonMode=true, logReasoning=false
             Decision decision = parse(raw, members);
             LogHelper.printLog(ModeratorService.class, "ModeratorService.decide", "DECIDE", "Moderator决策",

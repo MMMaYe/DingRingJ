@@ -6,9 +6,9 @@ import com.dingring.domain.group.GroupMessage;
 import com.dingring.domain.group.MessageRepository;
 import com.dingring.domain.group.SenderType;
 import com.dingring.domain.service.LlmService.ChatTurn;
-import com.dingring.common.constant.PromptConstants;
 import com.dingring.common.util.LogHelper;
 import com.dingring.infrastructure.aop.Event;
+import com.dingring.infrastructure.prompt.PromptTemplateLoader;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -50,6 +50,8 @@ public class ContextBuilder {
     }
 
     private final MessageRepository messageRepository;
+    /** 提示词模板加载器：Nacos 优先，失效兜底 prompt-config.json（提示词单一来源，替代 PromptConstants） */
+    private final PromptTemplateLoader promptLoader;
 
     /** 滑动窗口大小（可配置，默认 200 条） */
     @Value("${dingring.orchestrator.context-window:200}")
@@ -199,7 +201,7 @@ public class ContextBuilder {
         if (concluder.getSystemPrompt() != null && !concluder.getSystemPrompt().isBlank()) {
             sp.append(concluder.getSystemPrompt()).append("\n\n");
         }
-        sp.append(String.format(PromptConstants.CONCLUSION_STAR, topicTitle));
+        sp.append(promptLoader.render("conclude", Map.of("topicTitle", topicTitle)));
 
         List<GroupMessage> all = messageRepository.findRecentByTopicId(topicId, contextWindow);
         String spFinal = sp.toString();
@@ -218,10 +220,10 @@ public class ContextBuilder {
         if (agent.getSystemPrompt() != null && !agent.getSystemPrompt().isBlank()) {
             sp.append(agent.getSystemPrompt());
         }
-        sp.append("\n\n").append(String.format(PromptConstants.CHAT_BASE, agent.getName()));
+        sp.append("\n\n").append(promptLoader.render("chat-base", Map.of("agentName", agent.getName())));
         if (withCollaboration) {
             // 协作协议：自主收束 + 跳过本轮
-            sp.append("\n\n").append(PromptConstants.COLLABORATION_PROTOCOL);
+            sp.append("\n\n").append(promptLoader.render("collaboration-protocol", Map.of()));
         }
         return sp.toString();
     }

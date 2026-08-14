@@ -10,6 +10,7 @@ import com.dingring.domain.event.KnowledgeCardGenerated;
 import com.dingring.domain.event.TopicClosed;
 import com.dingring.domain.service.DomainEventPublisher;
 import com.dingring.domain.service.LlmService;
+import com.dingring.infrastructure.prompt.PromptTemplateLoader;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -42,6 +43,7 @@ class CardEventHandlerTest {
     private DomainEventPublisher eventPublisher;
     private GroupBroadcastService groupBroadcastService;
     private ObjectMapper objectMapper;
+    private PromptTemplateLoader promptLoader;
     private CardEventHandler handler;
 
     @BeforeEach
@@ -52,8 +54,10 @@ class CardEventHandlerTest {
         eventPublisher = mock(DomainEventPublisher.class);
         groupBroadcastService = mock(GroupBroadcastService.class);
         objectMapper = new ObjectMapper();
+        promptLoader = mock(PromptTemplateLoader.class);
         handler = new CardEventHandler(agentRepository, cardRepository, llmService,
-                eventPublisher, groupBroadcastService, objectMapper);
+                eventPublisher, groupBroadcastService, objectMapper, promptLoader);
+        when(promptLoader.render(eq("sediment"), any())).thenReturn("知识卡片提取模板");
     }
 
     private Agent agent(Long id, String name) {

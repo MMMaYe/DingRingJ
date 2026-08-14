@@ -5,6 +5,7 @@ import com.dingring.domain.group.GroupMessage;
 import com.dingring.domain.group.MessageRepository;
 import com.dingring.domain.group.SenderType;
 import com.dingring.domain.service.LlmService.ChatTurn;
+import com.dingring.infrastructure.prompt.PromptTemplateLoader;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -12,8 +13,11 @@ import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
 import java.util.List;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -33,13 +37,22 @@ import static org.mockito.Mockito.when;
 class ContextBuilderTest {
 
     private MessageRepository messageRepository;
+    private PromptTemplateLoader promptLoader;
     private ContextBuilder contextBuilder;
 
     @BeforeEach
     void setUp() throws Exception {
         messageRepository = mock(MessageRepository.class);
-        contextBuilder = new ContextBuilder(messageRepository);
+        promptLoader = mock(PromptTemplateLoader.class);
+        contextBuilder = new ContextBuilder(messageRepository, promptLoader);
         setField(contextBuilder, "contextWindow", 200);
+
+        // stub 模板渲染：返回带占位符解析的可识别片段（断言只校验拼装结构，不校验模板内容本身）
+        when(promptLoader.render(eq("chat-base"), any()))
+                .thenAnswer(inv -> "群聊语境：你的花名是「" + ((Map<?, ?>) inv.getArgument(1)).get("agentName") + "」");
+        when(promptLoader.render(eq("collaboration-protocol"), any())).thenReturn("协作协议 [[CONCLUDE]]/[[PASS]]");
+        when(promptLoader.render(eq("conclude"), any()))
+                .thenAnswer(inv -> "STAR 框架总结，主题：「" + ((Map<?, ?>) inv.getArgument(1)).get("topicTitle") + "」");
     }
 
     private void setField(Object target, String field, Object value) throws Exception {

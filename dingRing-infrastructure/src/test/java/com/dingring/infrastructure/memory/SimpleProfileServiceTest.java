@@ -4,6 +4,7 @@ import com.dingring.domain.agent.Agent;
 import com.dingring.domain.service.LlmService;
 import com.dingring.domain.user.UserProfile;
 import com.dingring.domain.user.UserProfileRepository;
+import com.dingring.infrastructure.prompt.PromptTemplateLoader;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -16,6 +17,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -30,6 +32,7 @@ class SimpleProfileServiceTest {
 
     private UserProfileRepository userProfileRepository;
     private LlmService llmService;
+    private PromptTemplateLoader promptLoader;
     private SimpleProfileService service;
     private Agent extractor;
 
@@ -37,7 +40,9 @@ class SimpleProfileServiceTest {
     void setUp() throws Exception {
         userProfileRepository = mock(UserProfileRepository.class);
         llmService = mock(LlmService.class);
-        service = new SimpleProfileService(userProfileRepository, llmService);
+        promptLoader = mock(PromptTemplateLoader.class);
+        service = new SimpleProfileService(userProfileRepository, llmService, promptLoader);
+        when(promptLoader.render(eq("profile-extract"), any())).thenReturn("用户画像提炼模板");
         extractor = new Agent();
         extractor.setId(10L);
         extractor.setName("老王");

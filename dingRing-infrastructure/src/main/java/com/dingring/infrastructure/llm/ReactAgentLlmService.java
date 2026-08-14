@@ -60,6 +60,8 @@ public class ReactAgentLlmService implements LlmService {
                     agent.getName(), agent.getModelName(), systemPrompt,
                     aiMessages.size(), LogHelper.formatTurns(aiMessages));
             Map<String, Object> inputs = Map.of("messages", aiMessages);
+            LogHelper.printLog(ReactAgentLlmService.class, "ReactAgentLlmService.chat", "CHAT_INPUTS", "输入",
+                    "reactAgent.call时的message={}", inputs);
             AssistantMessage response = reactAgent.call(inputs);
             String text = response.getText();
             long cost = System.currentTimeMillis() - startAt;

@@ -1,10 +1,10 @@
 package com.dingring.app.orchestrator;
 
-import com.dingring.common.constant.PromptConstants;
 import com.dingring.common.util.LogHelper;
 import com.dingring.domain.agent.Agent;
 import com.dingring.domain.service.LlmService;
 import com.dingring.infrastructure.aop.Event;
+import com.dingring.infrastructure.prompt.PromptTemplateLoader;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 消息路由器：对每条用户消息做一次 LLM 意图判定
@@ -42,8 +43,8 @@ public class MessageRouter {
     /** 标题兜底截断长度 */
     private static final int TITLE_FALLBACK_LEN = 20;
 
-    /** 分类输出为小 JSON，限制生成上限控制成本（小模型 + JSON 模式无需大配额） */
-    private static final int ROUTE_MAX_TOKENS = 1024;
+    /** 分类输出为小 JSON（maxTokens 统一放宽到 100000，仅作上限；与全局一致避免被输出上限截断） */
+    private static final int ROUTE_MAX_TOKENS = 100_000;
 
     /** 分类要确定性输出，不复用 Agent 会话温度（默认 0.7 会导致判定抖动） */
     private static final double ROUTE_TEMPERATURE = 0.0;
@@ -54,6 +55,8 @@ public class MessageRouter {
 
     private final LlmService llmService;
     private final ObjectMapper objectMapper;
+    /** 提示词模板加载器：Nacos 优先，失效兜底 prompt-config.json（提示词单一来源） */
+    private final PromptTemplateLoader promptLoader;
 
     /**
      * 路由一条用户消息。
@@ -69,7 +72,7 @@ public class MessageRouter {
             String userInput = activeTopicTitle == null
                     ? "（当前群里没有进行中的讨论主题）\n用户消息：" + content
                     : "（当前群里正在讨论主题「" + activeTopicTitle + "」）\n用户消息：" + content;
-            String raw = llmService.chat(judge, PromptConstants.INTENT_CLASSIFIER,
+            String raw = llmService.chat(judge, promptLoader.render("intent-classify", Map.of()),
                     List.of(LlmService.ChatTurn.user(userInput)),
                     new LlmService.CallOptions(ROUTE_TEMPERATURE, ROUTE_MAX_TOKENS, routeTimeoutSeconds,
                             true, true));  // jsonMode=true, logReasoning=true

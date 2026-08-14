@@ -62,12 +62,12 @@ class AgentTest {
     class MaxTokens {
 
         @Test
-        @DisplayName("feature 为 null 时使用默认 4096")
+        @DisplayName("feature 为 null 时使用默认 100000")
         void nullFeatureShouldUseDefault() {
             Agent a = new Agent();
             a.setFeature(null);
 
-            assertThat(a.maxTokens()).isEqualTo(4096);
+            assertThat(a.maxTokens()).isEqualTo(100000);
         }
 
         @Test

@@ -39,8 +39,8 @@ public class SaaModelFactory {
     @Value("${dingring.llm.read-timeout-seconds:120}")
     private long readTimeoutSeconds;
 
-    /** 业务发言未单独配置 maxTokens 时的默认输出预算，普通发言需支持较长的 SVG/文档结果。 */
-    @Value("${dingring.llm.default-max-tokens:16384}")
+    /** 业务发言未单独配置 maxTokens 时的默认输出上限（统一 100000，普通发言需支持较长的 SVG/文档结果）。 */
+    @Value("${dingring.llm.default-max-tokens:100000}")
     private int defaultMaxTokens;
 
     /**

@@ -4,6 +4,7 @@ package com.dingring.common.constant;
  * LLM 提示词常量集中管理（替代原 .prompt 外部文件 + PromptRegistry 方案）。
  * <p>含动态变量的提示词使用 {@code %s} 占位符，调用方通过 {@link String#format} 替换。
  */
+@Deprecated
 public final class PromptConstants {
 
     private PromptConstants() {

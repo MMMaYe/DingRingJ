@@ -49,6 +49,6 @@ public class SaveAgentRequest {
 
     private String systemPrompt;
 
-    /** 扩展配置（temperature 默认 0.7，maxTokens 默认 4096） */
+    /** 扩展配置（temperature 默认 0.7，maxTokens 默认 100000） */
     private Map<String, Object> feature;
 }

@@ -2,6 +2,7 @@ package com.dingring.app.orchestrator;
 
 import com.dingring.domain.agent.Agent;
 import com.dingring.domain.service.LlmService;
+import com.dingring.infrastructure.prompt.PromptTemplateLoader;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -13,6 +14,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -26,13 +28,16 @@ import static org.mockito.Mockito.when;
 class MessageRouterTest {
 
     private LlmService llmService;
+    private PromptTemplateLoader promptLoader;
     private MessageRouter router;
     private Agent judge;
 
     @BeforeEach
     void setUp() {
         llmService = mock(LlmService.class);
-        router = new MessageRouter(llmService, new ObjectMapper());
+        promptLoader = mock(PromptTemplateLoader.class);
+        router = new MessageRouter(llmService, new ObjectMapper(), promptLoader);
+        when(promptLoader.render(eq("intent-classify"), any())).thenReturn("意图分类模板");
         judge = new Agent();
         judge.setId(10L);
         judge.setName("老王");
@@ -123,7 +128,7 @@ class MessageRouterTest {
             ArgumentCaptor<LlmService.CallOptions> captor = ArgumentCaptor.forClass(LlmService.CallOptions.class);
             verify(llmService).chat(any(Agent.class), anyString(), anyList(), captor.capture());
             assertThat(captor.getValue().temperature()).isZero();
-            assertThat(captor.getValue().maxTokens()).isEqualTo(1024);
+            assertThat(captor.getValue().maxTokens()).isEqualTo(100000);
         }
     }
 
