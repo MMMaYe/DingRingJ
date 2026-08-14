@@ -113,8 +113,8 @@ dingring:
     # 流式输出（Phase 3）：true 时 Agent 发言逐块推送 MESSAGE_DELTA，完成推 MESSAGE_COMPLETE；落库语义不变
     enabled: true
   orchestrator:
-    # 上下文滑动窗口（条）
-    context-window: 200
+    # 上下文滑动窗口（条）， 改成50条
+    context-window: 50
     # 单主题 Agent 最大发言轮次（达到后自动触发结束）
     max-rounds: 100
     # 用户不@任何人时的自动接话条数（闲聊态）

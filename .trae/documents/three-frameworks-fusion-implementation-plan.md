@@ -1127,7 +1127,7 @@ public class GroupChatFlowDefinition {
 - **保留**:信号入队(`onUserSignal` / `BlockingQueue<UserSignal>`)、虚拟线程执行器(`executorOf`)、`wake` / `execute` 机制
 - **保留**:追溯建题(`ensureTopic`)的业务逻辑(移到 `EnsureTopicHandler`)
 - **移除**:信号折叠(`fold`) -- 消息已入库,意图分类和 Agent 发言都从 DB 拉完整上下文,折叠是多余的(且有信息丢失漏洞:只保留最后一条内容,中间消息丢失)。积压信号直接 `queue.clear()` 丢弃(已入库不丢数据)
-- **替换**:`runLoop` / `handleSignal` / `advanceDiscussion` / `speakOnce` 改为调用 `discussionFlowService.advance(groupChatFlow, inputs)`
+- **替换**:`runLoop` / `handleSignal` / `advanceDiscussion` / `speakOnce` 改为调用 `flowService.advance(groupChatFlow, inputs)`
 - **移除**:`StreamEmitter` / `StreamMarkerGuard`(移到 infra 层节点实现)
 - **移除**:`chatWithRetry`(移到 infra 层)
 
@@ -1147,7 +1147,7 @@ private void runLoop(Long groupId) {
                 "mentionedAgentIds", head.mentionedAgentIds(),
                 "repliedToAgentId", head.repliedToAgentId()
             );
-            var result = discussionFlowService.advance(groupChatFlow, inputs);
+            var result = flowService.advance(groupChatFlow, inputs);
             if (result.isConcluded()) return;
 
             String mode = result.state().get("discussMode");
@@ -1165,13 +1165,13 @@ private void runLoop(Long groupId) {
                 var confirm = queue.poll(5, TimeUnit.MINUTES);  // 5 分钟超时
                 if (confirm == null) {
                     // 超时:自动收束(兜底,防用户离开导致卡死)
-                    discussionFlowService.advance(groupChatFlow, Map.of(
+                    flowService.advance(groupChatFlow, Map.of(
                         "groupId", groupId, "forceConclude", true));
                     return;
                 }
                 queue.clear();
                 // 用户消息可能是确认("总结吧")或拒绝("还想继续讨论")
-                var confirmResult = discussionFlowService.advance(groupChatFlow, Map.of(
+                var confirmResult = flowService.advance(groupChatFlow, Map.of(
                     "groupId", groupId, "userMessage", confirm.content(),
                     "concludeConfirmation", true));
                 if (confirmResult.isConcluded()) return;
@@ -1183,7 +1183,7 @@ private void runLoop(Long groupId) {
         if (active.isEmpty()) return;
         // 讨论态自主推进(仅 DIVERGE 模式;CONVERGE 模式无消息时退出等用户)
         var inputs = Map.of("groupId", groupId, "autoAdvance", true);
-        discussionFlowService.advance(groupChatFlow, inputs);
+        flowService.advance(groupChatFlow, inputs);
     }
 }
 
@@ -1217,7 +1217,7 @@ package com.dingring.infrastructure.workflow;
 
 import com.alibaba.cloud.ai.graph.*;
 import com.alibaba.cloud.ai.graph.action.*;
-import com.dingring.domain.service.DiscussionFlowService;
+import com.dingring.domain.service.FlowService;
 import com.dingring.domain.workflow.*;
 import org.springframework.stereotype.Service;
 
@@ -1979,12 +1979,12 @@ return Map.of("topicId", topic.getId(), "restartHint", "");
 
 每次 `advance()` 返回后,`DiscussionEngine.runLoop` 把 OverAllState 的关键字段推给前端,前端展示讨论动态:
 
-**推送时机**:`runLoop` 中每次 `discussionFlowService.advance()` 返回后
+**推送时机**:`runLoop` 中每次 `flowService.advance()` 返回后
 
 **改造文件**:[DiscussionEngine.java](file:///Users/Zhuanz/IdeaProjects/DingRingJ/dingRing-app/src/main/java/com/dingring/app/orchestrator/DiscussionEngine.java) -- runLoop 中 advance 返回后推送:
 
 ```java
-var result = discussionFlowService.advance(groupChatFlow, inputs);
+var result = flowService.advance(groupChatFlow, inputs);
 if (result.isConcluded()) return;
 
 // 推送讨论状态快照(过滤敏感字段,只推前端需要的)
@@ -2039,7 +2039,7 @@ groupBroadcastService.broadcast(groupId, "TOPIC_STATUS", Map.of(
 
 ```java
 // runLoop 中,advance 返回后检查是否新建了 Topic
-var result = discussionFlowService.advance(groupChatFlow, inputs);
+var result = flowService.advance(groupChatFlow, inputs);
 if (result.isConcluded()) return;
 
 // 如果 EnsureTopicNode 新建了 Topic,result 中会有 topicId 和 restartHint

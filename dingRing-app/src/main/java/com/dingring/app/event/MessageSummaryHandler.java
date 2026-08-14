@@ -74,6 +74,9 @@ public class MessageSummaryHandler {
                         new LlmService.CallOptions(0.0, 100_000, null, true, false));
                 // 模板输出 JSON：{"has_viewpoint": true|false, "summary": "..."}
                 // （jsonMode=true 强制合法 JSON，先容忍 ```json 代码块包裹）
+                LogHelper.printLog(MessageSummaryHandler.class, "MessageSummaryHandler.summarizeAsync",
+                        "MESSAGE_SUMMARY", "LLM 输出消息摘要原始输出",
+                        "LLM输出的原始消息raw={}, messageId={}", raw, msg.getId());
                 Map<String, Object> parsed = JsonHelper.toMap(stripCodeFence(raw));
                 if (parsed.isEmpty()) {
                     // 解析失败：保留 VIEWPOINT 标签，上下文构建回退到原文

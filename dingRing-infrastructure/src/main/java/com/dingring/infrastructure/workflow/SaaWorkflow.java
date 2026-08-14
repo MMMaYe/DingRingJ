@@ -9,7 +9,7 @@ import com.alibaba.cloud.ai.graph.state.strategy.ReplaceStrategy;
 import com.alibaba.cloud.ai.graph.state.strategy.AppendStrategy;
 import com.dingring.common.constant.WsConstants;
 import com.dingring.common.util.LogHelper;
-import com.dingring.domain.service.DiscussionFlowService;
+import com.dingring.domain.service.FlowService;
 import com.dingring.domain.service.GroupBroadcastService;
 import com.dingring.domain.workflow.DiscussionFlowResult;
 import com.dingring.domain.workflow.DiscussionRules;
@@ -54,7 +54,7 @@ import java.util.Map;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class SaaWorkflow implements DiscussionFlowService {
+public class SaaWorkflow implements FlowService {
 
     private final NodeHandlerRegistry nodeRegistry;
     private final GroupBroadcastService groupBroadcastService;

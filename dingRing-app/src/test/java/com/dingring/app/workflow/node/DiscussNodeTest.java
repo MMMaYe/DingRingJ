@@ -190,4 +190,21 @@ class DiscussNodeTest {
         // 正常发言无 ERROR 广播
         verify(groupBroadcastService, never()).broadcast(anyLong(), eq(WsConstants.ERROR), any());
     }
+
+    @Test
+    @DisplayName("内容含 [[ASK_USER]]：返回 MODE_WAIT 让位给用户，标记已剥离、消息入库")
+    void shouldReturnWaitWhenAskUserMarker() {
+        mockCommon();
+        when(agentSpeakerService.call(any(Agent.class), anyString(), anyList(),
+                eq(AgentSpeakerService.ToolSet.DISCUSS), any(Map.class)))
+                .thenReturn(AgentSpeakerService.AgentResult.of("大概就这些，你更倾向哪个？[[ASK_USER]]"));
+
+        Map<String, Object> result = node.apply(state(List.of(), List.of(), false));
+
+        assertThat(result).containsEntry(StateKeys.DISCUSS_MODE, StateKeys.MODE_WAIT);
+        // 入库消息已剥离 [[ASK_USER]] 标记
+        ArgumentCaptor<GroupMessage> msgCaptor = ArgumentCaptor.forClass(GroupMessage.class);
+        verify(messageRepository).save(msgCaptor.capture());
+        assertThat(msgCaptor.getValue().getContent()).isEqualTo("大概就这些，你更倾向哪个？");
+    }
 }

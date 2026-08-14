@@ -6,7 +6,7 @@ import com.dingring.common.util.JsonHelper;
 import com.dingring.common.util.LogHelper;
 import com.dingring.domain.discussion.Topic;
 import com.dingring.domain.discussion.TopicRepository;
-import com.dingring.domain.service.DiscussionFlowService;
+import com.dingring.domain.service.FlowService;
 import com.dingring.domain.service.GroupBroadcastService;
 import com.dingring.domain.workflow.DiscussionFlowResult;
 import com.dingring.domain.workflow.DiscussionRules;
@@ -33,7 +33,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * <ul>
  *   <li>维护每群信号队列和串行执行器（与原版一致）</li>
  *   <li>维护运行时状态（discussMode/passedAgentIds/lowDiscussStreak/chatBuffer/divergeRounds）</li>
- *   <li>每次循环调用 {@link DiscussionFlowService#advance} 推进流程，根据返回的 discussMode 决定后续行为</li>
+ *   <li>每次循环调用 {@link FlowService#advance} 推进流程，根据返回的 discussMode 决定后续行为</li>
  * </ul>
  * <p>三态循环逻辑已迁移到 SAA StateGraph 节点（PreprocessNode/IntentClassifyNode/ChatNode/EnsureTopicNode/
  * DiscussNode/ConcludeNode/ProfileExtractNode/WorkNode），本类只负责"驱动"和"状态维护"。
@@ -52,6 +52,8 @@ public class DiscussionEngine {
         final AtomicBoolean running = new AtomicBoolean(false);
         /** 当前讨论模式（CONVERGE/DIVERGE/WAIT/CONCLUDE_PROPOSED/CONCLUDE），用于决定 pace */
         String discussMode;
+        /** 自上次用户信号以来 CONVERGE 自主推进轮数（达 maxAutoRounds 强制让位给用户） */
+        int autoRounds;
         /** 本轮已 PASS 的 Agent ID 列表（有人发言即清空） */
         List<Long> passedAgentIds = List.of();
         /** @提及的一次性发言权是否已消费（新用户消息含提及时重置，发言/跳过一次后置 true） */
@@ -64,7 +66,7 @@ public class DiscussionEngine {
         int divergeRounds;
     }
 
-    private final DiscussionFlowService discussionFlowService;
+    private final FlowService flowService;
     private final DiscussionRules rules;
     private final TopicRepository topicRepository;
     private final GroupBroadcastService groupBroadcastService;
@@ -73,12 +75,12 @@ public class DiscussionEngine {
     private final Map<Long, GroupState> states = new ConcurrentHashMap<>();
     private final Map<Long, ExecutorService> groupExecutors = new ConcurrentHashMap<>();
 
-    public DiscussionEngine(DiscussionFlowService discussionFlowService,
-                           DiscussionRules rules,
-                           TopicRepository topicRepository,
-                           GroupBroadcastService groupBroadcastService,
-                           ConclusionService conclusionService) {
-        this.discussionFlowService = discussionFlowService;
+    public DiscussionEngine(FlowService flowService,
+                            DiscussionRules rules,
+                            TopicRepository topicRepository,
+                            GroupBroadcastService groupBroadcastService,
+                            ConclusionService conclusionService) {
+        this.flowService = flowService;
         this.rules = rules;
         this.topicRepository = topicRepository;
         this.groupBroadcastService = groupBroadcastService;
@@ -116,10 +118,6 @@ public class DiscussionEngine {
      */
     @Event(eventCode = "RUN_CONCLUDE_FLOW", eventName = "触发收束流程")
     public void runConcludeFlow(Long topicId, Long groupId, String triggeredBy, Long concluderAgentId) {
-        LogHelper.printLog(DiscussionEngine.class, "DiscussionEngine.runConcludeFlow",
-                "RUN_CONCLUDE_FLOW", "触发收束流程",
-                "topicId={} groupId={} triggeredBy={} concluderAgentId={}",
-                topicId, groupId, triggeredBy, concluderAgentId);
         conclusionService.triggerAsync(topicId, groupId, triggeredBy, concluderAgentId);
     }
 
@@ -144,9 +142,9 @@ public class DiscussionEngine {
      * 主循环：poll 信号 → advance 流程 → 根据 discussMode 决定后续行为。
      * <p>讨论模式行为：
      * <ul>
-     *   <li>CONVERGE：阻塞等用户消息（不自主推进）</li>
+     *   <li>CONVERGE：pace 窗口后自主推进下一轮（LLM [[ASK_USER]] 让位或达 maxAutoRounds 后暂停等用户）</li>
      *   <li>DIVERGE：divergePaceMs 超时后自主推进一轮</li>
-     *   <li>WAIT：阻塞等用户回答（queue.take）</li>
+     *   <li>WAIT：Agent [[ASK_USER]] 让位给用户，poll(MAX_VALUE) 阻塞等用户发言</li>
      *   <li>CONCLUDE_PROPOSED：等用户确认（5分钟超时自动收束）</li>
      *   <li>CONCLUDE：流程内已收束，退出循环</li>
      * </ul>
@@ -162,7 +160,7 @@ public class DiscussionEngine {
                         .filter(Topic::isInProgress);
 
                 // 闲聊态（无活跃话题）：poll 不等待，空即退出
-                // 讨论态：按 discussMode 决定 pace（DIVERGE=divergePaceMs，其他=阻塞等待）
+                // 讨论态：按 discussMode 决定 pace（CONVERGE/DIVERGE=divergePaceMs，其他=阻塞等待）
                 long timeout = paceForMode(state, active.isPresent());
                 //打印超时日志
                 LogHelper.printLog(DiscussionEngine.class, "DiscussionEngine.runLoop",
@@ -173,6 +171,8 @@ public class DiscussionEngine {
                         : state.queue.poll();
 
                 if (signal != null) {
+                    // 用户消息重置自主推进计数（新一轮 burst）
+                    state.autoRounds = 0;
                     // 丢弃积压信号（已入库，意图分类从 DB 拉完整上下文）
                     state.queue.clear();
                     DiscussionFlowResult result = advanceFlow(groupId, signal, state);
@@ -186,36 +186,47 @@ public class DiscussionEngine {
                     String mode = result.discussMode();
                     state.discussMode = mode;
 
-                    // WAIT：Agent 追问用户，阻塞等下一条消息
-                    if (StateKeys.MODE_WAIT.equals(mode)) {
-                        state.queue.take();
-                        continue;
-                    }
                     // CONCLUDE_PROPOSED：Agent 提议收束，等用户确认（5分钟超时兜底）
                     if (StateKeys.MODE_CONCLUDE_PROPOSED.equals(mode)) {
                         if (handleConcludeProposed(groupId, state, result)) return;
                         continue;
                     }
-                    // CONVERGE/DIVERGE：继续循环
+                    // WAIT：Agent [[ASK_USER]] 让位给用户，下次迭代 poll(MAX_VALUE) 阻塞等用户发言。
+                    // 注：原实现此处 state.queue.take() 会吞掉用户回答（返回值被丢弃），已删除；
+                    // 让循环自然走 poll 由信号分支正确消费用户消息。
+                    // CONVERGE/DIVERGE/WAIT：继续循环
                     continue;
                 }
 
-                // 无信号
+                // 无信号：讨论态 CONVERGE/DIVERGE 自主推进（pace 窗口内用户可随时插话）
                 if (active.isEmpty()) {
                     // 闲聊态：退出等唤醒
                     return;
                 }
-                // 讨论态 DIVERGE：pace 超时，自主推进一轮
-                if (StateKeys.MODE_DIVERGE.equals(state.discussMode)) {
-                    DiscussionFlowResult result = advanceAuto(groupId, state);
-                    updateRuntimeState(state, result);
-                    pushTopicStatus(groupId, result);
-                    if (result.concluded()) return;
-                    state.discussMode = result.discussMode();
-                    continue;
+                String mode = state.discussMode;
+                if (!StateKeys.MODE_CONVERGE.equals(mode) && !StateKeys.MODE_DIVERGE.equals(mode)) {
+                    // WAIT 恒阻塞在 poll、CONCLUDE_PROPOSED 在信号分支处理，理论不可达
+                    return;
                 }
-                // CONVERGE/WAIT：无自主推进，退出等用户
-                return;
+                if (StateKeys.MODE_CONVERGE.equals(mode)) {
+                    // 无人通过 [[ASK_USER]] 让位达上限：强制让位给用户
+                    if (state.autoRounds >= rules.maxAutoRounds()) {
+                        return;
+                    }
+                    state.autoRounds++;
+                }
+                DiscussionFlowResult result = advanceAuto(groupId, state);
+                updateRuntimeState(state, result);
+                pushTopicStatus(groupId, result);
+                if (result.concluded()) return;
+                state.discussMode = result.discussMode();
+                // auto-advance 也可能产出 CONCLUDE_PROPOSED（[[CONCLUDE]]）：必须走确认流程
+                //（广播提议 + 等用户确认 + 5分钟超时兜底），否则只在 pushTopicStatus 广播后
+                // poll(MAX_VALUE) 静默阻塞，确认/继续按钮与超时逻辑全丢
+                if (StateKeys.MODE_CONCLUDE_PROPOSED.equals(state.discussMode)) {
+                    if (handleConcludeProposed(groupId, state, result)) return;
+                }
+                continue;
             }
         } finally {
             LogHelper.clearTrace();
@@ -242,7 +253,7 @@ public class DiscussionEngine {
         inputs.put(StateKeys.MENTION_HANDLED, hasMention ? Boolean.FALSE : state.mentionHandled);
         LogHelper.printLog(DiscussionEngine.class, "DiscussionEngine.advanceFlow",
                 "ADVANCE_FLOW_INPUTS", "构建inputs内容", "inputs", inputs);
-        return discussionFlowService.advance(rules, inputs);
+        return flowService.advance(rules, inputs);
     }
 
     /** DIVERGE 自主推进：无用户消息，设 INTENT=DISCUSS 跳过意图分类直接进入讨论 */
@@ -255,7 +266,7 @@ public class DiscussionEngine {
         inputs.put(StateKeys.PASSED_AGENT_IDS, state.passedAgentIds);
         inputs.put(StateKeys.DIVERGE_ROUNDS, state.divergeRounds);
         inputs.put(StateKeys.MENTION_HANDLED, state.mentionHandled);
-        return discussionFlowService.advance(rules, inputs);
+        return flowService.advance(rules, inputs);
     }
 
     /** CONCLUDE_PROPOSED 处理：广播提议 → 等用户确认 → 确认/超时 */
@@ -291,6 +302,7 @@ public class DiscussionEngine {
             return true;
         }
         // 用户回复：作为正常消息驱动流程（意图分类判定是确认还是继续讨论）
+        state.autoRounds = 0;
         state.queue.clear();
         DiscussionFlowResult confirmResult = advanceFlow(groupId, confirm, state);
         updateRuntimeState(state, confirmResult);
@@ -335,10 +347,16 @@ public class DiscussionEngine {
         if (handled instanceof Boolean) state.mentionHandled = (Boolean) handled;
     }
 
-    /** 根据讨论模式决定 poll 超时：DIVERGE=divergePaceMs，其他=阻塞等待 */
+    /**
+     * 根据讨论模式决定 poll 超时：CONVERGE/DIVERGE=divergePaceMs（pace 窗口后自主推进，窗口内用户可插话），
+     * 其他=阻塞等待（WAIT 等用户发言 / CONCLUDE_PROPOSED 等确认）
+     */
     private long paceForMode(GroupState state, boolean hasActiveTopic) {
         if (!hasActiveTopic) return 0;
-        if (StateKeys.MODE_DIVERGE.equals(state.discussMode)) return rules.divergePaceMs();
+        if (StateKeys.MODE_CONVERGE.equals(state.discussMode)
+                || StateKeys.MODE_DIVERGE.equals(state.discussMode)) {
+            return rules.divergePaceMs();
+        }
         return Long.MAX_VALUE;
     }
 

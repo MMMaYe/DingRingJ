@@ -15,6 +15,7 @@ public class WorkflowConfig {
     @Bean
     public DiscussionRules discussionRules(
             @Value("${dingring.orchestrator.diverge-pace-ms:2000}") long divergePaceMs,
+            @Value("${dingring.orchestrator.max-auto-rounds:5}") int maxAutoRounds,
             @Value("${dingring.orchestrator.max-diverge-rounds:3}") int maxDivergeRounds,
             @Value("${dingring.orchestrator.max-rounds:100}") int maxRounds,
             @Value("${dingring.orchestrator.profile-extract-threshold:15}") int profileExtractThreshold,
@@ -24,6 +25,7 @@ public class WorkflowConfig {
     ) {
         return new DiscussionRules(
                 divergePaceMs,
+                maxAutoRounds,
                 maxDivergeRounds,
                 maxRounds,
                 profileExtractThreshold,

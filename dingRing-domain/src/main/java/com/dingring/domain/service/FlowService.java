@@ -11,7 +11,7 @@ import java.util.Map;
  * <p>每次调用 advance() 推进流程到下一个停顿点（WAIT/CONCLUDE_PROPOSED/END），
  * DiscussionEngine 根据返回的 discussMode 决定阻塞等待还是继续推进。
  */
-public interface DiscussionFlowService {
+public interface FlowService {
 
     /**
      * 推进群聊流程。

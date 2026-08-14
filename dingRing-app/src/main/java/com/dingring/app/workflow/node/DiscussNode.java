@@ -51,6 +51,7 @@ import java.util.UUID;
  *   <li>SPOKE（真实发言）→ CONVERGE：清空 passedAgents，重置 divergeRounds</li>
  *   <li>PASSED（空内容/[[PASS]]/重复内容）→ DIVERGE：累积 passedAgents，divergeRounds+1；
  *       达 maxDivergeRounds 触发收束（CONVERGED）</li>
+ *   <li>[[ASK_USER]] 标记 → WAIT：让位给用户，引擎阻塞等用户发言</li>
  *   <li>[[CONCLUDE]] 标记 → CONCLUDE_PROPOSED：等用户确认（triggeredBy=AGENT）</li>
  *   <li>所有候选失败 → CONCLUDE（triggeredBy=FAILED）</li>
  *   <li>熔断/候选空 → CONCLUDE（triggeredBy=MAX_ROUNDS/CONVERGED）</li>
@@ -78,7 +79,7 @@ public class DiscussNode implements NodeAction {
     private boolean streamingEnabled;
 
     /** 发言结果枚举（内部用，决定 discussMode 写入） */
-    private enum SpeakOutcome { SPOKE, PASSED, CONCLUDE_PROPOSED, FAILED }
+    private enum SpeakOutcome { SPOKE, PASSED, CONCLUDE_PROPOSED, WAIT, FAILED }
 
     /**
      * 推进一轮讨论发言。
@@ -206,6 +207,11 @@ public class DiscussNode implements NodeAction {
                 result.put(StateKeys.CONCLUDER_AGENT_ID, speakResult.agent.getId());
                 result.put(StateKeys.SPEAKER_AGENT_ID, speakResult.agent.getId());
             }
+            case WAIT -> {
+                // Agent [[ASK_USER]] 让位给用户：引擎阻塞等用户发言
+                result.put(StateKeys.DISCUSS_MODE, StateKeys.MODE_WAIT);
+                result.put(StateKeys.SPEAKER_AGENT_ID, speakResult.agent.getId());
+            }
             case FAILED -> {
                 // 所有候选失败：收束
                 return concludeResult(topicId, "FAILED", null);
@@ -292,6 +298,7 @@ public class DiscussNode implements NodeAction {
                 }
 
                 boolean wantsConclude = content.contains(ContextBuilder.CONCLUDE_MARKER);
+                boolean asksUser = content.contains(ContextBuilder.ASK_USER_MARKER);
                 content = ContextBuilder.stripMarkers(content);
                 if (content.isBlank()) {
                     // 剥离标记后为空，视为 PASS
@@ -330,6 +337,9 @@ public class DiscussNode implements NodeAction {
 
                 if (wantsConclude) {
                     return new SpeakResult(SpeakOutcome.CONCLUDE_PROPOSED, agent);
+                }
+                if (asksUser) {
+                    return new SpeakResult(SpeakOutcome.WAIT, agent);
                 }
                 return new SpeakResult(SpeakOutcome.SPOKE, agent);
             } catch (Exception e) {

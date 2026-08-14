@@ -12,6 +12,10 @@ frontend/dist/
 *.iml
 .vscode/
 
+# ---- 本地工具运行态（不入库）----
+.claude/
+.superpowers/
+
 # ---- OS ----
 .DS_Store
 Thumbs.db

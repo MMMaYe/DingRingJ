@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DingRing 系统架构总览</title>
+<style>
+  /* 浅色 / 文档风格架构大图 —— DingRing 多 Agent AI 群聊系统 */
+  :root {
+    --bg: #f7f8fa;
+    --surface: #ffffff;
+    --border: #e5e7eb;
+    --text: #111827;
+    --text-2: #4b5563;
+    --text-3: #9ca3af;
+    --cyan: #0891b2;
+    --coral: #e11d48;
+    --green: #059669;
+    --blue: #2563eb;
+    --violet: #7c3aed;
+    --slate: #64748b;
+    --amber: #b45309;
+    --line: #94a3b8;
+    --radius: 10px;
+    --font: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif;
+    --mono: ui-monospace, "SF Mono", "JetBrains Mono", "Menlo", Consolas, monospace;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 13px;
+    line-height: 1.6;
+    padding: 32px 24px;
+  }
+  .wrap { max-width: 1340px; margin: 0 auto; }
+
+  /* ===== Header ===== */
+  header { margin-bottom: 22px; }
+  h1 { font-size: 24px; font-weight: 700; letter-spacing: -0.01em; }
+  .subtitle { color: var(--text-2); font-size: 13px; margin-top: 4px; }
+  .legend {
+    display: flex; flex-wrap: wrap; gap: 12px 26px;
+    margin-top: 14px; padding: 10px 16px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); font-size: 12px; color: var(--text-2);
+  }
+  .legend .swatch { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+  .legend .swatch--line { width: 22px; height: 0; border-top: 2px solid var(--line); margin-right: 6px; vertical-align: 3px; }
+  .legend .swatch--dashed { width: 22px; height: 0; border-top: 2px dashed var(--violet); margin-right: 6px; vertical-align: 3px; }
+  .legend .swatch--push { width: 22px; height: 0; border-top: 2px solid var(--cyan); margin-right: 6px; vertical-align: 3px; }
+  .legend b { color: var(--text); font-weight: 600; }
+
+  /* ===== Diagram ===== */
+  .diagram { position: relative; width: 1320px; }
+
+  .lane {
+    position: relative;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 0 14px 12px 46px;
+    box-shadow: 0 1px 2px rgba(17, 24, 39, 0.04);
+  }
+  .lane + .lane { margin-top: 20px; }
+  .lane-tag {
+    position: absolute; top: 12px; left: 10px;
+    writing-mode: vertical-rl; text-orientation: mixed;
+    font-size: 10px; font-weight: 700; letter-spacing: 0.18em;
+    text-transform: uppercase; padding: 8px 3px; border-radius: 6px;
+    white-space: nowrap;
+  }
+  .lane-head {
+    display: flex; align-items: baseline; gap: 10px;
+    padding: 9px 0 8px; border-bottom: 1px solid var(--border);
+    margin-bottom: 10px;
+  }
+  .lane-head .mod { font-family: var(--mono); font-size: 12px; font-weight: 700; }
+  .lane-head .role { font-size: 11px; color: var(--text-2); }
+  .lane-head .pkg { font-family: var(--mono); font-size: 10px; color: var(--text-3); margin-left: auto; }
+
+  .lane-body { display: flex; gap: 10px; align-items: stretch; }
+  .group {
+    background: rgba(148, 163, 184, 0.06);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px;
+    flex: 1 1 0;
+    min-width: 0;
+  }
+  .group-title {
+    font-size: 10px; font-weight: 700; letter-spacing: 0.05em;
+    color: var(--text-2); margin-bottom: 6px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .group-title::before { content: ""; width: 6px; height: 6px; border-radius: 2px; background: var(--g, var(--slate)); display: inline-block; }
+  .chips { display: flex; flex-wrap: wrap; gap: 5px; }
+  .chip {
+    flex: 1 1 calc(50% - 3px); min-width: 0;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 5px 7px;
+    font-family: var(--mono); font-size: 10.5px; color: var(--text);
+    line-height: 1.35;
+    position: relative; z-index: 2;
+  }
+  .chip--wide { flex-basis: 100%; }
+  .chip .s { font-family: var(--font); font-size: 9px; color: var(--text-3); display: block; }
+  .chip b { font-weight: 600; }
+  .chip--port { border-style: dashed; border-color: var(--violet); }
+  .chip--evt { border-style: dashed; border-color: var(--amber); }
+
+  /* 分层泳道语义色 */
+  .lane--fe   { border-top: 3px solid var(--cyan); }
+  .lane--fe .lane-tag   { background: rgba(8, 145, 178, 0.08); color: var(--cyan); }
+  .lane--ad   { border-top: 3px solid var(--coral); }
+  .lane--ad .lane-tag   { background: rgba(225, 29, 72, 0.08); color: var(--coral); }
+  .lane--app  { border-top: 3px solid var(--green); }
+  .lane--app .lane-tag  { background: rgba(5, 150, 105, 0.08); color: var(--green); }
+  .lane--dom  { border-top: 3px solid var(--blue); }
+  .lane--dom .lane-tag  { background: rgba(37, 99, 235, 0.08); color: var(--blue); }
+  .lane--inf  { border-top: 3px solid var(--violet); }
+  .lane--inf .lane-tag  { background: rgba(124, 58, 237, 0.08); color: var(--violet); }
+  .lane--com  { border-top: 3px solid var(--slate); }
+  .lane--com .lane-tag  { background: rgba(100, 116, 139, 0.08); color: var(--slate); }
+  .lane--ext  { border-top: 3px solid var(--amber); }
+  .lane--ext .lane-tag  { background: rgba(180, 83, 9, 0.08); color: var(--amber); }
+
+  .lane--com .lane-body { padding: 2px 0; }
+  .lane--com .chips { gap: 8px; }
+  .lane--com .chip { flex: 0 0 auto; border-radius: 20px; padding: 4px 12px; font-size: 10.5px; }
+
+  /* SVG 连线层 */
+  .arrows { position: absolute; top: 0; left: 0; width: 1320px; height: 1810px; pointer-events: none; z-index: 1; }
+  .arrows .flow { stroke: var(--line); stroke-width: 1.5; fill: none; }
+  .arrows .impl { stroke: var(--violet); stroke-width: 1.5; stroke-dasharray: 5 4; fill: none; }
+  .arrows .push { stroke: var(--cyan); stroke-width: 1.5; fill: none; }
+  .arrows .lab {
+    font-family: var(--font); font-size: 10px; fill: var(--text-2);
+    paint-order: stroke; stroke: var(--surface); stroke-width: 3px; stroke-linejoin: round;
+  }
+  .arrows .lab--violet { fill: var(--violet); }
+  .arrows .lab--cyan { fill: var(--cyan); }
+  .arrows .lab--amber { fill: var(--amber); }
+
+  /* ===== 摘要卡片 ===== */
+  .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 26px; }
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 14px 16px;
+  }
+  .card h3 { font-size: 13px; font-weight: 700; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+  .card .dot { width: 8px; height: 8px; border-radius: 50%; }
+  .dot--cyan { background: var(--cyan); }
+  .dot--green { background: var(--green); }
+  .dot--amber { background: var(--amber); }
+  .card ul { list-style: none; }
+  .card li { font-size: 12px; color: var(--text-2); padding: 2px 0; padding-left: 14px; position: relative; }
+  .card li::before { content: "•"; position: absolute; left: 2px; color: var(--text-3); }
+
+  footer { margin-top: 24px; padding-top: 14px; border-top: 1px solid var(--border); color: var(--text-3); font-size: 11px; display: flex; gap: 18px; }
+
+  /* ===== hover 交互增强 ===== */
+  .diagram.dim .chip { opacity: .3; }
+  .diagram.dim .chip.hover-on { opacity: 1; }
+  .chip { transition: opacity .15s ease, box-shadow .15s ease; }
+  .chip.hover-on { box-shadow: 0 2px 10px rgba(15, 23, 42, .18); }
+  .arrows > path { transition: stroke-opacity .15s ease; }
+  .arrows > path.conn-off { stroke-opacity: .15; }
+  .arrows > path.conn-on { stroke-opacity: 1; stroke-width: 2.5; }
+  #tip {
+    position: fixed; z-index: 999; pointer-events: none;
+    max-width: 260px; padding: 8px 10px;
+    background: #0f172a; color: #f1f5f9;
+    border-radius: 8px; font-size: 11.5px; line-height: 1.5;
+    box-shadow: 0 4px 14px rgba(15, 23, 42, .25);
+    opacity: 0; transform: translateY(4px);
+    transition: opacity .12s ease, transform .12s ease;
+  }
+  #tip.show { opacity: 1; transform: translateY(0); }
+  #tip .k { font-family: var(--mono); font-weight: 700; color: #7dd3fc; display: block; margin-bottom: 2px; }
+
+  /* ===== 移动端缩放适配 ===== */
+  /* 兜底 transform 方案的缩放原点；主方案 zoom 不依赖此属性 */
+  .diagram { transform-origin: top left; }
+  /* 摘要卡片窄屏降列：避免 grid 三列在窄容器下被内容撑破导致横向滚动 */
+  .card { min-width: 0; }
+  @media (max-width: 700px) { .cards { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 480px) { .cards { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>DingRing 系统架构总览</h1>
+  <p class="subtitle">多 Agent AI 群聊学习系统 · Java 21 虚拟线程 · Spring Boot 3.4.7 · React 19 · MySQL + pgvector · 六模块 DDD 分层</p>
+  <div class="legend">
+    <span><span class="swatch" style="background:var(--cyan)"></span>前端</span>
+    <span><span class="swatch" style="background:var(--coral)"></span>接入层</span>
+    <span><span class="swatch" style="background:var(--green)"></span>应用层</span>
+    <span><span class="swatch" style="background:var(--blue)"></span>领域层</span>
+    <span><span class="swatch" style="background:var(--violet)"></span>基础设施</span>
+    <span><span class="swatch" style="background:var(--slate)"></span>通用底座</span>
+    <span><span class="swatch" style="background:var(--amber)"></span>外部服务</span>
+    <span><span class="swatch swatch--line"></span>调用 / 数据流</span>
+    <span><span class="swatch swatch--dashed"></span>端口实现（运行时注入）</span>
+    <span><span class="swatch swatch--push"></span>WebSocket 推送</span>
+  </div>
+</header>
+
+<div class="diagram">
+
+  <!-- ================= 泳道 0：浏览器 ================= -->
+  <section class="lane lane--fe">
+    <div class="lane-tag">Browser</div>
+    <div class="lane-head">
+      <span class="mod">浏览器</span>
+      <span class="role">React SPA · 同源托管于 start/static</span>
+      <span class="pkg">frontend/ · Vite 8 · React 19</span>
+    </div>
+    <div class="lane-body">
+      <div class="group" style="--g:var(--cyan)">
+        <div class="group-title">核心页面</div>
+        <div class="chips">
+          <div class="chip"><b>Chat</b><span class="s">聊天</span></div>
+          <div class="chip"><b>Topics</b><span class="s">主题</span></div>
+          <div class="chip"><b>Agents</b><span class="s">智能体</span></div>
+          <div class="chip"><b>Cards</b><span class="s">知识卡片</span></div>
+          <div class="chip"><b>KB</b><span class="s">知识库</span></div>
+        </div>
+      </div>
+      <div class="group" style="--g:var(--cyan)">
+        <div class="group-title">通信与渲染</div>
+        <div class="chips">
+          <div class="chip"><b>WebSocketContext</b><span class="s">useWebSocket 状态管理</span></div>
+          <div class="chip"><b>api.ts</b><span class="s">REST 封装 /api/*</span></div>
+          <div class="chip"><b>marked + DOMPurify</b><span class="s">Markdown 渲染</span></div>
+          <div class="chip"><b>Sidebar · Modal · Toast</b><span class="s">UI 组件</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 泳道 1：接入层 ================= -->
+  <section class="lane lane--ad">
+    <div class="lane-tag">Adapter</div>
+    <div class="lane-head">
+      <span class="mod">dingRing-adapter</span>
+      <span class="role">接入层 · REST + WebSocket</span>
+      <span class="pkg">com.dingring.adapter</span>
+    </div>
+    <div class="lane-body">
+      <div class="group" style="--g:var(--coral); flex:2 1 0">
+        <div class="group-title">REST 接入 /api/*</div>
+        <div class="chips">
+          <div class="chip"><b>GroupController</b></div>
+          <div class="chip"><b>TopicController</b></div>
+          <div class="chip"><b>AgentController</b></div>
+          <div class="chip"><b>CardController</b></div>
+          <div class="chip"><b>KbController</b></div>
+          <div class="chip"><b>SkillController</b></div>
+          <div class="chip"><b>TestController</b><span class="s">dev 调试</span></div>
+          <div class="chip"><b>GlobalExceptionHandler</b></div>
+        </div>
+      </div>
+      <div class="group" style="--g:var(--coral)">
+        <div class="group-title">WebSocket /ws/chat</div>
+        <div class="chips">
+          <div class="chip"><b>ChatWebSocketHandler</b><span class="s">WS 会话</span></div>
+          <div class="chip"><b>WsMessageDispatcher</b><span class="s">上行分发</span></div>
+          <div class="chip"><b>WebSocketConfig</b></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 泳道 2：应用层 ================= -->
+  <section class="lane lane--app">
+    <div class="lane-tag">Application</div>
+    <div class="lane-head">
+      <span class="mod">dingRing-app</span>
+      <span class="role">应用层 · 编排引擎 + SAA 工作流</span>
+      <span class="pkg">com.dingring.app</span>
+    </div>
+    <div class="lane-body">
+      <div class="group" style="--g:var(--green); flex:2 1 0">
+        <div class="group-title">编排引擎 · 每群单线程虚拟线程</div>
+        <div class="chips">
+          <div class="chip"><b>ChatOrchestrator</b><span class="s">用户消息入口 + 收束</span></div>
+          <div class="chip"><b>DiscussionEngine</b><span class="s">群串行主循环</span></div>
+          <div class="chip"><b>SpeakerScheduler</b><span class="s">评分选人</span></div>
+          <div class="chip"><b>Terminator</b><span class="s">熔断 max-rounds</span></div>
+          <div class="chip"><b>ModeratorService</b><span class="s">可选主持人</span></div>
+          <div class="chip"><b>ContextBuilder</b><span class="s">上下文 + RAG 注入</span></div>
+          <div class="chip"><b>MessageRouter</b><span class="s">意图路由</span></div>
+          <div class="chip"><b>StreamMarkerGuard</b><span class="s">流式标记过滤</span></div>
+        </div>
+      </div>
+      <div class="group" style="--g:var(--green)">
+        <div class="group-title">SAA 工作流 · StateGraph 节点</div>
+        <div class="chips">
+          <div class="chip"><b>PreprocessNode</b></div>
+          <div class="chip"><b>IntentClassifyNode</b><span class="s">CHAT/DISCUSS/WORK/CONCLUDE</span></div>
+          <div class="chip"><b>EnsureTopicNode</b><span class="s">追溯式建题</span></div>
+          <div class="chip"><b>DiscussNode</b><span class="s">[[PASS]]/[[CONCLUDE]]</span></div>
+          <div class="chip"><b>ChatNode</b></div>
+          <div class="chip"><b>WorkNode</b></div>
+          <div class="chip"><b>ConcludeNode</b><span class="s">STAR 框架</span></div>
+          <div class="chip"><b>SedimentNode</b><span class="s">知识卡片沉淀</span></div>
+          <div class="chip"><b>ProfileExtractNode</b><span class="s">画像提炼</span></div>
+        </div>
+      </div>
+      <div class="group" style="--g:var(--green)">
+        <div class="group-title">应用服务</div>
+        <div class="chips">
+          <div class="chip"><b>GroupAppService</b></div>
+          <div class="chip"><b>TopicAppService</b></div>
+          <div class="chip"><b>AgentAppService</b></div>
+          <div class="chip"><b>CardAppService</b></div>
+          <div class="chip"><b>KnowledgeBaseAppService</b></div>
+          <div class="chip"><b>SkillAppService</b></div>
+          <div class="chip"><b>MessageAssembler</b><span class="s">DTO 组装</span></div>
+        </div>
+      </div>
+      <div class="group" style="--g:var(--green)">
+        <div class="group-title">事件与后台任务</div>
+        <div class="chips">
+          <div class="chip"><b>CardEventHandler</b><span class="s">TopicClosed → 卡片</span></div>
+          <div class="chip"><b>ProfileEventHandler</b><span class="s">画像提炼</span></div>
+          <div class="chip"><b>CardReconciler</b><span class="s">@Scheduled 对账补卡</span></div>
+          <div class="chip"><b>ConclusionWatchdog</b><span class="s">60s 卡死自愈</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 泳道 3：领域层 ================= -->
+  <section class="lane lane--dom">
+    <div class="lane-tag">Domain</div>
+    <div class="lane-head">
+      <span class="mod">dingRing-domain</span>
+      <span class="role">领域层 · 纯 POJO · 端口抽象</span>
+      <span class="pkg">com.dingring.domain</span>
+    </div>
+    <div class="lane-body">
+      <div class="group" style="--g:var(--blue)">
+        <div class="group-title">聚合实体</div>
+        <div class="chips">
+          <div class="chip"><b>Group / Member / Message</b></div>
+          <div class="chip"><b>Topic</b><span class="s">TopicStatus</span></div>
+          <div class="chip"><b>KnowledgeCard</b></div>
+          <div class="chip"><b>Agent</b></div>
+          <div class="chip"><b>User / UserProfile</b></div>
+          <div class="chip"><b>KnowledgeBase / File</b></div>
+          <div class="chip"><b>Skill</b></div>
+        </div>
+      </div>
+      <div class="group" style="--g:var(--blue)">
+        <div class="group-title">仓储端口 ×10</div>
+        <div class="chips">
+          <div class="chip chip--port"><b>GroupRepository</b></div>
+          <div class="chip chip--port"><b>TopicRepository</b></div>
+          <div class="chip chip--port"><b>CardRepository</b></div>
+          <div class="chip chip--port"><b>AgentRepository</b></div>
+          <div class="chip chip--port"><b>UserRepository</b></div>
+          <div class="chip chip--port"><b>UserProfileRepository</b></div>
+          <div class="chip chip--port"><b>MessageRepository</b></div>
+          <div class="chip chip--port"><b>KnowledgeBaseRepository</b></div>
+          <div class="chip chip--port"><b>FileRepository</b></div>
+          <div class="chip chip--port"><b>SkillRepository</b></div>
+        </div>
+      </div>
+      <div class="group" style="--g:var(--blue)">
+        <div class="group-title">服务端口 ×9</div>
+        <div class="chips">
+          <div class="chip chip--port"><b>LlmService</b></div>
+          <div class="chip chip--port"><b>MemoryService</b></div>
+          <div class="chip chip--port"><b>ProfileService</b></div>
+          <div class="chip chip--port"><b>RagService</b></div>
+          <div class="chip chip--port"><b>Reranker</b></div>
+          <div class="chip chip--port"><b>AgentSpeakerService</b></div>
+          <div class="chip chip--port"><b>DiscussionFlowService</b></div>
+          <div class="chip chip--port"><b>GroupBroadcastService</b></div>
+          <div class="chip chip--port"><b>DomainEventPublisher</b></div>
+        </div>
+      </div>
+      <div class="group" style="--g:var(--blue)">
+        <div class="group-title">领域事件 · 契约</div>
+        <div class="chips">
+          <div class="chip chip--evt"><b>GroupCreated</b></div>
+          <div class="chip chip--evt"><b>MessageSent</b></div>
+          <div class="chip chip--evt"><b>TopicCreated</b></div>
+          <div class="chip chip--evt"><b>TopicConcluding</b></div>
+          <div class="chip chip--evt"><b>TopicClosed</b></div>
+          <div class="chip chip--evt"><b>KnowledgeCardGenerated</b></div>
+          <div class="chip chip--evt"><b>AgentSelected</b></div>
+          <div class="chip chip--evt"><b>AgentFailed</b></div>
+          <div class="chip"><b>DiscussionFlowResult</b><span class="s">工作流契约</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 泳道 4：基础设施层 ================= -->
+  <section class="lane lane--inf">
+    <div class="lane-tag">Infrastructure</div>
+    <div class="lane-head">
+      <span class="mod">dingRing-infrastructure</span>
+      <span class="role">基础设施层 · 端口实现</span>
+      <span class="pkg">com.dingring.infrastructure</span>
+    </div>
+    <div class="lane-body">
+      <div class="group" style="--g:var(--violet)">
+        <div class="group-title">持久化 MyBatis</div>
+        <div class="chips">
+          <div class="chip"><b>Mapper ×10 + XML</b><span class="s">ring_chat 表</span></div>
+          <div class="chip"><b>*RepositoryImpl ×10</b><span class="s">端口实现</span></div>
+          <div class="chip"><b>TypeHandler</b><span class="s">JSON / List</span></div>
+        </div>
+      </div>
+      <div class="group" style="--g:var(--violet)">
+        <div class="group-title">LLM 适配</div>
+        <div class="chips">
+          <div class="chip"><b>SpringAiLlmService</b><span class="s">真实网关</span></div>
+          <div class="chip"><b>MockLlmService</b><span class="s">dingring.llm.mock 开关</span></div>
+          <div class="chip"><b>SaaModelFactory</b><span class="s">按 Agent 动态构建</span></div>
+        </div>
+      </div>
+      <div class="group" style="--g:var(--violet)">
+        <div class="group-title">记忆 · 画像 · 事件</div>
+        <div class="chips">
+          <div class="chip"><b>SimpleMemoryService</b><span class="s">群记忆</span></div>
+          <div class="chip"><b>SimpleProfileService</b><span class="s">用户画像</span></div>
+          <div class="chip"><b>SpringEventPublisher</b><span class="s">端口实现</span></div>
+          <div class="chip"><b>@Event + EventAspect</b><span class="s">AOP 事件注解</span></div>
+        </div>
+      </div>
+      <div class="group" style="--g:var(--violet)">
+        <div class="group-title">RAG 知识库</div>
+        <div class="chips">
+          <div class="chip"><b>DocumentIngestionPipeline</b><span class="s">切片 + 向量化</span></div>
+          <div class="chip"><b>SaaRagService</b><span class="s">检索 + 过滤</span></div>
+          <div class="chip"><b>LlmReranker</b><span class="s">LLM 重排</span></div>
+          <div class="chip"><b>MockEmbeddingModel</b><span class="s">本地向量</span></div>
+          <div class="chip"><b>PgVectorStoreConfig</b><span class="s">第二数据源</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="lane-body">
+      <div class="group" style="--g:var(--violet)">
+        <div class="group-title">技能 Skill</div>
+        <div class="chips">
+          <div class="chip"><b>SkillHotReloader</b><span class="s">热更新</span></div>
+          <div class="chip"><b>SkillLoaderServiceImpl</b><span class="s">种子技能</span></div>
+          <div class="chip"><b>SkillToolkitFactory</b><span class="s">工具注册</span></div>
+        </div>
+      </div>
+      <div class="group" style="--g:var(--violet)">
+        <div class="group-title">Agent 运行时</div>
+        <div class="chips">
+          <div class="chip"><b>SaaReactAgentFactory</b><span class="s">ReAct Agent</span></div>
+          <div class="chip"><b>SupervisorAgentFactory</b><span class="s">总结 Agent</span></div>
+          <div class="chip"><b>Hooks ×5</b><span class="s">Rag/Memory/Profile/Roster/Work</span></div>
+          <div class="chip"><b>Tools ×3</b><span class="s">KnowledgeSearch/TopicHistory/UserProfile</span></div>
+        </div>
+      </div>
+      <div class="group" style="--g:var(--violet)">
+        <div class="group-title">SAA 工作流 · 提示词</div>
+        <div class="chips">
+          <div class="chip"><b>SaaWorkflow</b><span class="s">StateGraph 编译执行</span></div>
+          <div class="chip"><b>NodeHandlerRegistry</b><span class="s">节点查找</span></div>
+          <div class="chip"><b>PromptTemplateLoader</b><span class="s">Nacos 热更新</span></div>
+        </div>
+      </div>
+      <div class="group" style="--g:var(--violet)">
+        <div class="group-title">文件存储</div>
+        <div class="chips">
+          <div class="chip"><b>FileStorageService</b><span class="s">./rag-files 本地</span></div>
+        </div>
+      </div>
+      <div class="group" style="--g:var(--violet)">
+        <div class="group-title">WebSocket 推送</div>
+        <div class="chips">
+          <div class="chip"><b>WsBroadcastAdapter</b><span class="s">implements GroupBroadcastService</span></div>
+          <div class="chip"><b>WsSessionRegistryImpl</b><span class="s">implements WsSessionRegistry</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 泳道 5：通用底座 ================= -->
+  <section class="lane lane--com">
+    <div class="lane-tag">Common</div>
+    <div class="lane-head">
+      <span class="mod">dingRing-common</span>
+      <span class="role">通用底座 · 零依赖</span>
+      <span class="pkg">com.dingring.common</span>
+    </div>
+    <div class="lane-body">
+      <div class="chips">
+        <div class="chip"><b>ApiResponse</b></div>
+        <div class="chip"><b>PageResult</b></div>
+        <div class="chip"><b>BizException</b></div>
+        <div class="chip"><b>ErrorCode</b></div>
+        <div class="chip"><b>ParamException</b></div>
+        <div class="chip"><b>WsConstants</b></div>
+        <div class="chip"><b>JsonHelper</b></div>
+        <div class="chip"><b>DateUtil</b></div>
+        <div class="chip"><b>LogHelper</b></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 泳道 6：外部服务 ================= -->
+  <section class="lane lane--ext">
+    <div class="lane-tag">External</div>
+    <div class="lane-head">
+      <span class="mod">外部服务</span>
+      <span class="role">数据库 · 向量库 · LLM 网关</span>
+    </div>
+    <div class="lane-body">
+      <div class="group" style="--g:var(--amber)">
+        <div class="group-title">MySQL 8</div>
+        <div class="chips">
+          <div class="chip"><b>ring_chat</b><span class="s">业务数据 · 7+ 表</span></div>
+        </div>
+      </div>
+      <div class="group" style="--g:var(--amber)">
+        <div class="group-title">PostgreSQL + pgvector</div>
+        <div class="chips">
+          <div class="chip"><b>my_rag · vector_store</b><span class="s">向量库</span></div>
+        </div>
+      </div>
+      <div class="group" style="--g:var(--amber)">
+        <div class="group-title">LLM 网关</div>
+        <div class="chips">
+          <div class="chip"><b>DeepSeek · StepFun · CloudBase</b><span class="s">OpenAI 协议</span></div>
+        </div>
+      </div>
+      <div class="group" style="--g:var(--amber)">
+        <div class="group-title">Nacos</div>
+        <div class="chips">
+          <div class="chip"><b>配置中心</b><span class="s">可选 · 提示词热更新</span></div>
+        </div>
+      </div>
+      <div class="group" style="--g:var(--amber)">
+        <div class="group-title">本地文件</div>
+        <div class="chips">
+          <div class="chip"><b>./rag-files</b><span class="s">文档存储</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= SVG 连线层 ================= -->
+  <svg class="arrows" viewBox="0 0 1320 1810" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path d="M 0 1 L 9 5 L 0 9 z" fill="#94a3b8"/>
+      </marker>
+      <marker id="arr-v" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path d="M 0 1 L 9 5 L 0 9 z" fill="#7c3aed"/>
+      </marker>
+      <marker id="arr-c" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path d="M 0 1 L 9 5 L 0 9 z" fill="#0891b2"/>
+      </marker>
+    </defs>
+
+    <!-- 泳道纵坐标（宽度 1320，7 个泳道）：
+         L0 浏览器 0-228, L1 adapter 248-483, L2 app 503-806,
+         L3 domain 826-1092, L4 infra 1112-1462, L5 common 1482-1573,
+         L6 external 1593-1735，SVG 底部 1810 -->
+
+    <!-- 1. 浏览器 REST → adapter -->
+    <path id="conn1" class="flow" d="M 250 116 L 250 250" marker-end="url(#arr)"/>
+    <text class="lab" x="258" y="236">REST /api/*</text>
+
+    <!-- 2. 浏览器 WS ↔ adapter -->
+    <path id="conn2" class="flow" d="M 850 116 L 850 250" marker-end="url(#arr)" marker-start="url(#arr)"/>
+    <text class="lab" x="858" y="236">WS /ws/chat</text>
+
+    <!-- 3. adapter WS → app 编排引擎 -->
+    <path id="conn3" class="flow" d="M 950 386 L 950 470 L 500 470 L 250 470 L 250 578" marker-end="url(#arr)"/>
+    <text class="lab" x="510" y="492">WsMessageDispatcher → ChatOrchestrator</text>
+
+    <!-- 4. adapter REST → app 应用服务 -->
+    <path id="conn4" class="flow" d="M 400 386 L 400 640 M 400 640 L 920 640 L 920 660" marker-end="url(#arr)"/>
+    <text class="lab" x="400" y="492">REST → AppService</text>
+
+    <!-- 5. app 编排引擎 → SAA 工作流（组内，同泳道） -->
+    <path id="conn5" class="flow" d="M 420 560 L 560 560" marker-end="url(#arr)"/>
+    <text class="lab" x="430" y="552">advance()</text>
+
+    <!-- 6. 应用层 → 领域层 端口 -->
+    <path id="conn6" class="flow" d="M 250 696 L 250 770 M 250 770 L 800 770 L 800 900" marker-end="url(#arr)"/>
+    <text class="lab" x="330" y="790">调用端口</text>
+
+    <!-- 7. 领域端口 ← 基础设施实现（虚线，多条） -->
+    <path id="conn7a" class="impl" d="M 130 1092 L 130 1110" marker-end="url(#arr-v)"/>
+    <path id="conn7b" class="impl" d="M 360 1092 L 360 1110" marker-end="url(#arr-v)"/>
+    <path id="conn7c" class="impl" d="M 620 1092 L 620 1110" marker-end="url(#arr-v)"/>
+    <path id="conn7d" class="impl" d="M 830 1092 L 830 1110" marker-end="url(#arr-v)"/>
+    <path id="conn7e" class="impl" d="M 940 1092 L 940 1110" marker-end="url(#arr-v)"/>
+    <text class="lab lab--violet" x="300" y="1100">端口实现 · 运行时注入</text>
+
+    <!-- 8. 事件分发：infra 事件发布 → app 事件处理器 -->
+    <path id="conn8" class="flow" d="M 980 1132 L 980 820 M 980 820 L 1180 820 L 1180 700" marker-end="url(#arr)"/>
+    <text class="lab" x="990" y="886">领域事件分发</text>
+
+    <!-- 9. 推送：infra WebSocket 推送组 → 浏览器（青色，右缘绕行） -->
+    <path id="conn9" class="push" d="M 1190 1380 L 1190 300 L 850 300 L 850 116" marker-end="url(#arr-c)"/>
+    <text class="lab lab--cyan" x="1198" y="700">WS 推送 NEW_MESSAGE / MESSAGE_DELTA / TOPIC_*</text>
+
+    <!-- 10. infra → MySQL -->
+    <path id="conn10" class="flow" d="M 130 1466 L 130 1585 M 130 1585 L 130 1630" marker-end="url(#arr)"/>
+    <text class="lab lab--amber" x="138" y="1520">MySQL ring_chat</text>
+
+    <!-- 11. infra → PostgreSQL+pgvector -->
+    <path id="conn11" class="flow" d="M 620 1466 L 620 1585 M 620 1585 L 440 1630" marker-end="url(#arr)"/>
+    <text class="lab lab--amber" x="628" y="1520">pgvector my_rag</text>
+
+    <!-- 12. infra → LLM 网关 -->
+    <path id="conn12" class="flow" d="M 360 1466 L 360 1585 M 360 1585 L 700 1630" marker-end="url(#arr)"/>
+    <text class="lab lab--amber" x="368" y="1520">OpenAI 协议</text>
+
+    <!-- 13. infra → Nacos（可选） -->
+    <path id="conn13" class="impl" d="M 830 1466 L 830 1585 M 830 1585 L 1000 1630" marker-end="url(#arr-v)"/>
+    <text class="lab lab--violet" x="838" y="1520">可选</text>
+
+    <!-- 14. infra → 本地文件 -->
+    <path id="conn14" class="flow" d="M 980 1466 L 980 1585 M 980 1585 L 1180 1630" marker-end="url(#arr)"/>
+    <text class="lab lab--amber" x="988" y="1520">./rag-files</text>
+
+    <!-- 15. 端口实现：GroupBroadcastService ← WsBroadcastAdapter（虚线） -->
+    <path id="conn15" class="impl" d="M 932 1092 L 932 1158 L 1230 1158 L 1230 1332" marker-end="url(#arr-v)"/>
+  </svg>
+</div>
+
+<!-- ================= 摘要卡片 ================= -->
+<div class="cards">
+  <div class="card">
+    <h3><span class="dot dot--cyan"></span>核心机制</h3>
+    <ul>
+      <li>意图路由：CHAT / DISCUSS / WORK / CONCLUDE</li>
+      <li>判定讨论 → 追溯式自动建题</li>
+      <li>SpeakerScheduler 评分调度轮流发言</li>
+      <li>[[PASS]] / [[CONCLUDE]] 协作收束</li>
+      <li>STAR 结论 → 异步提取 Q&amp;A 知识卡片</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h3><span class="dot dot--green"></span>线程模型</h3>
+    <ul>
+      <li>每群一个单线程虚拟线程执行器（group-{id}-）</li>
+      <li>群内串行免锁，跨群并行</li>
+      <li>画像提炼 / 卡片生成独立虚拟线程</li>
+      <li>ConclusionWatchdog（60s）卡死主题回滚</li>
+      <li>CardReconciler（10min）对账补卡</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h3><span class="dot dot--amber"></span>降级哲学</h3>
+    <ul>
+      <li>Moderator 失败 → 回退 SpeakerScheduler</li>
+      <li>Agent 失败 → 接力下一候选</li>
+      <li>流式异常 → ABORT，不卡死群执行器</li>
+      <li>RAG / 画像失败 → 静默降级不阻塞主流程</li>
+      <li>Nacos 不可用 → 降级 classpath 提示词</li>
+    </ul>
+  </div>
+</div>
+
+<footer>
+  <span>DingRing 架构大图 · 生成于 2026-08-09</span>
+  <span>六模块 DDD · 10 Mapper · 9 服务端口 · 8 领域事件</span>
+  <span>Java 21 · Spring Boot 3.4.7 · React 19</span>
+</footer>
+
+</div>
+
+<script>
+(function () {
+  'use strict';
+  // hover 交互：chip 悬停 → 全图 dim + 自身 hover-on + 相关连线 conn-on / 其余 conn-off；
+  // tooltip 内容与位置分离：mouseenter 设置内容，mousemove 仅更新位置。
+  // 数据约定：TIPS 键 = chip 的 <b> 文本；LINKS 值 = 连线 path id（conn7a-e 除外）。
+  var TIPS = {
+    'ChatOrchestrator': '用户消息入口 + 收束域编排；接收 WS 上行消息，驱动讨论引擎。',
+    'DiscussionEngine': '每群单线程虚拟线程主循环，串行推进讨论；跨群并行。',
+    'SpeakerScheduler': '评分调度：按群成员 Agent 评分选人发言。',
+    'Terminator': '熔断器：发言总数达 max-rounds（默认 100）强制收束。',
+    'ModeratorService': '可选主持人模式（moderator.enabled）；失败回退评分调度。',
+    'ContextBuilder': '组装讨论上下文：群成员名单 + 群记忆 + RAG 注入。',
+    'MessageRouter': '意图路由：CHAT / DISCUSS / WORK / CONCLUDE。',
+    'StreamMarkerGuard': '流式标记过滤：识别 [[PASS]] / [[CONCLUDE]] 协作协议。',
+    'ChatWebSocketHandler': 'WS 会话生命周期：连接 / 断开 / 消息接收。',
+    'WsMessageDispatcher': 'WS 上行消息分发到 ChatOrchestrator。',
+    'WebSocketConfig': '注册 /ws/chat 端点，允许所有 Origin。',
+    'GlobalExceptionHandler': '全局异常 → ApiResponse 统一返回。',
+    'GroupController': '群组 REST API：建群 / 成员 / 消息查询。',
+    'TopicController': '讨论主题 REST API。',
+    'AgentController': 'AI Agent 配置 REST API（花名 / 人设 / LLM 端点）。',
+    'CardController': '知识卡片 REST API。',
+    'KbController': '知识库 REST API（文档上传 / 检索）。',
+    'SkillController': '技能配置 REST API。',
+    'TestController': 'dev 调试接口，仅测试环境使用。',
+    'GroupAppService': '群用例编排：建群、加成员、群列表。',
+    'TopicAppService': '主题用例编排。',
+    'AgentAppService': 'Agent 用例编排。',
+    'CardAppService': '知识卡片用例编排。',
+    'KnowledgeBaseAppService': '知识库用例编排。',
+    'SkillAppService': '技能用例编排。',
+    'MessageAssembler': '领域消息 → DTO 组装。',
+    'CardEventHandler': '监听 TopicClosed → 异步提取 Q&A 知识卡片。',
+    'ProfileEventHandler': '监听消息 → 用户画像提炼。',
+    'CardReconciler': '@Scheduled 定时对账补卡（10min）。',
+    'ConclusionWatchdog': '卡死主题自愈：60s 未完成收束则回滚重试。',
+    'Topic': '讨论主题聚合：IN_PROGRESS→CONCLUDING→CLOSED 乐观锁状态机。',
+    'KnowledgeCard': 'Q&A 知识卡片，供复习沉淀。',
+    'Agent': 'AI 智能体：花名 / 人设 / 独立 LLM 端点配置。',
+    'KnowledgeBase / File': '知识库与文件（v1 预留后端能力）。',
+    'LlmService': 'LLM 调用端口（抽象，多实现）。',
+    'MemoryService': '群记忆读写端口。',
+    'ProfileService': '用户画像读写端口。',
+    'RagService': 'RAG 检索端口。',
+    'Reranker': '检索结果重排端口。',
+    'AgentSpeakerService': 'Agent 发言服务端口。',
+    'DiscussionFlowService': '讨论流式推进端口。',
+    'GroupBroadcastService': '群消息推送端口（出站）。',
+    'DomainEventPublisher': '领域事件发布端口。',
+    'SpringAiLlmService': '真实 LLM 实现（Spring AI OpenAI 协议）。',
+    'MockLlmService': '离线 Mock 实现（dingring.llm.mock=true）。',
+    'SaaModelFactory': '按 Agent 的 baseUrl/apiKey/modelName 动态构建模型。',
+    'SimpleMemoryService': '群记忆内存实现（Simple）。',
+    'SimpleProfileService': '用户画像内存实现（Simple）。',
+    'SpringEventPublisher': 'DomainEventPublisher 的 Spring 事件实现。',
+    'WsBroadcastAdapter': 'GroupBroadcastService 实现：经 WS 会话推送消息。',
+    'WsSessionRegistryImpl': 'WsSessionRegistry 实现：WS 会话注册表。',
+    'SaaWorkflow': 'SAA StateGraph 工作流：编译 + 执行 + 节点调度。',
+    'PreprocessNode': '消息预处理节点。',
+    'IntentClassifyNode': '意图分类：CHAT/DISCUSS/WORK/CONCLUDE。',
+    'EnsureTopicNode': '追溯式建题：HIGH 立即 / LOW 连续 2 次。',
+    'DiscussNode': '讨论态推进：评分调度 + [[PASS]]/[[CONCLUDE]]。',
+    'ChatNode': '闲聊态：Agent 自动接续发言。',
+    'WorkNode': 'WORK 意图：工作流任务执行。',
+    'ConcludeNode': '收束：STAR 框架结论生成。',
+    'SedimentNode': '知识卡片沉淀节点。',
+    'ProfileExtractNode': '画像提炼节点。'
+  };
+  // 连线高亮映射：键 = chip 的 <b> 文本，值 = 连线 path id。
+  // conn7a-e（5 条通用端口实现虚线）不做映射：随 dim 淡化，但不单独高亮；
+  // conn9 对 ChatOrchestrator / DiscussionEngine 的映射表示"逻辑驱动"关系
+  // （该连线图上实际连接 infra 推送组 → 浏览器，非直接可见连接）。
+  var LINKS = {
+    'ChatOrchestrator': ['conn3', 'conn9'],
+    'DiscussionEngine': ['conn5', 'conn6', 'conn9'],
+    'WsMessageDispatcher': ['conn3'],
+    'GroupBroadcastService': ['conn9', 'conn15'],
+    'WsBroadcastAdapter': ['conn9', 'conn15'],
+    'GroupController': ['conn1', 'conn4'],
+    'TopicController': ['conn1', 'conn4'],
+    'AgentController': ['conn1', 'conn4'],
+    'CardController': ['conn1', 'conn4'],
+    'SpringAiLlmService': ['conn12'],
+    'MockLlmService': ['conn12'],
+    'SaaModelFactory': ['conn12']
+  };
+  var tip = document.createElement('div');
+  tip.id = 'tip';
+  // 一次性构建 tooltip 骨架（键名 + 描述文本），后续仅更新 textContent，避免 DOM 重建与注入风险
+  var tipK = document.createElement('span');
+  tipK.className = 'k';
+  var tipT = document.createTextNode('');
+  tip.appendChild(tipK);
+  tip.appendChild(tipT);
+  document.body.appendChild(tip);
+  var diagram = document.querySelector('.diagram');
+  // 仅选中连线 path（svg 直接子元素），defs 内 marker 的填充 path 不会被捕获
+  var paths = Array.prototype.slice.call(document.querySelectorAll('svg.arrows > path'));
+  var chips = Array.prototype.slice.call(document.querySelectorAll('.chip'));
+  function chipKey(c) {
+    var b = c.querySelector('b');
+    return b ? b.textContent.trim() : '';
+  }
+  var tipW = 0, tipH = 0;
+  // 内容设置：仅在 mouseenter 时调用，只更新 textContent（无 innerHTML，无注入风险）；
+  // 内容随 chip 切换而变化，设置后同步刷新尺寸缓存，供 positionTip 热路径使用
+  function setTipContent(c) {
+    var k = chipKey(c);
+    var t = TIPS[k];
+    if (!t) {
+      var s = c.querySelector('.s');
+      t = s && s.textContent.trim() ? s.textContent.trim() : '';
+    }
+    tipK.textContent = t ? k : '';
+    tipT.textContent = t ? t : k;
+    tipW = tip.offsetWidth;
+    tipH = tip.offsetHeight;
+  }
+  // 位置更新：mousemove 热路径仅改 left/top；用 setTipContent 缓存的尺寸做双轴钳制（右/下翻转 + 左/上边界）
+  function positionTip(x, y) {
+    var w = tipW, h = tipH, pad = 14;
+    var tx = x + pad, ty = y + pad;
+    if (tx + w > window.innerWidth) tx = x - w - pad;
+    if (ty + h > window.innerHeight) ty = y - h - pad;
+    tx = Math.max(4, Math.min(tx, window.innerWidth - w - 4));
+    ty = Math.max(4, Math.min(ty, window.innerHeight - h - 4));
+    tip.style.left = tx + 'px';
+    tip.style.top = ty + 'px';
+  }
+  function setActive(c, on) {
+    var key = chipKey(c);
+    diagram.classList.toggle('dim', on);
+    chips.forEach(function (o) { o.classList.toggle('hover-on', on && o === c); });
+    paths.forEach(function (p) {
+      var linked = on && LINKS[key] && LINKS[key].indexOf(p.id) !== -1;
+      p.classList.toggle('conn-on', linked);
+      p.classList.toggle('conn-off', on && !linked);
+    });
+  }
+  chips.forEach(function (c) {
+    c.addEventListener('mouseenter', function (e) { setActive(c, true); setTipContent(c); positionTip(e.clientX, e.clientY); tip.classList.add('show'); });
+    c.addEventListener('mousemove', function (e) { positionTip(e.clientX, e.clientY); });
+    c.addEventListener('mouseleave', function () { setActive(c, false); tip.classList.remove('show'); });
+  });
+
+  // 移动端缩放：可用宽度 < 1320px 时按比例缩小 .diagram（HTML 布局 + SVG 连线层整体缩放）。
+  // 缩放基数取 .wrap 实际可用宽度（已扣除 body padding），窄屏下整图恰好贴合容器、无横向滚动；
+  // 主方案 zoom：真实改变布局宽度，滚动条自然消失（Chrome / Safari / Firefox 126+ 均已标准化）；
+  // 兜底 transform：zoom 不可用（老浏览器）时仅视觉缩放，配合 CSS transform-origin: top left。
+  function fitDiagram() {
+    var wrap = document.querySelector('.wrap');
+    var avail = wrap ? wrap.clientWidth : window.innerWidth;
+    var scale = Math.min(1, avail / 1320);
+    var useZoom = 'zoom' in document.documentElement.style;
+    if (scale >= 1) {
+      diagram.style.zoom = '';
+      diagram.style.transform = '';
+      return;
+    }
+    if (useZoom) {
+      diagram.style.zoom = scale;
+      diagram.style.transform = '';
+    } else {
+      diagram.style.zoom = '';
+      diagram.style.transform = 'scale(' + scale + ')';
+    }
+  }
+  window.addEventListener('resize', fitDiagram);
+  fitDiagram();
+})();
+</script>
+</body>
+</html>

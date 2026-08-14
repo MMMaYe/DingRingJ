@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DingRingJ 融合方案 - 核心流程大图</title>
+<style>
+  /* Trae design tokens (dark theme) */
+  :root {
+    --bg-base: #1A1B1D;
+    --bg-surface: #222427;
+    --bg-tertiary: #2A2D31;
+    --bg-overlay: rgba(224, 226, 242, 0.06);
+    --text-default: #D1D3DB;
+    --text-secondary: #9599A6;
+    --text-tertiary: #666B75;
+    --brand-green: #32F08C;
+    --accent-blue: #7BB8FF;
+    --accent-amber: #DCB364;
+    --accent-violet: #BFA5FF;
+    --accent-coral: #FF9392;
+    --accent-cyan: #04CBE5;
+    --border: rgba(224, 226, 242, 0.1);
+    --border-strong: rgba(224, 226, 242, 0.16);
+    --radius: 8px;
+    --font: "SF Pro Text", "SF Pro", -apple-system, system-ui, sans-serif;
+    --font-mono: "JetBrains Mono", "SF Mono", monospace;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg-base);
+    color: var(--text-default);
+    font-family: var(--font);
+    font-size: 13px;
+    line-height: 1.6;
+    padding: 40px 24px;
+    min-width: 1400px;
+  }
+
+  h1 {
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--text-default);
+    margin-bottom: 4px;
+    letter-spacing: -0.02em;
+  }
+
+  .subtitle {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-bottom: 32px;
+  }
+
+  /* ========== Layer labels ========== */
+  .layer-label {
+    position: absolute;
+    left: -8px;
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--text-tertiary);
+    padding: 8px 4px;
+    border-radius: 4px;
+  }
+
+  .layer-band {
+    position: relative;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 20px 20px 36px;
+    margin-bottom: 16px;
+    background: var(--bg-surface);
+  }
+
+  .layer-band--adapter { border-left: 3px solid var(--accent-coral); }
+  .layer-band--app { border-left: 3px solid var(--brand-green); }
+  .layer-band--domain { border-left: 3px solid var(--accent-blue); }
+  .layer-band--infra { border-left: 3px solid var(--accent-violet); }
+
+  .layer-band--adapter .layer-label { background: rgba(255, 147, 146, 0.08); color: var(--accent-coral); }
+  .layer-band--app .layer-label { background: rgba(50, 240, 140, 0.08); color: var(--brand-green); }
+  .layer-band--domain .layer-label { background: rgba(123, 184, 255, 0.08); color: var(--accent-blue); }
+  .layer-band--infra .layer-label { background: rgba(191, 165, 255, 0.08); color: var(--accent-violet); }
+
+  .layer-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 14px;
+    letter-spacing: 0.05em;
+  }
+
+  /* ========== Flow row ========== */
+  .flow-row {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+  }
+
+  /* ========== Node card ========== */
+  .node {
+    flex-shrink: 0;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius);
+    padding: 10px 14px;
+    min-width: 120px;
+    text-align: center;
+    position: relative;
+    transition: border-color 0.2s;
+  }
+
+  .node:hover { border-color: var(--text-secondary); }
+
+  .node__title {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-default);
+    margin-bottom: 2px;
+  }
+
+  .node__desc {
+    font-size: 10px;
+    color: var(--text-tertiary);
+    line-height: 1.4;
+  }
+
+  .node--start {
+    background: rgba(50, 240, 140, 0.08);
+    border-color: var(--brand-green);
+  }
+  .node--start .node__title { color: var(--brand-green); }
+
+  .node--end {
+    background: rgba(102, 107, 117, 0.12);
+    border-color: var(--text-tertiary);
+  }
+  .node--end .node__title { color: var(--text-secondary); }
+
+  .node--decision {
+    background: rgba(123, 184, 255, 0.08);
+    border-color: var(--accent-blue);
+  }
+  .node--decision .node__title { color: var(--accent-blue); }
+
+  .node--agent {
+    background: rgba(191, 165, 255, 0.06);
+    border-color: rgba(191, 165, 255, 0.3);
+  }
+
+  .node--function {
+    background: rgba(220, 179, 100, 0.06);
+    border-color: rgba(220, 179, 100, 0.3);
+  }
+
+  .node--loop {
+    background: rgba(4, 203, 229, 0.06);
+    border-color: rgba(4, 203, 229, 0.3);
+  }
+
+  /* ========== Arrow ========== */
+  .arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 36px;
+    position: relative;
+  }
+
+  .arrow::after {
+    content: '';
+    width: 100%;
+    height: 1px;
+    background: var(--border-strong);
+  }
+
+  .arrow__label {
+    position: absolute;
+    top: -16px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 9px;
+    color: var(--text-tertiary);
+    white-space: nowrap;
+    font-family: var(--font-mono);
+    background: var(--bg-surface);
+    padding: 0 4px;
+  }
+
+  .arrow--down {
+    width: 100%;
+    height: 28px;
+  }
+  .arrow--down::after {
+    width: 1px;
+    height: 100%;
+  }
+  .arrow--down .arrow__label {
+    top: 50%;
+    left: 8px;
+    transform: translateY(-50%);
+  }
+
+  /* ========== Branch container ========== */
+  .branch {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+
+  .branch__lane {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: 1px dashed var(--border);
+    position: relative;
+  }
+
+  .branch__lane-label {
+    position: absolute;
+    top: -8px;
+    left: 12px;
+    font-size: 9px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    background: var(--bg-surface);
+    padding: 0 6px;
+    font-family: var(--font-mono);
+  }
+
+  .branch__lane--chat { border-color: rgba(50, 240, 140, 0.2); }
+  .branch__lane--discuss { border-color: rgba(123, 184, 255, 0.2); }
+  .branch__lane--work { border-color: rgba(220, 179, 100, 0.2); }
+
+  .branch__lane--chat .branch__lane-label { color: var(--brand-green); }
+  .branch__lane--discuss .branch__lane-label { color: var(--accent-blue); }
+  .branch__lane--work .branch__lane-label { color: var(--accent-amber); }
+
+  /* ========== Mode badges ========== */
+  .mode-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: rgba(4, 203, 229, 0.04);
+  }
+
+  .mode-group__title {
+    font-size: 9px;
+    font-weight: 600;
+    color: var(--accent-cyan);
+    text-align: center;
+    margin-bottom: 4px;
+    letter-spacing: 0.05em;
+  }
+
+  .mode-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 500;
+    font-family: var(--font-mono);
+  }
+
+  .mode-badge--converge { background: rgba(50, 240, 140, 0.1); color: var(--brand-green); }
+  .mode-badge--diverge { background: rgba(123, 184, 255, 0.1); color: var(--accent-blue); }
+  .mode-badge--wait { background: rgba(220, 179, 100, 0.1); color: var(--accent-amber); }
+  .mode-badge--propose { background: rgba(191, 165, 255, 0.1); color: var(--accent-violet); }
+  .mode-badge--conclude { background: rgba(255, 147, 146, 0.1); color: var(--accent-coral); }
+
+  .mode-badge__dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: currentColor; flex-shrink: 0;
+  }
+
+  /* ========== Side panel ========== */
+  .side-panel {
+    flex-shrink: 0;
+    width: 200px;
+    margin-left: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .side-card {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 10px;
+  }
+
+  .side-card__title {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 4px;
+  }
+
+  .side-card__body {
+    font-size: 10px;
+    color: var(--text-tertiary);
+    line-height: 1.5;
+  }
+
+  /* ========== Legend ========== */
+  .legend {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 24px;
+    padding: 12px 16px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+  }
+
+  .legend__item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--text-secondary);
+  }
+
+  .legend__swatch {
+    width: 14px; height: 14px;
+    border-radius: 3px;
+    border: 1px solid var(--border-strong);
+  }
+
+  /* ========== Section heading ========== */
+  .section-heading {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-default);
+    margin: 32px 0 12px 0;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .section-heading__num {
+    font-size: 11px;
+    color: var(--brand-green);
+    font-family: var(--font-mono);
+    background: rgba(50, 240, 140, 0.1);
+    padding: 2px 8px;
+    border-radius: 4px;
+  }
+
+  /* ========== Tag ========== */
+  .tag {
+    display: inline-block;
+    font-size: 9px;
+    font-weight: 600;
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-family: var(--font-mono);
+    vertical-align: middle;
+  }
+  .tag--phase-a { background: rgba(50, 240, 140, 0.12); color: var(--brand-green); }
+  .tag--phase-b { background: rgba(123, 184, 255, 0.12); color: var(--accent-blue); }
+  .tag--phase-c { background: rgba(191, 165, 255, 0.12); color: var(--accent-violet); }
+  .tag--phase-d { background: rgba(220, 179, 100, 0.12); color: var(--accent-amber); }
+  .tag--phase-e { background: rgba(4, 203, 229, 0.12); color: var(--accent-cyan); }
+
+  /* ========== WS push box ========== */
+  .ws-push {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-top: 10px;
+  }
+
+  .ws-push__item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 10px;
+    color: var(--text-secondary);
+    font-family: var(--font-mono);
+  }
+
+  .ws-push__icon {
+    color: var(--accent-coral);
+    font-size: 11px;
+  }
+
+  /* ========== Vertical flow ========== */
+  .vflow {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+  }
+
+  /* ========== Loop indicator ========== */
+  .loop-arrow {
+    font-size: 10px;
+    color: var(--accent-cyan);
+    font-family: var(--font-mono);
+    padding: 2px 8px;
+    background: rgba(4, 203, 229, 0.06);
+    border-radius: 4px;
+    border: 1px solid rgba(4, 203, 229, 0.2);
+  }
+
+  /* ========== Connector line ========== */
+  .connector {
+    width: 1px;
+    height: 20px;
+    background: var(--border-strong);
+    margin: 0 auto;
+  }
+
+  .connector--dashed {
+    background: none;
+    border-left: 1px dashed var(--border-strong);
+  }
+
+  /* ========== Diagram canvas ========== */
+  .diagram {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .diagram__main {
+    display: flex;
+    align-items: flex-start;
+  }
+</style>
+</head>
+<body>
+
+<h1>DingRingJ 融合方案 · 核心流程大图</h1>
+<p class="subtitle">Phase A-E 完整链路:用户消息 → StateGraph 编排 → Agent 发言 → WS 推送</p>
+
+<!-- Legend -->
+<div class="legend">
+  <div class="legend__item"><div class="legend__swatch" style="background:rgba(50,240,140,0.08);border-color:var(--brand-green)"></div>入口/出口</div>
+  <div class="legend__item"><div class="legend__swatch" style="background:rgba(123,184,255,0.08);border-color:var(--accent-blue)"></div>条件判断</div>
+  <div class="legend__item"><div class="legend__swatch" style="background:rgba(191,165,255,0.06);border-color:rgba(191,165,255,0.3)"></div>Agent 节点</div>
+  <div class="legend__item"><div class="legend__swatch" style="background:rgba(220,179,100,0.06);border-color:rgba(220,179,100,0.3)"></div>Function 节点</div>
+  <div class="legend__item"><div class="legend__swatch" style="background:rgba(4,203,229,0.06);border-color:rgba(4,203,229,0.3)"></div>循环/模式</div>
+  <div class="legend__item"><div class="legend__swatch" style="background:rgba(102,107,117,0.12);border-color:var(--text-tertiary)"></div>END</div>
+</div>
+
+<div class="diagram">
+
+  <!-- ===== Section 1: 用户消息入口 (Adapter + App) ===== -->
+  <div class="section-heading">
+    <span class="section-heading__num">1</span>
+    用户消息入口 <span class="tag tag--phase-a">Phase A</span> <span class="tag tag--phase-b">Phase B</span>
+  </div>
+
+  <div class="layer-band layer-band--adapter">
+    <span class="layer-label">ADAPTER</span>
+    <div class="layer-title">adapter 层 · 外部接入</div>
+    <div class="flow-row">
+      <div class="node node--start">
+        <div class="node__title">用户</div>
+        <div class="node__desc">发送消息 / @提及</div>
+      </div>
+      <div class="arrow"><span class="arrow__label">WebSocket</span></div>
+      <div class="node">
+        <div class="node__title">ChatWebSocketHandler</div>
+        <div class="node__desc">WsMessageDispatcher 路由</div>
+      </div>
+      <div class="arrow"><span class="arrow__label">SEND_MESSAGE</span></div>
+      <div class="node node--function">
+        <div class="node__title">GroupController</div>
+        <div class="node__desc">REST + WS 入口</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="connector"></div>
+
+  <div class="layer-band layer-band--app">
+    <span class="layer-label">APP</span>
+    <div class="layer-title">app 层 · 业务编排</div>
+    <div class="flow-row">
+      <div class="node node--function">
+        <div class="node__title">ChatOrchestrator</div>
+        <div class="node__desc">消息入库 → 广播 → 投递信号</div>
+      </div>
+      <div class="arrow"><span class="arrow__label">onUserSignal()</span></div>
+      <div class="node node--function">
+        <div class="node__title">DiscussionEngine</div>
+        <div class="node__desc">~200行 · 信号队列 + paceForMode<br>+ 调 advance()</div>
+      </div>
+      <div class="arrow"><span class="arrow__label">advance()</span></div>
+      <div class="node node--decision">
+        <div class="node__title">DiscussionFlowService</div>
+        <div class="node__desc">端口(domain) → SaaWorkflow(infra)</div>
+      </div>
+
+      <!-- Side: WS 推送 -->
+      <div class="side-panel">
+        <div class="side-card">
+          <div class="side-card__title">GroupBroadcastService <span class="tag tag--phase-b">Phase B</span></div>
+          <div class="side-card__body">统一 WS 推送端口</div>
+          <div class="ws-push">
+            <div class="ws-push__item"><span class="ws-push__icon">→</span> NEW_MESSAGE</div>
+            <div class="ws-push__item"><span class="ws-push__icon">→</span> MESSAGE_DELTA / COMPLETE</div>
+            <div class="ws-push__item"><span class="ws-push__icon">→</span> AGENT_TYPING</div>
+            <div class="ws-push__item"><span class="ws-push__icon">→</span> TOPIC_CREATED</div>
+            <div class="ws-push__item"><span class="ws-push__icon">→</span> TOPIC_STATUS <span class="tag tag--phase-c">Phase C</span></div>
+            <div class="ws-push__item"><span class="ws-push__icon">→</span> CONCLUDE_PROPOSED <span class="tag tag--phase-c">Phase C</span></div>
+            <div class="ws-push__item"><span class="ws-push__icon">→</span> TOPIC_CLOSED</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="connector"></div>
+
+  <!-- ===== Section 2: StateGraph Workflow (Infra) ===== -->
+  <div class="section-heading">
+    <span class="section-heading__num">2</span>
+    StateGraph 工作流编排 <span class="tag tag--phase-c">Phase C 核心</span>
+  </div>
+
+  <div class="layer-band layer-band--domain">
+    <span class="layer-label">DOMAIN</span>
+    <div class="layer-title">domain 层 · 流程定义(纯数据,不依赖 SAA)</div>
+    <div class="flow-row">
+      <div class="node node--function">
+        <div class="node__title">GroupChatFlowDefinition</div>
+        <div class="node__desc">app 层组装 · build() 返回<br>DiscussionFlowDefinition</div>
+      </div>
+      <div class="arrow"><span class="arrow__label">FlowNode + FlowEdge + DiscussionRules</span></div>
+      <div class="node">
+        <div class="node__title">DiscussionFlowDefinition</div>
+        <div class="node__desc">节点列表 + 边列表 + 业务规则<br>纯 domain record</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="connector"></div>
+
+  <div class="layer-band layer-band--infra">
+    <span class="layer-label">INFRA</span>
+    <div class="layer-title">infrastructure 层 · SAA StateGraph 实现</div>
+
+    <!-- Preprocess → Intent Classify -->
+    <div class="flow-row" style="margin-bottom: 4px;">
+      <div class="node node--function">
+        <div class="node__title">preprocess</div>
+        <div class="node__desc">PreprocessNode<br>信号预处理 · @解析</div>
+      </div>
+      <div class="arrow"></div>
+      <div class="node node--decision">
+        <div class="node__title">intent-classify</div>
+        <div class="node__desc">IntentClassifyNode<br>LLM 意图分类<br>prompt: Nacos</div>
+      </div>
+    </div>
+
+    <!-- Three branches -->
+    <div style="height: 20px; width: 1px; background: var(--border-strong); margin: 0 auto 8px auto;"></div>
+
+    <div style="display: flex; gap: 12px; justify-content: center;">
+
+      <!-- CHAT branch -->
+      <div class="branch__lane branch__lane--chat" style="display: flex; flex-direction: column; gap: 0; padding: 14px 12px 8px 12px;">
+        <span class="branch__lane-label">intent == 'CHAT'</span>
+        <div class="flow-row" style="margin-bottom: 4px;">
+          <div class="node node--agent" style="min-width: 90px;">
+            <div class="node__title">chat</div>
+            <div class="node__desc">ChatNode<br>轻量闲聊</div>
+          </div>
+        </div>
+        <div style="text-align: center; font-size: 9px; color: var(--text-tertiary); font-family: var(--font-mono); margin: 2px 0;">chatBuffer ≥ 15?</div>
+        <div class="flow-row" style="margin-bottom: 4px;">
+          <div class="node node--agent" style="min-width: 90px;">
+            <div class="node__title">profile-extract</div>
+            <div class="node__desc">全局画像提炼<br>SimpleProfileService</div>
+          </div>
+        </div>
+        <div class="connector connector--dashed" style="height: 12px;"></div>
+        <div class="node node--end" style="min-width: 90px;">
+          <div class="node__title">END</div>
+          <div class="node__desc">等下一条消息</div>
+        </div>
+      </div>
+
+      <!-- DISCUSS branch (core) -->
+      <div class="branch__lane branch__lane--discuss" style="display: flex; flex-direction: column; gap: 0; padding: 14px 12px 8px 12px; min-width: 420px;">
+        <span class="branch__lane-label">intent == 'DISCUSS'</span>
+
+        <!-- ensure-topic -->
+        <div class="flow-row" style="margin-bottom: 4px; justify-content: center;">
+          <div class="node node--function" style="min-width: 130px;">
+            <div class="node__title">ensure-topic</div>
+            <div class="node__desc">EnsureTopicNode<br>追溯建题 + 历史回溯<br><span style="color: var(--accent-violet)">userHistoryHint</span></div>
+          </div>
+        </div>
+        <div class="connector" style="height: 12px;"></div>
+
+        <!-- discuss node + modes -->
+        <div class="flow-row" style="justify-content: center; gap: 12px; margin-bottom: 8px;">
+          <div class="node node--agent" style="min-width: 130px;">
+            <div class="node__title">discuss</div>
+            <div class="node__desc">DiscussNode<br>SpeakerScheduler 选人<br>+ LLM 发言 + StreamMarkerGuard<br>上下文: 观点列表 + 近期窗口</div>
+          </div>
+
+          <!-- Mode badges -->
+          <div class="mode-group" style="min-width: 160px;">
+            <div class="mode-group__title">discussMode (条件边)</div>
+            <div class="mode-badge mode-badge--converge">
+              <span class="mode-badge__dot"></span>
+              CONVERGE → 立即下一轮
+            </div>
+            <div class="mode-badge mode-badge--diverge">
+              <span class="mode-badge__dot"></span>
+              DIVERGE → pace 2s · N/3 轮
+            </div>
+            <div class="mode-badge mode-badge--wait">
+              <span class="mode-badge__dot"></span>
+              WAIT → 阻塞等用户
+            </div>
+            <div class="mode-badge mode-badge--propose">
+              <span class="mode-badge__dot"></span>
+              CONCLUDE_PROPOSED → 等用户确认
+            </div>
+            <div class="mode-badge mode-badge--conclude">
+              <span class="mode-badge__dot"></span>
+              CONCLUDE → 用户要求/熔断
+            </div>
+          </div>
+        </div>
+
+        <!-- Loop indicator -->
+        <div style="text-align: center; margin-bottom: 4px;">
+          <span class="loop-arrow">↻ self-loop (CONVERGE / DIVERGE)</span>
+        </div>
+
+        <div class="connector" style="height: 12px;"></div>
+
+        <!-- conclude + sediment -->
+        <div class="flow-row" style="justify-content: center; gap: 0; margin-bottom: 4px;">
+          <div class="node node--agent" style="min-width: 110px;">
+            <div class="node__title">conclude</div>
+            <div class="node__desc">ConcludeNode<br>STAR 总结<br>prompt: Nacos</div>
+          </div>
+          <div class="arrow"></div>
+          <div class="node node--agent" style="min-width: 110px;">
+            <div class="node__title">sediment</div>
+            <div class="node__desc">SedimentNode<br>知识卡片抽取</div>
+          </div>
+        </div>
+        <div class="connector connector--dashed" style="height: 12px;"></div>
+        <div class="node node--end" style="min-width: 90px; margin: 0 auto;">
+          <div class="node__title">END</div>
+          <div class="node__desc">TopicClosed 事件</div>
+        </div>
+      </div>
+
+      <!-- WORK branch -->
+      <div class="branch__lane branch__lane--work" style="display: flex; flex-direction: column; gap: 0; padding: 14px 12px 8px 12px;">
+        <span class="branch__lane-label">intent == 'WORK'</span>
+        <div class="flow-row" style="margin-bottom: 4px;">
+          <div class="node node--agent" style="min-width: 90px;">
+            <div class="node__title">work</div>
+            <div class="node__desc">WorkNode<br>单 Agent ReAct<br><span class="tag tag--phase-d">Phase D</span></div>
+          </div>
+        </div>
+        <div class="flow-row" style="margin-bottom: 4px;">
+          <div class="node node--agent" style="min-width: 90px;">
+            <div class="node__title">sediment</div>
+            <div class="node__desc">工作产出沉淀</div>
+          </div>
+        </div>
+        <div class="connector connector--dashed" style="height: 12px;"></div>
+        <div class="node node--end" style="min-width: 90px;">
+          <div class="node__title">END</div>
+          <div class="node__desc">产出完成</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Section 3: 支撑系统 ===== -->
+  <div class="section-heading">
+    <span class="section-heading__num">3</span>
+    支撑系统
+  </div>
+
+  <div style="display: flex; gap: 16px; flex-wrap: wrap;">
+
+    <!-- Nacos Prompt -->
+    <div class="side-card" style="flex: 1; min-width: 220px;">
+      <div class="side-card__title">Nacos Prompt <span class="tag tag--phase-a">Phase A</span></div>
+      <div class="side-card__body">
+        <div style="margin-bottom: 6px;">层2 流程级(热更新):</div>
+        <div style="font-family: var(--font-mono); font-size: 9px; color: var(--text-secondary); line-height: 1.8;">
+          intent-classify · conclude · moderator<br>
+          collaboration-protocol · profile-extract<br>
+          message-viewpoint · topic-profile
+        </div>
+        <div style="margin-top: 6px;">层3 能力级 <span class="tag tag--phase-d">Phase D</span>:</div>
+        <div style="font-family: var(--font-mono); font-size: 9px; color: var(--text-secondary);">
+          Tool description · Hook prompt
+        </div>
+        <div style="margin-top: 6px; color: var(--text-tertiary);">本地兜底: classpath:/prompt-config.json</div>
+      </div>
+    </div>
+
+    <!-- Message Tagger -->
+    <div class="side-card" style="flex: 1; min-width: 220px;">
+      <div class="side-card__title">消息标签 + 观点摘要 <span class="tag tag--phase-c">Phase C</span></div>
+      <div class="side-card__body">
+        <div style="display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 6px;">
+          <span class="mode-badge mode-badge--converge" style="font-size: 9px; padding: 2px 6px;">KEY</span>
+          <span class="mode-badge mode-badge--diverge" style="font-size: 9px; padding: 2px 6px;">VIEWPOINT</span>
+          <span class="mode-badge mode-badge--wait" style="font-size: 9px; padding: 2px 6px;">NOISE</span>
+          <span class="mode-badge mode-badge--propose" style="font-size: 9px; padding: 2px 6px;">MARKER_*</span>
+        </div>
+        <div>MessageTagger: 规则判定(零 LLM)</div>
+        <div>MessageSummaryHandler: VIEWPOINT → LLM 判断+摘要(一次调用)</div>
+        <div style="color: var(--brand-green); margin-top: 4px;">10万 token → ~2500 token (40x)</div>
+      </div>
+    </div>
+
+    <!-- Topic Profile -->
+    <div class="side-card" style="flex: 1; min-width: 220px;">
+      <div class="side-card__title">话题级用户画像 <span class="tag tag--phase-c">Phase C</span></div>
+      <div class="side-card__body">
+        <div>TopicClosed → LLM 分析用户表现</div>
+        <div style="font-family: var(--font-mono); font-size: 9px; color: var(--text-secondary); margin: 4px 0;">
+          user_topic_profile 表
+        </div>
+        <div>理解程度 / 薄弱点 / 亮点 / 建议</div>
+        <div style="margin-top: 4px;">话题重启 → 回溯历史 → 进步轨迹</div>
+        <div style="margin-top: 4px; color: var(--accent-violet);">→ userHistoryHint (给 Agent)</div>
+        <div style="color: var(--accent-coral);">→ restartHint (给前端)</div>
+      </div>
+    </div>
+
+    <!-- ReactAgent -->
+    <div class="side-card" style="flex: 1; min-width: 220px;">
+      <div class="side-card__title">ReactAgent + Toolkit <span class="tag tag--phase-d">Phase D</span></div>
+      <div class="side-card__body">
+        <div>SAA ReactAgent 替代裸 LLM 调用</div>
+        <div style="margin-top: 4px;">讨论 maxIters=3 · 工作 maxIters=15</div>
+        <div style="margin-top: 4px;">Hook: MemoryInjection / ProfileInjection / StreamMarker</div>
+        <div style="margin-top: 4px;">协作标记 → Tool 调用</div>
+      </div>
+    </div>
+
+    <!-- RAG -->
+    <div class="side-card" style="flex: 1; min-width: 220px;">
+      <div class="side-card__title">RAG VectorStore <span class="tag tag--phase-e">Phase E</span></div>
+      <div class="side-card__body">
+        <div>Spring AI VectorStore (PgVector)</div>
+        <div style="margin-top: 4px;">知识检索 → KnowledgeSearchTool</div>
+        <div style="margin-top: 4px;">讨论态注入 · 收束态引用</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Section 4: CONCLUDE_PROPOSED 流程 ===== -->
+  <div class="section-heading">
+    <span class="section-heading__num">4</span>
+    Agent 提议收束 + 用户确认 <span class="tag tag--phase-c">Phase C</span>
+  </div>
+
+  <div class="layer-band layer-band--app">
+    <span class="layer-label">FLOW</span>
+    <div class="flow-row" style="gap: 0;">
+      <div class="node node--agent">
+        <div class="node__title">Agent 输出</div>
+        <div class="node__desc">[[CONCLUDE]]</div>
+      </div>
+      <div class="arrow"><span class="arrow__label">不直接收束</span></div>
+      <div class="node node--decision">
+        <div class="node__title">CONCLUDE_PROPOSED</div>
+        <div class="node__desc">runLoop 推送 WS<br>等用户确认</div>
+      </div>
+      <div class="arrow"><span class="arrow__label">queue.poll(5min)</span></div>
+
+      <div style="display: flex; flex-direction: column; gap: 6px;">
+        <div class="node node--start" style="min-width: 100px;">
+          <div class="node__title">用户确认</div>
+          <div class="node__desc">→ 正式收束</div>
+        </div>
+        <div class="node node--function" style="min-width: 100px;">
+          <div class="node__title">用户拒绝</div>
+          <div class="node__desc">→ CONVERGE 继续</div>
+        </div>
+        <div class="node node--end" style="min-width: 100px;">
+          <div class="node__title">超时 5min</div>
+          <div class="node__desc">→ 自动收束(兜底)</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Section 5: Phase 时间线 ===== -->
+  <div class="section-heading">
+    <span class="section-heading__num">5</span>
+    Phase 实施顺序
+  </div>
+
+  <div class="flow-row" style="gap: 4px; flex-wrap: wrap;">
+    <div class="node" style="min-width: 100px;">
+      <div class="node__title">Phase 0</div>
+      <div class="node__desc">版本升级<br>SAA 1.1.2.2</div>
+    </div>
+    <div class="arrow" style="width: 20px;"></div>
+    <div class="node" style="min-width: 100px;">
+      <div class="node__title">Phase A</div>
+      <div class="node__desc">SAA Model<br>+ Nacos Prompt</div>
+    </div>
+    <div class="arrow" style="width: 20px;"></div>
+    <div class="node" style="min-width: 100px;">
+      <div class="node__title">Phase B</div>
+      <div class="node__desc">群聊消息<br>广播统一</div>
+    </div>
+    <div class="arrow" style="width: 20px;"></div>
+    <div class="node node--loop" style="min-width: 100px;">
+      <div class="node__title" style="color: var(--accent-violet)">Phase C</div>
+      <div class="node__desc">StateGraph<br>Workflow 重构<br>← 核心</div>
+    </div>
+    <div class="arrow" style="width: 20px;"></div>
+    <div class="node" style="min-width: 100px;">
+      <div class="node__title">Phase D</div>
+      <div class="node__desc">ReactAgent<br>+ Toolkit</div>
+    </div>
+    <div class="arrow" style="width: 20px;"></div>
+    <div class="node" style="min-width: 100px;">
+      <div class="node__title">Phase E</div>
+      <div class="node__desc">RAG<br>VectorStore</div>
+    </div>
+    <div class="arrow" style="width: 20px;"></div>
+    <div class="node" style="min-width: 100px;">
+      <div class="node__title">Phase F</div>
+      <div class="node__desc">SKILL<br>+ Supervisor</div>
+    </div>
+  </div>
+
+  <div style="margin-top: 16px; font-size: 10px; color: var(--text-tertiary); text-align: center;">
+    Phase 0-C 串行执行(每步验证) · Phase D-E 可并行 · Phase F 最后
+  </div>
+
+</div>
+
+</body>
+</html>

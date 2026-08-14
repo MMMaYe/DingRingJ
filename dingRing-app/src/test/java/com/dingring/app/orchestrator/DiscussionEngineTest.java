@@ -5,7 +5,7 @@ import com.dingring.common.constant.WsConstants;
 import com.dingring.domain.discussion.Topic;
 import com.dingring.domain.discussion.TopicRepository;
 import com.dingring.domain.discussion.TopicStatus;
-import com.dingring.domain.service.DiscussionFlowService;
+import com.dingring.domain.service.FlowService;
 import com.dingring.domain.service.GroupBroadcastService;
 import com.dingring.domain.workflow.DiscussionFlowResult;
 import com.dingring.domain.workflow.DiscussionRules;
@@ -44,7 +44,7 @@ class DiscussionEngineTest {
 
     private static final long WAIT = 3000;
 
-    private DiscussionFlowService discussionFlowService;
+    private FlowService flowService;
     private TopicRepository topicRepository;
     private GroupBroadcastService groupBroadcastService;
     private ConclusionService conclusionService;
@@ -53,6 +53,7 @@ class DiscussionEngineTest {
     /** 测试用规则：超短超时让阻塞场景快速返回 */
     private final DiscussionRules rules = new DiscussionRules(
             100,    // divergePaceMs（测试用短间隔）
+            2,      // maxAutoRounds（自主推进兜底上限，测试用 2 便于验证让位）
             3,      // maxDivergeRounds
             100,    // maxRounds
             15,     // profileExtractThreshold
@@ -63,11 +64,11 @@ class DiscussionEngineTest {
 
     @BeforeEach
     void setUp() {
-        discussionFlowService = mock(DiscussionFlowService.class);
+        flowService = mock(FlowService.class);
         topicRepository = mock(TopicRepository.class);
         groupBroadcastService = mock(GroupBroadcastService.class);
         conclusionService = mock(ConclusionService.class);
-        engine = new DiscussionEngine(discussionFlowService, rules,
+        engine = new DiscussionEngine(flowService, rules,
                 topicRepository, groupBroadcastService, conclusionService);
     }
 
@@ -158,7 +159,7 @@ class DiscussionEngineTest {
 
             // 等待循环启动（findActive 被调用说明循环已执行），再确认 advance 未被调用
             verify(topicRepository, timeout(WAIT)).findActiveByGroupId(1L);
-            verify(discussionFlowService, never()).advance(any(), any());
+            verify(flowService, never()).advance(any(), any());
         }
 
         @Test
@@ -166,14 +167,14 @@ class DiscussionEngineTest {
         void signalWithConcludedResultShouldExitAfterOneAdvance() {
             Topic topic = activeTopic(100L, 1L);
             when(topicRepository.findActiveByGroupId(1L)).thenReturn(Optional.of(topic));
-            when(discussionFlowService.advance(any(), any()))
+            when(flowService.advance(any(), any()))
                     .thenReturn(result(true, StateKeys.MODE_CONCLUDE, null));
 
             engine.onUserSignal(1L, signal("结束讨论"));
 
             // advance 被调用一次，inputs 包含用户消息
             ArgumentCaptor<Map<String, Object>> inputsCaptor = ArgumentCaptor.forClass(Map.class);
-            verify(discussionFlowService, timeout(WAIT)).advance(eq(rules), inputsCaptor.capture());
+            verify(flowService, timeout(WAIT)).advance(eq(rules), inputsCaptor.capture());
             assertThat(inputsCaptor.getValue().get(StateKeys.INPUT)).isEqualTo("结束讨论");
             assertThat(inputsCaptor.getValue().get(StateKeys.GROUP_ID)).isEqualTo(1L);
         }
@@ -185,14 +186,14 @@ class DiscussionEngineTest {
             // 第一次：用户信号返回 DIVERGE（建立发散模式）
             // 第二次：无信号 pace 超时 → advanceAuto 返回 concluded 退出
             when(topicRepository.findActiveByGroupId(1L)).thenReturn(Optional.of(topic));
-            when(discussionFlowService.advance(any(), any()))
+            when(flowService.advance(any(), any()))
                     .thenReturn(result(false, StateKeys.MODE_DIVERGE, null))
                     .thenReturn(result(true, StateKeys.MODE_CONCLUDE, null));
 
             engine.onUserSignal(1L, signal("发散讨论"));
 
             // advance 被调用两次：第一次用户信号驱动，第二次 DIVERGE 自主推进
-            verify(discussionFlowService, timeout(WAIT).times(2)).advance(eq(rules), any());
+            verify(flowService, timeout(WAIT).times(2)).advance(eq(rules), any());
         }
 
         @Test
@@ -206,17 +207,95 @@ class DiscussionEngineTest {
             proposedState.put(StateKeys.TOPIC_ID, 100L);
             proposedState.put(StateKeys.TOPIC_TITLE, "收束中主题");
             proposedState.put(StateKeys.CONCLUDER_AGENT_ID, 77L);
-            when(discussionFlowService.advance(any(), any()))
+            when(flowService.advance(any(), any()))
                     .thenReturn(result(false, StateKeys.MODE_CONCLUDE_PROPOSED, proposedState));
 
             engine.onUserSignal(1L, signal("可以总结了吗"));
 
             // 第一次 advance：用户信号驱动
-            verify(discussionFlowService, timeout(WAIT)).advance(eq(rules), any());
+            verify(flowService, timeout(WAIT)).advance(eq(rules), any());
             // 广播提议收束状态
             verify(groupBroadcastService, timeout(WAIT))
                     .broadcast(eq(1L), eq(WsConstants.TOPIC_STATUS_CHANGED), any());
             // 超时后 runConcludeFlow 委托 ConclusionService 触发收束（TIMEOUT）
+            verify(conclusionService, timeout(WAIT + rules.concludeConfirmTimeoutMs()))
+                    .triggerAsync(eq(100L), eq(1L), eq("TIMEOUT"), eq(77L));
+        }
+
+        @Test
+        @DisplayName("有活跃话题 + CONVERGE 模式 + pace 超时：advanceAuto 被调用推进一轮")
+        void convergePaceTimeoutShouldAutoAdvance() {
+            Topic topic = activeTopic(100L, 1L);
+            // 第一次：用户信号返回 CONVERGE（真实发言）
+            // 第二次：无信号 pace 超时 → advanceAuto 返回 concluded 退出
+            when(topicRepository.findActiveByGroupId(1L)).thenReturn(Optional.of(topic));
+            when(flowService.advance(any(), any()))
+                    .thenReturn(result(false, StateKeys.MODE_CONVERGE, null))
+                    .thenReturn(result(true, StateKeys.MODE_CONCLUDE, null));
+
+            engine.onUserSignal(1L, signal("讨论一下"));
+
+            // advance 被调用两次：第一次用户信号驱动，第二次 CONVERGE 自主推进
+            verify(flowService, timeout(WAIT).times(2)).advance(eq(rules), any());
+        }
+
+        @Test
+        @DisplayName("CONVERGE 自主推进达 maxAutoRounds 上限后让位，不再 advance")
+        void convergeReachesMaxAutoRoundsShouldYield() {
+            Topic topic = activeTopic(100L, 1L);
+            when(topicRepository.findActiveByGroupId(1L)).thenReturn(Optional.of(topic));
+            // 所有 advance 都返回 CONVERGE（无人 [[ASK_USER]] 让位），靠 maxAutoRounds 兜底
+            when(flowService.advance(any(), any()))
+                    .thenReturn(result(false, StateKeys.MODE_CONVERGE, null));
+
+            engine.onUserSignal(1L, signal("讨论一下"));
+
+            // 1 次信号驱动 + maxAutoRounds(2) 次自主推进 = 3 次，之后强制让位不再推进
+            verify(flowService, timeout(WAIT).times(3)).advance(eq(rules), any());
+        }
+
+        @Test
+        @DisplayName("advance 返回 WAIT：阻塞后用户回答被 advanceFlow 消费（不吞消息）")
+        void waitModeShouldConsumeUserAnswer() {
+            Topic topic = activeTopic(100L, 1L);
+            when(topicRepository.findActiveByGroupId(1L)).thenReturn(Optional.of(topic));
+            // 第一次：用户消息返回 WAIT（Agent [[ASK_USER]] 让位）
+            // 第二次：用户回答返回 CONCLUDE（结束，避免后续自主推进干扰计数）
+            when(flowService.advance(any(), any()))
+                    .thenReturn(result(false, StateKeys.MODE_WAIT, null))
+                    .thenReturn(result(true, StateKeys.MODE_CONCLUDE, null));
+
+            engine.onUserSignal(1L, signal("你更倾向哪个？"));
+            // 等第一个 advance（返回 WAIT）处理完再发回答，避免背压信号被 queue.clear() 清掉
+            verify(flowService, timeout(WAIT)).advance(eq(rules), any());
+            engine.onUserSignal(1L, signal("我的回答"));
+
+            // 第二次 advance 的 INPUT 应为用户回答（证明没被旧的 queue.take() 吞掉）
+            ArgumentCaptor<Map<String, Object>> inputsCaptor = ArgumentCaptor.forClass(Map.class);
+            verify(flowService, timeout(WAIT).times(2)).advance(eq(rules), inputsCaptor.capture());
+            assertThat(inputsCaptor.getAllValues().get(1).get(StateKeys.INPUT)).isEqualTo("我的回答");
+        }
+
+        @Test
+        @DisplayName("auto-advance 返回 CONCLUDE_PROPOSED：走确认流程（广播 + 超时兜底）")
+        void autoAdvanceConcludeProposedShouldHandleConfirm() {
+            Topic topic = activeTopic(100L, 1L);
+            when(topicRepository.findActiveByGroupId(1L)).thenReturn(Optional.of(topic));
+            // 第一次：用户信号返回 CONVERGE；第二次：pace 超时 auto-advance 返回 CONCLUDE_PROPOSED
+            Map<String, Object> proposedState = new HashMap<>();
+            proposedState.put(StateKeys.TOPIC_ID, 100L);
+            proposedState.put(StateKeys.TOPIC_TITLE, "收束中主题");
+            proposedState.put(StateKeys.CONCLUDER_AGENT_ID, 77L);
+            when(flowService.advance(any(), any()))
+                    .thenReturn(result(false, StateKeys.MODE_CONVERGE, null))
+                    .thenReturn(result(false, StateKeys.MODE_CONCLUDE_PROPOSED, proposedState));
+
+            engine.onUserSignal(1L, signal("讨论一下"));
+
+            // auto-advance 产出 CONCLUDE_PROPOSED → 必须广播提议 + 等确认超时后委托 ConclusionService
+            verify(flowService, timeout(WAIT).times(2)).advance(eq(rules), any());
+            verify(groupBroadcastService, timeout(WAIT))
+                    .broadcast(eq(1L), eq(WsConstants.TOPIC_STATUS_CHANGED), any());
             verify(conclusionService, timeout(WAIT + rules.concludeConfirmTimeoutMs()))
                     .triggerAsync(eq(100L), eq(1L), eq("TIMEOUT"), eq(77L));
         }
