@@ -9,6 +9,7 @@ import org.mockito.ArgumentCaptor;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.util.List;
 import java.util.Map;
@@ -26,12 +27,14 @@ import static org.mockito.Mockito.when;
 class TopicVectorServiceImplTest {
 
     private VectorStore topicVectorStore;
+    private JdbcTemplate vectorJdbcTemplate;
     private TopicVectorServiceImpl service;
 
     @BeforeEach
     void setUp() {
         topicVectorStore = mock(VectorStore.class);
-        service = new TopicVectorServiceImpl(topicVectorStore);
+        vectorJdbcTemplate = mock(JdbcTemplate.class);
+        service = new TopicVectorServiceImpl(topicVectorStore, vectorJdbcTemplate);
     }
 
     @Test
@@ -78,5 +81,35 @@ class TopicVectorServiceImplTest {
         when(topicVectorStore.similaritySearch(any(SearchRequest.class))).thenReturn(List.of(dirty));
 
         assertThat(service.findSimilarTopics("q", 3, 0.7)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("indexTopic 先删旧向量再写入（同 topicId 幂等，防事件重放累积重复）")
+    void shouldDeleteBeforeIndexForIdempotency() {
+        Topic topic = new Topic();
+        topic.setId(5L);
+        topic.setChatGroupId(2L);
+        topic.setTitle("Java内存模型");
+
+        service.indexTopic(topic);
+
+        // 先删后写：DELETE 在 add 之前执行（inOrder 锁定顺序）
+        org.mockito.InOrder inOrder = org.mockito.Mockito.inOrder(vectorJdbcTemplate, topicVectorStore);
+        inOrder.verify(vectorJdbcTemplate).update(
+                org.mockito.ArgumentMatchers.eq("DELETE FROM topic_id_store WHERE metadata->>'topicId' = ?"),
+                org.mockito.ArgumentMatchers.eq("5"));
+        inOrder.verify(topicVectorStore).add(org.mockito.ArgumentMatchers.anyList());
+    }
+
+    @Test
+    @DisplayName("metadata topicId 为 Integer（Jackson 反序列化真实路径）也能解析")
+    void shouldParseIntegerTopicId() {
+        Document hit = new Document("历史话题", Map.of("topicId", 7, "distance", 0.2));
+        when(topicVectorStore.similaritySearch(any(SearchRequest.class))).thenReturn(List.of(hit));
+
+        List<TopicVectorService.SimilarTopic> result = service.findSimilarTopics("q", 3, 0.7);
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).topicId()).isEqualTo(7L);
     }
 }
