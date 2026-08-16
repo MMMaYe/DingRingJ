@@ -16,6 +16,7 @@ import com.dingring.domain.group.GroupRepository;
 import com.dingring.domain.group.MessageRepository;
 import com.dingring.domain.service.DomainEventPublisher;
 import com.dingring.domain.service.GroupBroadcastService;
+import com.dingring.domain.service.TopicVectorService;
 import com.dingring.domain.user.UserTopicProfile;
 import com.dingring.domain.user.UserTopicProfileRepository;
 import com.dingring.domain.workflow.StateKeys;
@@ -27,6 +28,7 @@ import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -53,12 +55,17 @@ public class EnsureTopicNode implements NodeAction {
     /** 连续 LOW 置信度 DISCUSS 达该次数即建题（与原 DiscussionEngine 保持一致） */
     private static final int LOW_DISCUSS_CREATE_STREAK = 2;
 
+    /** 语义回溯相似度阈值：低于此值的历史话题视为不相关 */
+    private static final double SIMILAR_THRESHOLD = 0.75;
+    private static final int SIMILAR_TOP_K = 3;
+
     private final GroupRepository groupRepository;
     private final TopicRepository topicRepository;
     private final MessageRepository messageRepository;
     private final DomainEventPublisher eventPublisher;
     private final GroupBroadcastService groupBroadcastService;
     private final UserTopicProfileRepository topicProfileRepository;
+    private final TopicVectorService topicVectorService;
 
     /**
      * 追溯式建题。
@@ -156,9 +163,9 @@ public class EnsureTopicNode implements NodeAction {
         // 回填上一个主题关闭之后的近期闲聊消息到新主题
         int backfilled = backfillChatMessages(groupId, topic.getId(), backfillLimit);
 
-        // 话题重启回溯（方案 6.3.7）：按标题查用户历史表现，生成给前端的 restartHint + 给 Agent 的 userHistoryHint
-        List<UserTopicProfile> history = topicProfileRepository
-                .findByUserIdAndTopicTitleOrderByCreatedAtDesc(GroupAppService.DEFAULT_USER_ID, topicTitle);
+        // 话题重启回溯（P2 升级：向量语义检索相似历史话题，无命中/异常回退标题精确匹配）
+        TopicBacktrack backtrack = backtrackTopic(topic);
+        List<UserTopicProfile> history = backtrack.history();
         String restartHint = "新话题「" + topic.getTitle() + "」已开始，可以开始讨论";
         String userHistoryHint = "";
         if (!history.isEmpty()) {
@@ -167,10 +174,16 @@ public class EnsureTopicNode implements NodeAction {
                     history.size() + 1, topic.getTitle(),
                     latest.getWeakPoints() == null || latest.getWeakPoints().isBlank()
                             ? "知识深度" : latest.getWeakPoints());
-            userHistoryHint = formatHistoryHint(history);
+            userHistoryHint = formatHistoryHint(history, backtrack.relatedConclusions());
             LogHelper.printLog(EnsureTopicNode.class, "EnsureTopicNode.apply", "ENSURE_TOPIC", "话题重启回溯命中",
-                    "topicId={} title={} 历史次数={}",
-                    topic.getId(), topic.getTitle(), history.size());
+                    "topicId={} title={} 历史次数={} 相似话题结论={}",
+                    topic.getId(), topic.getTitle(), history.size(), backtrack.relatedConclusions().size());
+        } else if (!backtrack.relatedConclusions().isEmpty()) {
+            // 无画像但有相似历史结论：历史讨论沉淀仍有价值（如用户第一次聊但系统已有相关结论）
+            restartHint = "检测到与历史话题「" + backtrack.topSimilarTitle() + "」相关，可参考既往结论展开";
+            userHistoryHint = formatHistoryHint(history, backtrack.relatedConclusions());
+            LogHelper.printLog(EnsureTopicNode.class, "EnsureTopicNode.apply", "ENSURE_TOPIC", "相似话题结论命中",
+                    "topicId={} title={} 相似话题={}", topic.getId(), topic.getTitle(), backtrack.topSimilarTitle());
         }
 
         // 发布领域事件 + WS 广播
@@ -214,11 +227,67 @@ public class EnsureTopicNode implements NodeAction {
     }
 
     /**
+     * 语义回溯：向量检索相似历史话题 → 回查结论与用户画像。
+     * <p>容错链：向量服务异常/返回 null/无命中 → 回退标题精确匹配（Phase E 原逻辑），
+     * 任何情况不阻塞建题。
+     */
+    private TopicBacktrack backtrackTopic(Topic topic) {
+        List<TopicVectorService.SimilarTopic> similar;
+        try {
+            similar = topicVectorService.findSimilarTopics(topic.getTitle(), SIMILAR_TOP_K, SIMILAR_THRESHOLD);
+        } catch (Exception e) {
+            LogHelper.printWarnLog(EnsureTopicNode.class, "EnsureTopicNode.backtrackTopic", "ENSURE_TOPIC",
+                    "语义回溯异常回退精确匹配", "topicId={} 错误: {}", topic.getId(), e.getMessage());
+            similar = List.of();
+        }
+        if (similar == null) {
+            similar = List.of();  // mock 未桩或实现的防御性返回：按无命中处理
+        }
+        // 排除自身（标题撞车/重复讨论时向量库可能召回自己）
+        List<TopicVectorService.SimilarTopic> filtered = similar.stream()
+                .filter(s -> !topic.getId().equals(s.topicId()))
+                .toList();
+
+        if (filtered.isEmpty()) {
+            // 回退：标题精确匹配（原 Phase E 行为）
+            List<UserTopicProfile> exact = topicProfileRepository
+                    .findByUserIdAndTopicTitleOrderByCreatedAtDesc(GroupAppService.DEFAULT_USER_ID, topic.getTitle());
+            return new TopicBacktrack(exact, List.of(), null);
+        }
+
+        List<UserTopicProfile> history = new ArrayList<>();
+        List<String> relatedConclusions = new ArrayList<>();
+        for (TopicVectorService.SimilarTopic s : filtered) {
+            // 相似话题的画像按其标题精确回查（复用既有仓储方法，零 schema 变更）
+            history.addAll(topicProfileRepository.findByUserIdAndTopicTitleOrderByCreatedAtDesc(
+                    GroupAppService.DEFAULT_USER_ID, s.title()));
+            // 相似话题结论（截断 200 字符控制 prompt 长度）
+            topicRepository.findById(s.topicId())
+                    .map(t -> t.getConclusion() == null || t.getConclusion().isBlank()
+                            ? null : t.getConclusion())
+                    .ifPresent(c -> {
+                        String trimmed = c.length() > 200 ? c.substring(0, 200) + "…" : c;
+                        relatedConclusions.add("「" + s.title() + "」：" + trimmed);
+                    });
+        }
+        return new TopicBacktrack(history, relatedConclusions, filtered.get(0).title());
+    }
+
+    /** 语义回溯结果载体 */
+    private record TopicBacktrack(List<UserTopicProfile> history,
+                                  List<String> relatedConclusions,
+                                  String topSimilarTitle) {}
+
+    /**
      * 格式化用户历史表现提示（给 Agent 看，注入 DiscussNode 的 system prompt）。
      * <p>history 按 create_time 倒序，history.get(0) = 最近一次讨论；2 条以上追加进步轨迹，
      * 让 Agent 感知用户是否在进步并调整引导力度。
      */
-    private String formatHistoryHint(List<UserTopicProfile> history) {
+    private String formatHistoryHint(List<UserTopicProfile> history, List<String> relatedConclusions) {
+        if (history.isEmpty()) {
+            return relatedConclusions == null || relatedConclusions.isEmpty() ? ""
+                    : "相关历史话题结论（供参考，勿直接复述）：\n- " + String.join("\n- ", relatedConclusions);
+        }
         UserTopicProfile latest = history.get(0);
         StringBuilder sb = new StringBuilder();
         sb.append("用户上次讨论「").append(latest.getTopicTitle()).append("」时:\n");
@@ -237,6 +306,12 @@ public class EnsureTopicNode implements NodeAction {
             }
         }
         sb.append("\n请在本次讨论中针对性地引导用户提升薄弱点。");
+        if (relatedConclusions != null && !relatedConclusions.isEmpty()) {
+            sb.append("\n\n相关历史话题结论（供参考，勿直接复述）：");
+            for (String c : relatedConclusions) {
+                sb.append("\n- ").append(c);
+            }
+        }
         return sb.toString();
     }
 
