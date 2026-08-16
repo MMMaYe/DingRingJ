@@ -6,6 +6,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
@@ -16,6 +17,9 @@ import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -94,11 +98,11 @@ class TopicVectorServiceImplTest {
         service.indexTopic(topic);
 
         // 先删后写：DELETE 在 add 之前执行（inOrder 锁定顺序）
-        org.mockito.InOrder inOrder = org.mockito.Mockito.inOrder(vectorJdbcTemplate, topicVectorStore);
+        InOrder inOrder = inOrder(vectorJdbcTemplate, topicVectorStore);
         inOrder.verify(vectorJdbcTemplate).update(
-                org.mockito.ArgumentMatchers.eq("DELETE FROM topic_id_store WHERE metadata->>'topicId' = ?"),
-                org.mockito.ArgumentMatchers.eq("5"));
-        inOrder.verify(topicVectorStore).add(org.mockito.ArgumentMatchers.anyList());
+                eq("DELETE FROM topic_id_store WHERE metadata->>'topicId' = ?"),
+                eq("5"));
+        inOrder.verify(topicVectorStore).add(anyList());
     }
 
     @Test

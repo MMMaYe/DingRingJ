@@ -13,6 +13,7 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 
 /**
@@ -40,7 +41,8 @@ class TopicVectorEventHandlerTest {
         handler.onTopicClosed(event());
 
         ArgumentCaptor<Topic> captor = ArgumentCaptor.forClass(Topic.class);
-        verify(topicVectorService).indexTopic(captor.capture());
+        // 虚拟线程异步执行，timeout 等待写入完成
+        verify(topicVectorService, timeout(2000)).indexTopic(captor.capture());
         assertThat(captor.getValue().getId()).isEqualTo(10L);
         assertThat(captor.getValue().getChatGroupId()).isEqualTo(1L);
         assertThat(captor.getValue().getTitle()).isEqualTo("Java内存模型");
@@ -52,6 +54,8 @@ class TopicVectorEventHandlerTest {
         // indexTopic 返回 void：void 方法桩必须用 doThrow 语法
         doThrow(new RuntimeException("pg down")).when(topicVectorService).indexTopic(any());
 
+        // handler 立即返回，不因虚拟线程内部异常向调用方传播
         assertThatCode(() -> handler.onTopicClosed(event())).doesNotThrowAnyException();
+        verify(topicVectorService, timeout(2000)).indexTopic(any());
     }
 }
