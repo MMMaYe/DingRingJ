@@ -164,7 +164,9 @@ public class EnsureTopicNode implements NodeAction {
         int backfilled = backfillChatMessages(groupId, topic.getId(), backfillLimit);
 
         // 话题重启回溯（P2 升级：向量语义检索相似历史话题，无命中/异常回退标题精确匹配）
-        TopicBacktrack backtrack = backtrackTopic(topic);
+        // 用原始 topicTitle 而非 topic.getTitle()：撞车重试后者的标题带时间后缀，
+        // 语义检索与回退精确匹配都会因后缀噪音而失配
+        TopicBacktrack backtrack = backtrackTopic(topic, topicTitle);
         List<UserTopicProfile> history = backtrack.history();
         String restartHint = "新话题「" + topic.getTitle() + "」已开始，可以开始讨论";
         String userHistoryHint = "";
@@ -230,18 +232,20 @@ public class EnsureTopicNode implements NodeAction {
      * 语义回溯：向量检索相似历史话题 → 回查结论与用户画像。
      * <p>容错链：向量服务异常/返回 null/无命中 → 回退标题精确匹配（Phase E 原逻辑），
      * 任何情况不阻塞建题。
+     *
+     * @param originalTitle 意图分类拟定的原始标题（撞车重试前），语义检索与回退匹配均基于它
      */
-    private TopicBacktrack backtrackTopic(Topic topic) {
+    private TopicBacktrack backtrackTopic(Topic topic, String originalTitle) {
         List<TopicVectorService.SimilarTopic> similar;
         try {
-            similar = topicVectorService.findSimilarTopics(topic.getTitle(), SIMILAR_TOP_K, SIMILAR_THRESHOLD);
+            similar = topicVectorService.findSimilarTopics(originalTitle, SIMILAR_TOP_K, SIMILAR_THRESHOLD);
         } catch (Exception e) {
             LogHelper.printWarnLog(EnsureTopicNode.class, "EnsureTopicNode.backtrackTopic", "ENSURE_TOPIC",
                     "语义回溯异常回退精确匹配", "topicId={} 错误: {}", topic.getId(), e.getMessage());
             similar = List.of();
         }
         if (similar == null) {
-            similar = List.of();  // mock 未桩或实现的防御性返回：按无命中处理
+            similar = List.of();  // 外部服务边界的防御性判空（如实现缺陷返回 null）：按无命中处理
         }
         // 排除自身（标题撞车/重复讨论时向量库可能召回自己）
         List<TopicVectorService.SimilarTopic> filtered = similar.stream()
@@ -249,9 +253,9 @@ public class EnsureTopicNode implements NodeAction {
                 .toList();
 
         if (filtered.isEmpty()) {
-            // 回退：标题精确匹配（原 Phase E 行为）
+            // 回退：标题精确匹配（原 Phase E 行为，同样用原始标题——带后缀标题查画像必空）
             List<UserTopicProfile> exact = topicProfileRepository
-                    .findByUserIdAndTopicTitleOrderByCreatedAtDesc(GroupAppService.DEFAULT_USER_ID, topic.getTitle());
+                    .findByUserIdAndTopicTitleOrderByCreatedAtDesc(GroupAppService.DEFAULT_USER_ID, originalTitle);
             return new TopicBacktrack(exact, List.of(), null);
         }
 
