@@ -112,6 +112,8 @@ class KnowledgeBaseAppServiceTest {
                 "file", "note.md", "text/markdown", "# 标题\n内容".getBytes());
 
         assertThatCode(() -> service.upload(1L, md)).doesNotThrowAnyException();
+        // 闭环验证：落盘确实发生（不只是摄入管道被调用）
+        verify(fileStorageService).store(any());
         verify(ingestionPipeline).ingest(any(), eq(KnowledgeBase.SCOPE_GLOBAL), any());
     }
 }

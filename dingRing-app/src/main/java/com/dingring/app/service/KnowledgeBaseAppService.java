@@ -103,7 +103,8 @@ public class KnowledgeBaseAppService {
     }
 
     /**
-     * 上传文件：落盘 → 记录 kb_file → 异步触发摄入。
+     * 上传文件：md 双检 -> 落盘 -> 记录 kb_file -> 异步触发摄入。
+     * <p>仅接受 .md/.markdown（contentType 非空时须 text/*），否则抛 {@link ParamException}。
      * <p>摄入失败不影响上传结果，状态由摄入管道回写为 FAILED。
      */
     public FileDTO upload(Long kbId, MultipartFile file) {
