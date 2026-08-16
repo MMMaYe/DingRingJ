@@ -100,6 +100,8 @@ public class DiscussNode implements NodeAction {
         Long repliedToAgentId = state.<Long>value(StateKeys.REPLIED_TO_AGENT_ID).orElse(null);
         // 话题重启时 EnsureTopicNode 注入的用户历史表现提示（无则为空）
         String userHistoryHint = state.value(StateKeys.USER_HISTORY_HINT, "");
+        // 话题标题（图状态不自动进入 ReactAgent inputs，需透传至 speakOnce 的 context）
+        String topicTitle = state.value(StateKeys.TOPIC_TITLE, "");
 
         // 用 HashMap 而非 Map.of：topicId/groupId 可能为 null（如未建题被误路由时），
         // Map.of 遇到 null 值会抛 NPE，反而遮蔽下方 groupId/topicId 的防御校验
@@ -172,7 +174,7 @@ public class DiscussNode implements NodeAction {
                 .speakCounts(speakCounts)
                 .build();
 
-        SpeakResult speakResult = speakOnce(candidates, all, ctx, userHistoryHint);
+        SpeakResult speakResult = speakOnce(candidates, all, ctx, topicTitle, userHistoryHint);
 
         // 根据发言结果写 discussMode
         Map<String, Object> result = new HashMap<>();
@@ -226,10 +228,11 @@ public class DiscussNode implements NodeAction {
      * 一次发言（降级链）：按评分降序依次尝试，失败接力下一个，全部失败才返回 FAILED。
      * <p>讨论态判定：空内容/[[PASS]]/重复内容 → PASSED；[[CONCLUDE]] → CONCLUDE_PROPOSED；正常 → SPOKE。
      *
+     * @param topicTitle      话题标题（无则为空）
      * @param userHistoryHint 话题重启的用户历史表现提示（无则为空）
      */
     private SpeakResult speakOnce(List<Agent> candidates, List<Agent> members, MessageContext ctx,
-                                  String userHistoryHint) {
+                                  String topicTitle, String userHistoryHint) {
         List<SpeakerScheduler.ScoredAgent> ranked = speakerScheduler.rank(candidates, ctx);
         LogHelper.printLog(DiscussNode.class, "DiscussNode.speakOnce", "DISCUSS_NODE", "发言评分结果",
                 "groupId={} topicId={} 排序={}", ctx.getGroupId(), ctx.getTopicId(),
@@ -261,6 +264,8 @@ public class DiscussNode implements NodeAction {
                 context.put(StateKeys.INTENT, "DISCUSS");
                 // RAG 检索词：以触发调度的消息为查询（InjectKbHook 读取）
                 context.put("ragQuery", ctx.getContent());
+                // 话题标题（InjectKbHook topic 源检索相似历史话题用）
+                context.put(StateKeys.TOPIC_TITLE, topicTitle);
 
                 // Agent 发言（失败重试 1 次）；流式模式下重试前废弃旧流、换新 streamId 重开
                 LlmService.AgentResult result;

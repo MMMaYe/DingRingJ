@@ -171,6 +171,8 @@ public class ConclusionService {
             context.put(StateKeys.INTENT, "CONCLUDE");
             // RAG 检索词：以主题标题为查询（CONCLUDE 意图下 InjectKbHook 不消费 kb 源，保留供检索语义）
             context.put("ragQuery", topic.getTitle());
+            // 话题标题（InjectKbHook topic 源检索相似历史话题用）
+            context.put(StateKeys.TOPIC_TITLE, topic.getTitle());
             LlmService.AgentResult agentResult;
             try {
                 agentResult = llmService.chat(concluder, ctx.systemPrompt(), ctx.turns(),
