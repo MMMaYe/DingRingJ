@@ -1,9 +1,10 @@
-package com.dingring.infrastructure.agent.runtime;
+package com.dingring.infrastructure.llm;
 
 import com.alibaba.cloud.ai.graph.CompileConfig;
 import com.alibaba.cloud.ai.graph.agent.ReactAgent;
 import com.dingring.common.util.LogHelper;
 import com.dingring.domain.agent.Agent;
+import com.dingring.domain.service.LlmService.CallOptions;
 import com.dingring.domain.service.LlmService.ToolSet;
 import com.dingring.infrastructure.agent.hook.GroupRosterHook;
 import com.dingring.infrastructure.agent.hook.MemoryInjectionHook;
@@ -13,16 +14,27 @@ import com.dingring.infrastructure.agent.hook.SystemMessageMergeHook;
 import com.dingring.infrastructure.agent.tool.KnowledgeSearchTool;
 import com.dingring.infrastructure.agent.tool.TopicHistoryTool;
 import com.dingring.infrastructure.agent.tool.UserProfileQueryTool;
-import com.dingring.infrastructure.llm.SaaModelFactory;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.ai.openai.OpenAiChatModel;
+import org.springframework.ai.openai.OpenAiChatOptions;
+import org.springframework.ai.openai.api.OpenAiApi;
+import org.springframework.ai.openai.api.ResponseFormat;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
+import org.springframework.http.client.reactive.JdkClientHttpConnector;
 import org.springframework.ai.support.ToolCallbacks;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.RestClient;
+import org.springframework.web.reactive.function.client.WebClient;
+
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.time.Duration;
 
 /**
- * 按 Agent 领域实体配置构建 SAA ReactAgent（Phase D）。
- * <p>复用 {@link SaaModelFactory} 构建 ChatModel，避免重复 resolveUrl 逻辑。
+ * 按 Agent 配置构建 ChatModel 和 ReactAgent。
  * <p>ReAct 循环上限用 {@link CompileConfig.Builder#recursionLimit(int)}（SAA 1.1.2.3 无 maxIters API）。
  * <p>注意：recursionLimit 按图节点执行次数计数。每个推理轮次 = __START__ + 5 个 beforeModel Hook
  * + _AGENT_MODEL_（+ 工具节点），单轮至少 7 步，因此必须 > 7，否则模型节点永远无法执行
@@ -40,15 +52,19 @@ import org.springframework.stereotype.Component;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class SaaReactAgentFactory {
+public class SaaLlmFactory {
 
-    /** 讨论场景 ReAct 上限：一次工具往返（实测需 limit≥20，19 时第二轮被掐断）+ 20 步缓冲 */
+    @Value("${dingring.llm.connect-timeout-seconds:10}")
+    private long connectTimeoutSeconds;
+    @Value("${dingring.llm.read-timeout-seconds:120}")
+    private long readTimeoutSeconds;
+    @Value("${dingring.llm.default-max-tokens:100000}")
+    private int defaultMaxTokens;
     private static final int DISCUSS_RECURSION_LIMIT = 40;
 
     /** 工作场景 ReAct 上限：深度 ReAct，支撑约 3 轮模型推理（每轮约 10 步） */
     private static final int WORK_RECURSION_LIMIT = 40;
 
-    private final SaaModelFactory modelFactory;
     private final MemoryInjectionHook memoryInjectionHook;
     private final ProfileInjectionHook profileInjectionHook;
     private final GroupRosterHook groupRosterHook;
@@ -57,6 +73,68 @@ public class SaaReactAgentFactory {
     private final UserProfileQueryTool userProfileQueryTool;
     private final TopicHistoryTool topicHistoryTool;
     private final KnowledgeSearchTool knowledgeSearchTool;
+
+    public OpenAiChatModel buildChatModel(Agent agent, CallOptions options) {
+        double temperature = options != null && options.temperature() != null
+                ? options.temperature() : agent.temperature();
+        int maxTokens = options != null && options.maxTokens() != null
+                ? options.maxTokens() : agent.maxTokens(defaultMaxTokens);
+        long readTimeout = options != null && options.readTimeoutSeconds() != null
+                && options.readTimeoutSeconds() > 0
+                ? options.readTimeoutSeconds() : readTimeoutSeconds;
+
+        UrlParts parts = resolveUrl(agent.getBaseUrl());
+        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
+        requestFactory.setConnectTimeout(Duration.ofSeconds(connectTimeoutSeconds));
+        requestFactory.setReadTimeout(Duration.ofSeconds(readTimeout));
+        HttpClient jdkHttpClient = HttpClient.newBuilder()
+                .connectTimeout(Duration.ofSeconds(connectTimeoutSeconds))
+                .build();
+
+        OpenAiApi openAiApi = OpenAiApi.builder()
+                .baseUrl(parts.baseUrl())
+                .completionsPath(parts.completionsPath())
+                .apiKey(agent.getApiKey())
+                .restClientBuilder(RestClient.builder().requestFactory(requestFactory))
+                .webClientBuilder(WebClient.builder().clientConnector(new JdkClientHttpConnector(jdkHttpClient)))
+                .build();
+
+        OpenAiChatOptions.Builder chatOptionsBuilder = OpenAiChatOptions.builder()
+                .model(agent.getModelName())
+                .temperature(temperature)
+                .maxTokens(maxTokens);
+        if (options != null && Boolean.TRUE.equals(options.jsonMode())) {
+            chatOptionsBuilder.responseFormat(ResponseFormat.builder()
+                    .type(ResponseFormat.Type.JSON_OBJECT)
+                    .build());
+        }
+        return OpenAiChatModel.builder()
+                .openAiApi(openAiApi)
+                .defaultOptions(chatOptionsBuilder.build())
+                .build();
+    }
+
+    public long getReadTimeoutSeconds() {
+        return readTimeoutSeconds;
+    }
+
+    static UrlParts resolveUrl(String rawBaseUrl) {
+        String raw = rawBaseUrl == null ? "" : rawBaseUrl.trim();
+        while (raw.endsWith("/")) {
+            raw = raw.substring(0, raw.length() - 1);
+        }
+        URI uri = URI.create(raw);
+        String origin = uri.getScheme() + "://" + uri.getRawAuthority();
+        String path = uri.getRawPath() == null ? "" : uri.getRawPath();
+        if (path.isEmpty()) {
+            return new UrlParts(origin, "/v1/chat/completions");
+        }
+        String completionsPath = path.endsWith("/chat/completions")
+                ? path : path + "/chat/completions";
+        return new UrlParts(origin, completionsPath);
+    }
+
+    record UrlParts(String baseUrl, String completionsPath) {}
 
     /**
      * 构建讨论场景 ReactAgent（轻量工具）。
@@ -88,7 +166,7 @@ public class SaaReactAgentFactory {
         ReactAgent agent = ReactAgent.builder()
                 .name(domainAgent.getName())
                 .description(domainAgent.getDescription() != null ? domainAgent.getDescription() : "")
-                .model(modelFactory.buildChatModel(domainAgent, null))
+                .model(buildChatModel(domainAgent, null))
                 .tools(tools)
                 // Hook 单例共享安全：实现仅从 state 读 per-call 参数，不使用 agent 引用。
                 // 合并 Hook 必须注册在最后：ReactAgent 按注册顺序执行 Hook，保证模型调用前
@@ -100,7 +178,7 @@ public class SaaReactAgentFactory {
                         .build())
                 .build();
 
-        LogHelper.printLog(SaaReactAgentFactory.class, "SaaReactAgentFactory.build", "REACT_AGENT_BUILD",
+        LogHelper.printLog(SaaLlmFactory.class, "SaaLlmFactory.build", "REACT_AGENT_BUILD",
                 "ReactAgent 构建完成", "agent={} toolSet={} recursionLimit={} tools={}",
                 domainAgent.getName(), toolSet, recursionLimit, tools.length);
         return agent;

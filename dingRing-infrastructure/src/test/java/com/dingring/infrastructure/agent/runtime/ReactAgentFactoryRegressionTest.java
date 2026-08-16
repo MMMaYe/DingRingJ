@@ -18,7 +18,7 @@ import com.dingring.infrastructure.agent.hook.SystemMessageMergeHook;
 import com.dingring.infrastructure.agent.tool.KnowledgeSearchTool;
 import com.dingring.infrastructure.agent.tool.TopicHistoryTool;
 import com.dingring.infrastructure.agent.tool.UserProfileQueryTool;
-import com.dingring.infrastructure.llm.SaaModelFactory;
+import com.dingring.infrastructure.llm.SaaLlmFactory;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.ai.chat.messages.AssistantMessage;
@@ -35,12 +35,14 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * SaaReactAgentFactory 回归测试。
+ * SaaLlmFactory 回归测试。
  * <p>回归背景（Phase G）：recursionLimit=3 时图在 memory/profile hook 后即终止，
  * _AGENT_MODEL_ 节点从未执行，抛出 "No AssistantMessage found in 'messages' state"。
  * <p>本测试走真实工厂路径（真实 hook + 真实工具 + mock ChatModel），
@@ -49,7 +51,6 @@ import static org.mockito.Mockito.when;
 class ReactAgentFactoryRegressionTest {
 
     private final OpenAiChatModel chatModel = mock(OpenAiChatModel.class);
-    private final SaaModelFactory modelFactory = mock(SaaModelFactory.class);
     private final Agent domainAgent = mock(Agent.class);
 
     private final AgentRepository agentRepository = mock(AgentRepository.class);
@@ -60,9 +61,8 @@ class ReactAgentFactoryRegressionTest {
     private final TopicRepository topicRepository = mock(TopicRepository.class);
 
     /** 真实工具实例（依赖用 mock 服务），走 ToolCallbacks.from 转 ToolCallback */
-    private SaaReactAgentFactory newFactory() {
-        return new SaaReactAgentFactory(
-                modelFactory,
+    private SaaLlmFactory newFactory() {
+        SaaLlmFactory factory = spy(new SaaLlmFactory(
                 new MemoryInjectionHook(memoryService),
                 new ProfileInjectionHook(profileService),
                 new GroupRosterHook(groupRepository, agentRepository),
@@ -70,11 +70,12 @@ class ReactAgentFactoryRegressionTest {
                 new SystemMessageMergeHook(),
                 new UserProfileQueryTool(profileService),
                 new TopicHistoryTool(topicRepository),
-                new KnowledgeSearchTool(ragService));
+                new KnowledgeSearchTool(ragService)));
+        doReturn(chatModel).when(factory).buildChatModel(any(), any());
+        return factory;
     }
 
     private void stubBaseMocks() {
-        when(modelFactory.buildChatModel(any(), any())).thenReturn(chatModel);
         when(domainAgent.getId()).thenReturn(1L);
         when(domainAgent.getName()).thenReturn("老王");
         when(domainAgent.getDescription()).thenReturn("程序员老王，专注高并发与缓存");

@@ -21,8 +21,9 @@ AgentResult chatStream(Agent, String, List<ChatTurn>, ToolSet, Map<String, Objec
 ## 实现
 
 - `ReactAgentLlmService` 同时承担两条路径：
-  - 无工具 `chat`：通过 `SaaModelFactory` 构建无工具 ReactAgent，保留 `CallOptions`；
-  - 带工具 `chat`：通过 `SaaReactAgentFactory` 构建 ReactAgent，保留 ToolSet、Hook、context 与 recursionLimit。
+  - 无工具 `chat`：通过 `SaaLlmFactory.buildChatModel` 构建无工具 ReactAgent，保留 `CallOptions`；
+  - 带工具 `chat`：通过 `SaaLlmFactory.buildDiscussAgent/buildWorkAgent` 构建 ReactAgent，保留 ToolSet、Hook、context 与 recursionLimit。
+- `SaaLlmFactory` 统一承担 ChatModel 与 ReactAgent 构建，删除原 `SaaModelFactory`/`SaaReactAgentFactory` 两个 Factory 的重复门面。
 - 两条 stream 路径均保留当前非流式回退语义：非空结果整体回调一次。
 - 带工具异常统一转换为 `BizException(ErrorCode.LLM_API_ERROR)`。
 
@@ -35,7 +36,7 @@ AgentResult chatStream(Agent, String, List<ChatTurn>, ToolSet, Map<String, Objec
 - `WorkNode`
 - `ConclusionService`
 
-`SaaReactAgentFactory`、`SystemMessageMergeHook` 及相关测试的旧类型引用已同步迁移。
+`SaaLlmFactory`、`SystemMessageMergeHook` 及相关测试的旧类型引用已同步迁移。
 
 ## Mock 策略
 

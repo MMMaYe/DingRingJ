@@ -15,7 +15,7 @@ import com.dingring.infrastructure.agent.hook.WorkProgressBroadcastHook;
 import com.dingring.infrastructure.agent.tool.KnowledgeSearchTool;
 import com.dingring.infrastructure.agent.tool.TopicHistoryTool;
 import com.dingring.infrastructure.agent.tool.UserProfileQueryTool;
-import com.dingring.infrastructure.llm.SaaModelFactory;
+import com.dingring.infrastructure.llm.SaaLlmFactory;
 import com.dingring.infrastructure.skill.SkillToolkitFactory;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -58,7 +58,7 @@ public class SupervisorAgentFactory {
      */
     private static final int WORKER_RECURSION_LIMIT = 15;
 
-    private final SaaModelFactory modelFactory;
+    private final SaaLlmFactory llmFactory;
     private final WorkProgressBroadcastHook workProgressBroadcastHook;
     private final MemoryInjectionHook memoryInjectionHook;
     private final ProfileInjectionHook profileInjectionHook;
@@ -88,7 +88,7 @@ public class SupervisorAgentFactory {
         ReactAgent supervisor = ReactAgent.builder()
                 .name(SUPERVISOR_NAME)
                 .description("工作流编排者：将任务拆解为子任务并委派给专业子 Agent，汇总结果")
-                .model(modelFactory.buildChatModel(supervisorAgent, null))
+                .model(llmFactory.buildChatModel(supervisorAgent, null))
                 .systemPrompt(systemPrompt)
                 .tools(subTools)
                 // Supervisor 的 state 含 groupId（WorkNode 注入），state 依赖 Hook 可正常工作
@@ -116,7 +116,7 @@ public class SupervisorAgentFactory {
         ReactAgent worker = ReactAgent.builder()
                 .name(agent.getName())
                 .description(agent.getDescription() != null ? agent.getDescription() : "")
-                .model(modelFactory.buildChatModel(agent, null))
+                .model(llmFactory.buildChatModel(agent, null))
                 .systemPrompt(systemPrompt)
                 .tools(tools)
                 .hooks(memoryInjectionHook, profileInjectionHook, groupRosterHook, ragInjectionHook)

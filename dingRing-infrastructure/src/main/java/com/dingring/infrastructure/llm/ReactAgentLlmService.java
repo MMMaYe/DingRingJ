@@ -8,14 +8,13 @@ import com.dingring.domain.agent.Agent;
 import com.dingring.domain.service.LlmService;
 import com.dingring.infrastructure.aop.Event;
 import com.dingring.infrastructure.agent.hook.SystemMessageMergeHook;
-import com.dingring.infrastructure.agent.runtime.SaaReactAgentFactory;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -29,7 +28,7 @@ import java.util.function.Consumer;
  * <p>替代 Phase C 的裸 {@code OpenAiChatModel} 直调（{@code SpringAiLlmService} 已废弃保留，
  * 默认不激活）：所有 LLM 调用统一经由 ReactAgent——本类构建无工具 ReactAgent 服务意图分类/摘要/重排等
  * 确定性任务，也构建带工具 ReactAgent 服务 Agent 发言，两条路径共享同一 Agent 运行时，无第二套 LLM 调用代码。
- * <p>参数覆盖（temperature/maxTokens/readTimeout/jsonMode）已由 {@link SaaModelFactory#buildChatModel}
+ * <p>参数覆盖（temperature/maxTokens/readTimeout/jsonMode）已由 {@link SaaLlmFactory#buildChatModel}
  * 装配进 model 的 defaultOptions；ReactAgent 未指定 chatOptions 时复用 model 默认 options，
  * 因此无需在 Agent 层重复处理。
  * <p>流式：SAA 1.1.2.3 的 ReactAgent 无公共流式入口，chatStream 统一回退非流式
@@ -37,14 +36,15 @@ import java.util.function.Consumer;
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
 @ConditionalOnProperty(name = "dingring.llm.mock", havingValue = "false", matchIfMissing = true)
 public class ReactAgentLlmService implements LlmService {
 
-    /** 模型构建工厂（参数覆盖 + 超时在此装配进 ChatModel defaultOptions） */
-    private final SaaModelFactory modelFactory;
-    /** 带工具 Agent 构建工厂（Hook、工具集和 recursionLimit 由工厂统一装配） */
-    private final SaaReactAgentFactory agentFactory;
+    /** 统一 LLM runtime 构建工厂（模型 + 工具 Agent） */
+    private final SaaLlmFactory llmFactory;
+
+    public ReactAgentLlmService(@Lazy SaaLlmFactory llmFactory) {
+        this.llmFactory = llmFactory;
+    }
 
     @Override
     public String chat(Agent agent, String systemPrompt, List<ChatTurn> messages) {
@@ -56,7 +56,7 @@ public class ReactAgentLlmService implements LlmService {
     public String chat(Agent agent, String systemPrompt, List<ChatTurn> messages, CallOptions options) {
         long startAt = System.currentTimeMillis();
         try {
-            // 统一入口：每次调用构建无工具 ReactAgent（无状态，参数覆盖由 SaaModelFactory 装配进 model）
+            // 统一入口：每次调用构建无工具 ReactAgent（无状态，参数覆盖由 SaaLlmFactory 装配进 model）
             ReactAgent reactAgent = buildAgent(agent, systemPrompt, options);
             List<Message> aiMessages = toAiMessages(messages);
             LogHelper.printLog(ReactAgentLlmService.class, "ReactAgentLlmService.chat", "CHAT_PROMPT", "Prompt",
@@ -108,8 +108,8 @@ public class ReactAgentLlmService implements LlmService {
         long startAt = System.currentTimeMillis();
         try {
             ReactAgent reactAgent = toolSet == ToolSet.WORK
-                    ? agentFactory.buildWorkAgent(agent)
-                    : agentFactory.buildDiscussAgent(agent, toolSet);
+                    ? llmFactory.buildWorkAgent(agent)
+                    : llmFactory.buildDiscussAgent(agent, toolSet);
             Map<String, Object> inputs = buildAgentInputs(systemPrompt, messages, context);
             LogHelper.printLog(ReactAgentLlmService.class, "ReactAgentLlmService.chatAgent", "AGENT_SPEAK",
                     "Agent发言开始", "agent={} toolSet={} 消息数={} context={}",
@@ -171,10 +171,10 @@ public class ReactAgentLlmService implements LlmService {
      * 构建无工具 ReactAgent。
      * <p>systemPrompt 由 builder 注入（模型调用时置顶为 SystemMessage，与 messages 分离），
      * 避免多 SystemMessage 干扰模型；参数覆盖（temperature/maxTokens/readTimeout/jsonMode）
-     * 已在 {@link SaaModelFactory#buildChatModel} 装配进 model 默认 options，ReactAgent 复用之。
+     * 已在 {@link SaaLlmFactory#buildChatModel} 装配进 model 默认 options，ReactAgent 复用之。
      */
     private ReactAgent buildAgent(Agent agent, String systemPrompt, CallOptions options) {
-        ChatModel chatModel = modelFactory.buildChatModel(agent, options);
+        ChatModel chatModel = llmFactory.buildChatModel(agent, options);
         var builder = ReactAgent.builder()
                 .name(agent.getName())
                 .model(chatModel);
