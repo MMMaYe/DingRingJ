@@ -121,4 +121,17 @@ class SiliconFlowEmbeddingModelTest {
         // 未注册任何期望：若发起请求 MockRestServiceServer 会因无匹配期望而失败
         server.verify();
     }
+
+    @Test
+    @DisplayName("响应缺少 data 时抛出带语义的异常（而非 NPE），便于摄入管道记录 errorMsg")
+    void shouldThrowMeaningfulExceptionOnMalformedResponse() {
+        server.expect(requestTo("https://api.siliconflow.cn/v1/embeddings"))
+                .andRespond(withSuccess("{\"object\":\"list\",\"model\":\"x\"}", MediaType.APPLICATION_JSON));
+
+        SiliconFlowEmbeddingModel model = new SiliconFlowEmbeddingModel(props, builder);
+        assertThatThrownBy(() -> model.embed(List.of("x")))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("expected=1");
+        server.verify();
+    }
 }

@@ -135,6 +135,12 @@ public class SiliconFlowEmbeddingModel extends AbstractEmbeddingModel {
 
         JSONObject json = JSONObject.parseObject(responseBody);
         JSONArray data = json.getJSONArray("data");
+        if (data == null || data.size() != batch.size()) {
+            // 畸形/短返回会给上游留下 NPE 或难定位的条数不匹配，这里快速失败并携带期望条数
+            throw new IllegalStateException(
+                    "SiliconFlow 响应缺少 data 或条数不匹配: expected=" + batch.size()
+                            + " actual=" + (data == null ? "null" : data.size()));
+        }
         List<float[]> result = new ArrayList<>(data.size());
         for (int i = 0; i < data.size(); i++) {
             JSONArray arr = data.getJSONObject(i).getJSONArray("embedding");
