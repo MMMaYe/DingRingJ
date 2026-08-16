@@ -19,7 +19,7 @@ import java.util.stream.Collectors;
 /**
  * RAG 检索服务实现（Phase E）。
  * <p>检索流程：向量召回 Top-20 + LLM 重排 Top-5。
- * <p>双层过滤：全局知识(scope=GLOBAL) OR 群专属知识(scope=GROUP AND groupId匹配)。
+ * <p>绑定过滤：metadata.kbId IN (群绑定的知识库 ID 列表)，只有群绑定的库才会注入该群。
  * <p>容错：任何环节失败不阻塞群聊主流程，返回空字符串。
  */
 @Slf4j
@@ -39,22 +39,15 @@ public class SaaRagService implements RagService {
     private static final double SIMILARITY_THRESHOLD = 0.7;
 
     @Override
-    public String retrieve(String query, Long groupId) {
-        if (query == null || query.isBlank()) {
+    public String retrieve(String query, List<Long> kbIds) {
+        // 未绑定任何知识库的群：不注入知识，也省一次无效向量检索
+        if (query == null || query.isBlank() || kbIds == null || kbIds.isEmpty()) {
             return "";
         }
         try {
-            // 1. 构建双层过滤表达式：scope=GLOBAL OR (scope=GROUP AND groupId={id})
+            // 1. 绑定过滤：摄入管道写入的 metadata.kbId 溯源字段，IN 匹配群绑定库
             FilterExpressionBuilder b = new FilterExpressionBuilder();
-            FilterExpressionBuilder.Op filter;
-            if (groupId != null) {
-                filter = b.or(
-                        b.eq("scope", "GLOBAL"),
-                        b.and(b.eq("scope", "GROUP"), b.eq("groupId", groupId))
-                );
-            } else {
-                filter = b.eq("scope", "GLOBAL");
-            }
+            FilterExpressionBuilder.Op filter = b.in("kbId", kbIds.toArray());
 
             // 2. 向量召回 Top-20
             SearchRequest searchRequest = SearchRequest.builder()
@@ -67,7 +60,7 @@ public class SaaRagService implements RagService {
             List<Document> candidates = vectorStore.similaritySearch(searchRequest);
             if (candidates == null || candidates.isEmpty()) {
                 LogHelper.printLog(SaaRagService.class, "retrieve", "RAG_RETRIEVE",
-                        "向量召回无结果", "query={} groupId={}", query.substring(0, Math.min(50, query.length())), groupId);
+                        "向量召回无结果", "query={} kbIds={}", query.substring(0, Math.min(50, query.length())), kbIds);
                 return "";
             }
 
@@ -83,14 +76,14 @@ public class SaaRagService implements RagService {
                     .collect(Collectors.toList());
 
             LogHelper.printLog(SaaRagService.class, "retrieve", "RAG_RETRIEVE",
-                    "检索完成", "query={} groupId={} 召回={} 重排={}",
-                    query.substring(0, Math.min(50, query.length())), groupId, candidates.size(), topResults.size());
+                    "检索完成", "query={} kbIds={} 召回={} 重排={}",
+                    query.substring(0, Math.min(50, query.length())), kbIds, candidates.size(), topResults.size());
 
             return formatResults(topResults);
         } catch (Exception e) {
             LogHelper.printWarnLog(SaaRagService.class, "retrieve", "RAG_RETRIEVE",
-                    "RAG检索失败降级为空", "query={} groupId={} 错误: {}",
-                    query.substring(0, Math.min(50, query.length())), groupId, e.getMessage());
+                    "RAG检索失败降级为空", "query={} kbIds={} 错误: {}",
+                    query.substring(0, Math.min(50, query.length())), kbIds, e.getMessage());
             return "";
         }
     }

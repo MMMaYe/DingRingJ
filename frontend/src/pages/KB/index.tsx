@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import Sidebar from '../../components/Sidebar';
+import Sidebar, { IconPlus } from '../../components/Sidebar';
 import Modal from '../../components/Modal';
 import { toast } from '../../components/Toast';
 import { KbApi, type KbFileDTO, type KbSummary } from '../../api';
@@ -45,8 +45,7 @@ export default function KBPage() {
   const [uploading, setUploading] = useState(false);
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState('');
-  const [newScope, setNewScope] = useState<'GLOBAL' | 'GROUP'>('GLOBAL');
-  const [newGroupId, setNewGroupId] = useState('');
+  const [newDesc, setNewDesc] = useState('');
   const [loading, setLoading] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -89,20 +88,13 @@ export default function KBPage() {
   const handleCreate = async () => {
     const name = newName.trim();
     if (!name) { toast('请输入知识库名称', 'info'); return; }
-    if (newScope === 'GROUP' && !newGroupId.trim()) { toast('群专属知识库需填写 groupId', 'info'); return; }
-    // 数字校验：Number('abc')->NaN 会以 null 落库，创建出无归属的 GROUP 库
-    const groupId = Number(newGroupId);
-    if (newScope === 'GROUP' && (!Number.isInteger(groupId) || groupId <= 0)) {
-      toast('groupId 必须为正整数', 'info');
-      return;
-    }
+    const description = newDesc.trim();
+    if (!description) { toast('请输入知识库描述', 'info'); return; }
     try {
-      const created = await KbApi.create({
-        name, scope: newScope,
-        ...(newScope === 'GROUP' ? { groupId } : {}),
-      });
+      // 知识库不再区分作用域：群与库的关联改由群侧绑定（chat_group.knowledge_base_config）
+      const created = await KbApi.create({ name, description });
       toast(`知识库「${created.name}」已创建`, 'success');
-      setCreating(false); setNewName(''); setNewGroupId('');
+      setCreating(false); setNewName(''); setNewDesc('');
       await reloadKbs();
       setSelectedId(created.id);
     } catch (e) {
@@ -160,9 +152,10 @@ export default function KBPage() {
 
   return (
     <div className="app-shell">
-      <Sidebar>
+      <Sidebar
+        footer={<button className="sidebar__new-group" onClick={() => setCreating(true)}><IconPlus /> 新建知识库</button>}
+      >
         <div className="sidebar__label">知识库</div>
-        <button className="btn btn--brand kb-side-create" onClick={() => setCreating(true)}>新建知识库</button>
         <div className="kb-side-list">
           {kbs.map(kb => (
             <div
@@ -170,13 +163,12 @@ export default function KBPage() {
               className={`kb-side-item ${kb.id === selectedId ? 'kb-side-item--active' : ''}`}
               onClick={() => setSelectedId(kb.id)}
             >
-              <span className="kb-side-item__name">{kb.name}</span>
-              <span className="kb-side-item__scope">{kb.scope === 'GLOBAL' ? '全局' : `群 ${kb.groupId}`}</span>
+              <span className="kb-side-item__name" title={kb.description ?? kb.name}>{kb.name}</span>
               <button className="kb-side-item__del" title="删除知识库"
                       onClick={e => { e.stopPropagation(); void handleDeleteKb(kb); }}>×</button>
             </div>
           ))}
-          {!loading && kbs.length === 0 && <div className="kb-side-hint">暂无知识库，点击上方新建</div>}
+          {!loading && kbs.length === 0 && <div className="kb-side-hint">暂无知识库，点击下方新建</div>}
         </div>
       </Sidebar>
 
@@ -293,7 +285,7 @@ export default function KBPage() {
           onClose={() => setCreating(false)}
           eyebrow="Knowledge Base"
           title="新建知识库"
-          subtitle="上传 .md 文档，作为群聊 RAG 检索源"
+          subtitle="上传 .md 文档构建检索源，建群或群设置中再绑定到群聊"
           footer={
             <div className="kb-modal-actions">
               <button className="btn" onClick={() => setCreating(false)}>取消</button>
@@ -307,19 +299,10 @@ export default function KBPage() {
                    placeholder="如：Java 并发编程资料库" autoFocus />
           </div>
           <div className="form-row">
-            <label>作用域</label>
-            <select className="input" value={newScope} onChange={e => setNewScope(e.target.value as 'GLOBAL' | 'GROUP')}>
-              <option value="GLOBAL">全局（所有群聊可用）</option>
-              <option value="GROUP">群专属（仅指定群可用）</option>
-            </select>
+            <label>描述</label>
+            <textarea className="input" rows={3} value={newDesc} onChange={e => setNewDesc(e.target.value)}
+                      placeholder="说明这个知识库的用途，如：收录 Java 并发核心知识点，供并发主题讨论时检索" maxLength={200} />
           </div>
-          {newScope === 'GROUP' && (
-            <div className="form-row">
-              <label>群 ID</label>
-              <input className="input" value={newGroupId} onChange={e => setNewGroupId(e.target.value)}
-                     placeholder="如：1" inputMode="numeric" />
-            </div>
-          )}
         </Modal>
       </section>
     </div>

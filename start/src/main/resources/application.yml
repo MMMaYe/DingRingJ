@@ -91,7 +91,7 @@ dingring:
       provider: siliconflow
       siliconflow:
         base-url: https://api.siliconflow.cn/v1/embeddings
-        api-key: ${SILICONFLOW_API_KEY:}
+        api-key: sk-scjjoaifoftvpjisrxvndcfwyjcyltwqsmltjotlqdwczznl
         model: Qwen/Qwen3-Embedding-0.6B
         dimensions: 1024
         batch-size: 16

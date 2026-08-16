@@ -68,11 +68,11 @@ class ReactAgentFactoryRegressionTest {
                 new MemoryInjectionHook(memoryService),
                 new ProfileInjectionHook(profileService),
                 new GroupRosterHook(groupRepository, agentRepository),
-                new InjectKbHook(ragService, topicVectorService, topicRepository),
+                new InjectKbHook(ragService, topicVectorService, topicRepository, groupRepository),
                 new SystemMessageMergeHook(),
                 new UserProfileQueryTool(profileService),
                 new TopicHistoryTool(topicRepository),
-                new KnowledgeSearchTool(ragService)));
+                new KnowledgeSearchTool(ragService, groupRepository)));
         doReturn(chatModel).when(factory).buildChatModel(any(), any());
         return factory;
     }

@@ -58,15 +58,14 @@ public class DocumentIngestionPipeline {
     /**
      * 异步执行文档摄入。
      * <p>读取文件 → 切片 → 向量化入库 → 更新文件状态。
+     * <p>向量 metadata 仅按 kbId/fileId 溯源：检索过滤与删除清理都不再依赖作用域字段。
      *
-     * @param file       文件元信息
-     * @param scope      知识库作用域（GLOBAL / GROUP）
-     * @param groupId    群 ID（scope=GROUP 时用于检索过滤）
+     * @param file 文件元信息
      */
     @Async
-    public void ingest(File file, String scope, Long groupId) {
+    public void ingest(File file) {
         LogHelper.printLog(DocumentIngestionPipeline.class, "ingest", "RAG_INGEST",
-                "摄入开始", "fileId={} fileName={} scope={}", file.getId(), file.getName(), scope);
+                "摄入开始", "fileId={} fileName={}", file.getId(), file.getName());
         try {
             // 1. 读取文件
             List<Document> documents;
@@ -94,9 +93,9 @@ public class DocumentIngestionPipeline {
             file.setChunkCount(chunks.size());
             fileRepository.update(file);
 
-            // 3. 构建 metadata 并入库（fileId/chunkIndex 为 P2 新增：删除文件/知识库时按 metadata 清理向量的关键）
+            // 3. 构建 metadata 并入库（fileId/chunkIndex：删除文件/知识库时按 metadata 清理向量的关键）
             for (int i = 0; i < chunks.size(); i++) {
-                Map<String, Object> metadata = buildMetadata(file, scope, groupId);
+                Map<String, Object> metadata = buildMetadata(file);
                 metadata.put("fileId", file.getId());
                 metadata.put("chunkIndex", i);
                 chunks.get(i).getMetadata().putAll(metadata);
@@ -113,8 +112,8 @@ public class DocumentIngestionPipeline {
             file.setUpdateTime(LocalDateTime.now());
             fileRepository.update(file);
             LogHelper.printLog(DocumentIngestionPipeline.class, "ingest", "RAG_INGEST",
-                    "摄入完成", "fileId={} fileName={} 切片数={} scope={}",
-                            file.getId(), file.getName(), chunks.size(), scope);
+                    "摄入完成", "fileId={} fileName={} 切片数={}",
+                            file.getId(), file.getName(), chunks.size());
         } catch (Exception e) {
             LogHelper.printWarnLog(DocumentIngestionPipeline.class, "ingest", "RAG_INGEST",
                     "摄入失败", "fileId={} fileName={} 错误: {}",
@@ -130,16 +129,12 @@ public class DocumentIngestionPipeline {
         }
     }
 
-    /** 构建 metadata（双层过滤 + 溯源清理用） */
-    private Map<String, Object> buildMetadata(File file, String scope, Long groupId) {
+    /** 构建 metadata（kbId 绑定过滤 + fileId/fileName 溯源清理用） */
+    private Map<String, Object> buildMetadata(File file) {
         Map<String, Object> metadata = new HashMap<>();
         metadata.put("kbId", file.getKnowledgeBaseId());
         metadata.put("fileName", file.getName());
         metadata.put("docType", file.getFileType());
-        metadata.put("scope", scope);
-        if (groupId != null) {
-            metadata.put("groupId", groupId);
-        }
         metadata.put("uploadTime", LocalDateTime.now().toString());
         return metadata;
     }

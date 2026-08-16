@@ -1,8 +1,6 @@
 /* KB page styles - RAG 知识库（P2 全量对接） */
 
-/* 侧边栏：新建入口 + 知识库列表 */
-.kb-side-create { width: 100%; margin-bottom: 12px; }
-
+/* 侧边栏：知识库列表（新建入口复用 sidebar footer 的 sidebar__new-group，与新建群聊对齐） */
 .kb-side-list { display: flex; flex-direction: column; gap: 6px; }
 
 .kb-side-item {
@@ -19,7 +17,6 @@
   flex: 1; font-size: 13px;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-.kb-side-item__scope { font-size: 11px; color: var(--text-tertiary); white-space: nowrap; }
 .kb-side-item__del {
   border: none; background: none; color: inherit; opacity: .4; cursor: pointer;
   font-size: 14px; line-height: 1; padding: 2px;

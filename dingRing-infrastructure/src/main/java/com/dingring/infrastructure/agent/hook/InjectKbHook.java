@@ -6,6 +6,8 @@ import com.alibaba.cloud.ai.graph.agent.hook.AgentHook;
 import com.dingring.common.util.LogHelper;
 import com.dingring.domain.discussion.Topic;
 import com.dingring.domain.discussion.TopicRepository;
+import com.dingring.domain.group.Group;
+import com.dingring.domain.group.GroupRepository;
 import com.dingring.domain.service.RagService;
 import com.dingring.domain.service.TopicVectorService;
 import com.dingring.domain.workflow.StateKeys;
@@ -34,6 +36,9 @@ import java.util.concurrent.ConcurrentHashMap;
  *   <li>WORK：仅 kb 源（任务要资料，历史话题无关）</li>
  *   <li>intent 缺失：有 ragQuery 则 kb 源（兼容 Supervisor Worker clearContext 后的空 state）</li>
  * </ul>
+ * <p>kb 源只检索群绑定的知识库（chat_group.knowledge_base_config.kbIds，
+ * 向量 metadata.kbId IN 过滤）：未绑定库的群不注入任何文档知识，
+ * 且每次 Agent 运行实时读取绑定（群设置改绑定后下一条消息即生效，故不做缓存）。
  * <p>topic 源按 topicId 缓存 TTL 10 分钟：话题存续期内标题不变、相似集结论均为已关闭话题，
  * 每轮 DISCUSS 重复检索浪费 embedding 调用；kb 源 query 随消息变化不缓存。
  * <p>容错：任一源异常跳过该源，双源全空返回空 Map，绝不阻塞 Agent 发言。
@@ -56,6 +61,7 @@ public class InjectKbHook extends AgentHook {
     private final RagService ragService;
     private final TopicVectorService topicVectorService;
     private final TopicRepository topicRepository;
+    private final GroupRepository groupRepository;
 
     /** topicId → 缓存条目（注入文本段 + 时间戳） */
     private final ConcurrentHashMap<Long, CacheEntry> topicCache = new ConcurrentHashMap<>();
@@ -84,7 +90,14 @@ public class InjectKbHook extends AgentHook {
 
         String kbSection = "";
         if (kbWanted && groupId != null && !ragQuery.isBlank()) {
-            kbSection = retrieveKbSafely(ragQuery, groupId);
+            List<Long> kbIds = resolveBoundKbIds(groupId);
+            if (kbIds.isEmpty()) {
+                // 未绑定任何知识库：kb 源整体跳过（检索也只会得到空结果，直接省掉）
+                LogHelper.printLog(InjectKbHook.class, "beforeAgent", "INJECT_KB",
+                        "群未绑定知识库，跳过kb源", "groupId={}", groupId);
+            } else {
+                kbSection = retrieveKbSafely(ragQuery, kbIds);
+            }
         }
 
         String topicSection = "";
@@ -105,13 +118,29 @@ public class InjectKbHook extends AgentHook {
         return CompletableFuture.completedFuture(Map.of("messages", new SystemMessage(text)));
     }
 
-    /** kb 源：复用 RagService（向量召回+LLM 重排+双层过滤），异常跳过 */
-    private String retrieveKbSafely(String query, Long groupId) {
+    /**
+     * 解析群绑定的知识库 ID 列表，群不存在等异常按未绑定处理（跳过 kb 源）。
+     * <p>刻意不做缓存：群设置随时可改绑定，实时读取保证下一条消息即生效。
+     */
+    private List<Long> resolveBoundKbIds(Long groupId) {
         try {
-            return ragService.retrieve(query, groupId);
+            return groupRepository.findById(groupId)
+                    .map(Group::boundKbIds)
+                    .orElse(List.of());
+        } catch (Exception e) {
+            LogHelper.printWarnLog(InjectKbHook.class, "resolveBoundKbIds", "INJECT_KB",
+                    "群绑定解析失败按未绑定处理", "groupId={} 错误: {}", groupId, e.getMessage());
+            return List.of();
+        }
+    }
+
+    /** kb 源：复用 RagService（向量召回+LLM 重排+绑定库过滤），异常跳过 */
+    private String retrieveKbSafely(String query, List<Long> kbIds) {
+        try {
+            return ragService.retrieve(query, kbIds);
         } catch (Exception e) {
             LogHelper.printWarnLog(InjectKbHook.class, "retrieveKbSafely", "INJECT_KB",
-                    "kb源检索失败跳过", "groupId={} 错误: {}", groupId, e.getMessage());
+                    "kb源检索失败跳过", "kbIds={} 错误: {}", kbIds, e.getMessage());
             return "";
         }
     }

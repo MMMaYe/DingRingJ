@@ -9,9 +9,11 @@ import { formatTime, renderMarkdown, findExpandableSvg } from './utils';
 import SvgLightbox from './SvgLightbox';
 import Modal from '../../components/Modal';
 import GroupSettings from '../../components/GroupSettings';
+import MultiSelect from '../../components/MultiSelect';
 import { toast } from '../../components/Toast';
 import { useWebSocketContext } from '../../context/WebSocketContext';
-import { API } from '../../api';
+import { API, KbApi } from '../../api';
+import type { KbSummary } from '../../api';
 import type {
   GroupSummary, GroupDetail, TopicSummary, MemberInfo,
   MessageDTO, AgentDTO, ConclusionDTO, KnowledgeCardDTO, PageResult,
@@ -66,6 +68,10 @@ export default function ChatPage() {
   // create group form
   const [cgName, setCgName] = useState('');
   const [cgSelectedAgents, setCgSelectedAgents] = useState<Set<number>>(new Set());
+  const [cgSelectedKbs, setCgSelectedKbs] = useState<number[]>([]);
+
+  // 知识库列表：右侧信息面板展示绑定 + 建群/群设置下拉多选共用
+  const [kbs, setKbs] = useState<KbSummary[]>([]);
 
   const chatBodyRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -156,6 +162,13 @@ export default function ChatPage() {
   }, []);
 
   useEffect(() => { loadGroups(); }, [loadGroups]);
+
+  // ---- 加载知识库列表（面板展示绑定 + 建群/群设置多选共用；静默失败不弹错误） ----
+  const reloadKbs = useCallback(async () => {
+    try { setKbs(await KbApi.list()); } catch { /* 面板数据缺失不阻塞聊天主流程 */ }
+  }, []);
+
+  useEffect(() => { void reloadKbs(); }, [reloadKbs]);
 
   // 侧栏收起状态持久化
   useEffect(() => { localStorage.setItem('dingring.chat.leftCollapsed', leftCollapsed ? '1' : '0'); }, [leftCollapsed]);
@@ -489,13 +502,15 @@ export default function ChatPage() {
       const list = await API.get<AgentDTO[]>('/api/agents');
       if (!list.length) { toast('请先到「Agent 管理」创建 Agent', 'error'); return; }
       setAgents(list);
+      void reloadKbs();  // 刷新知识库选项（KB 页可能新增/删除）
       setCgName('');
       setCgSelectedAgents(new Set());
+      setCgSelectedKbs([]);
       setShowCreateGroup(true);
     } catch (e: any) { toast(e.message, 'error'); }
-  }, []);
+  }, [reloadKbs]);
 
-  // ---- 群设置（成员管理）：打开前确保 agents 已加载 ----
+  // ---- 群设置（成员管理 + 知识库绑定）：打开前确保 agents / kbs 已加载 ----
   const openGroupSettings = useCallback(async () => {
     try {
       if (!agents.length) {
@@ -503,22 +518,25 @@ export default function ChatPage() {
         if (!list.length) { toast('请先到「Agent 管理」创建 Agent', 'error'); return; }
         setAgents(list);
       }
+      void reloadKbs();
       setShowGroupSettings(true);
     } catch (e: any) { toast(e.message, 'error'); }
-  }, [agents.length]);
+  }, [agents.length, reloadKbs]);
 
   const submitCreateGroup = useCallback(async () => {
     const agentIds = [...cgSelectedAgents];
     if (!cgName.trim()) { toast('请输入群名称', 'error'); return; }
     if (!agentIds.length) { toast('请至少选择一个成员 Agent', 'error'); return; }
     try {
-      const detail = await API.post<GroupDetail>('/api/groups', { name: cgName.trim(), agentIds });
+      // kbIds 可空：不绑定任何知识库也允许建群
+      const detail = await API.post<GroupDetail>('/api/groups',
+        { name: cgName.trim(), agentIds, kbIds: cgSelectedKbs });
       setShowCreateGroup(false);
       toast('群创建成功', 'success');
       await loadGroups();
       selectGroup(detail.id);
     } catch (e: any) { toast(e.message, 'error'); }
-  }, [cgName, cgSelectedAgents, loadGroups, selectGroup]);
+  }, [cgName, cgSelectedAgents, cgSelectedKbs, loadGroups, selectGroup]);
 
   // ---- 删除群（逻辑删除，历史数据保留） ----
   const deleteGroup = useCallback(async (targetId: number, name: string) => {
@@ -899,20 +917,35 @@ export default function ChatPage() {
             </div>
           </div>
 
-          {/* 知识库管理 */}
+          {/* 知识库管理：展示群绑定的知识库（chat_group.knowledge_base_config.kbIds） */}
           <div className="info-panel__section">
             <div className="info-panel__heading">知识库管理</div>
             <div className="member-list">
-              <div className="member-item">
-                <Avatar name="知识库" size="sm" />
-                <div className="member-item__info">
-                  <span className="member-item__name">主知识库</span>
-                  <div className="member-item__row">
-                    <span className="tag tag--neutral">—</span>
-                    <span className="tag tag--success">已连接</span>
+              {(group.kbIds ?? []).map(id => {
+                const kb = kbs.find(k => k.id === id);
+                return (
+                  <div key={id} className="member-item">
+                    <Avatar name={kb?.name ?? `KB-${id}`} size="sm" />
+                    <div className="member-item__info">
+                      <span className="member-item__name">{kb?.name ?? `知识库 #${id}`}</span>
+                      <div className="member-item__row">
+                        <span className="tag tag--success">已绑定</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+              {!(group.kbIds ?? []).length && (
+                <div className="member-item">
+                  <Avatar name="知识库" size="sm" />
+                  <div className="member-item__info">
+                    <span className="member-item__name">未绑定知识库</span>
+                    <div className="member-item__row">
+                      <span className="tag tag--neutral">在群设置中绑定</span>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
             </div>
           </div>
         </aside>
@@ -943,6 +976,12 @@ export default function ChatPage() {
                 <span className="preview-pill__dot" />
                 {cgSelectedAgents.size} 位成员
               </span>
+              {cgSelectedKbs.length > 0 && (
+                <span className="preview-pill">
+                  <span className="preview-pill__dot" />
+                  {cgSelectedKbs.length} 个知识库
+                </span>
+              )}
             </div>
           </div>
           <div className="modal__footer-actions">
@@ -1024,6 +1063,29 @@ export default function ChatPage() {
             })}
           </div>
         </section>
+
+        {/* 章节 03：绑定知识库（可选） */}
+        <section className="chapter">
+          <header className="chapter__head">
+            <span className="chapter__num">03</span>
+            <div className="chapter__title-wrap">
+              <h3 className="chapter__title">绑定知识库</h3>
+              <span className="chapter__hint">讨论时作为 RAG 检索源注入，可多选，可稍后在群设置中调整</span>
+            </div>
+            <span className="chapter__count">{cgSelectedKbs.length}<span className="chapter__count-sep">/</span>{kbs.length}</span>
+          </header>
+          <MultiSelect
+            options={kbs.map(kb => ({
+              value: kb.id,
+              label: kb.name,
+              desc: kb.description ? (kb.description.length > 18 ? kb.description.slice(0, 18) + '…' : kb.description) : undefined,
+            }))}
+            selected={cgSelectedKbs}
+            onChange={setCgSelectedKbs}
+            placeholder="选择要绑定的知识库（可多选）"
+            emptyText="暂无知识库，可到「知识库管理」页创建"
+          />
+        </section>
       </Modal>
 
       {/* 弹窗：主题结论 */}
@@ -1050,13 +1112,14 @@ export default function ChatPage() {
         </div>
       </Modal>
 
-      {/* 抽屉：群设置（成员管理） */}
+      {/* 抽屉：群设置（成员管理 + 知识库绑定） */}
       {group && (
         <GroupSettings
           open={showGroupSettings}
           onClose={() => setShowGroupSettings(false)}
           group={group}
           agents={agents}
+          kbs={kbs}
           onUpdated={detail => { setGroup(detail); setActiveTopic(detail.activeTopic ?? null); }}
         />
       )}

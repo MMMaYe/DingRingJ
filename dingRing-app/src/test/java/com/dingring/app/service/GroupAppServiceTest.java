@@ -1,6 +1,7 @@
 package com.dingring.app.service;
 
 import com.dingring.app.dto.request.CreateGroupRequest;
+import com.dingring.app.dto.request.UpdateMembersRequest;
 import com.dingring.app.dto.response.GroupDetail;
 import com.dingring.app.dto.response.GroupSummary;
 import com.dingring.app.dto.response.MemberInfo;
@@ -19,6 +20,8 @@ import com.dingring.domain.group.MemberRole;
 import com.dingring.domain.group.MemberType;
 import com.dingring.domain.group.MessageRepository;
 import com.dingring.domain.group.GroupMessage;
+import com.dingring.domain.knowledgebase.KnowledgeBase;
+import com.dingring.domain.knowledgebase.KnowledgeBaseRepository;
 import com.dingring.domain.service.DomainEventPublisher;
 import com.dingring.domain.user.User;
 import com.dingring.domain.user.UserRepository;
@@ -45,6 +48,7 @@ class GroupAppServiceTest {
 
     private GroupRepository groupRepository;
     private AgentRepository agentRepository;
+    private KnowledgeBaseRepository knowledgeBaseRepository;
     private TopicRepository topicRepository;
     private MessageRepository messageRepository;
     private UserRepository userRepository;
@@ -56,12 +60,13 @@ class GroupAppServiceTest {
     void setUp() {
         groupRepository = mock(GroupRepository.class);
         agentRepository = mock(AgentRepository.class);
+        knowledgeBaseRepository = mock(KnowledgeBaseRepository.class);
         topicRepository = mock(TopicRepository.class);
         messageRepository = mock(MessageRepository.class);
         userRepository = mock(UserRepository.class);
         eventPublisher = mock(DomainEventPublisher.class);
         terminator = mock(Terminator.class);
-        service = new GroupAppService(groupRepository, agentRepository, topicRepository,
+        service = new GroupAppService(groupRepository, agentRepository, knowledgeBaseRepository, topicRepository,
                 messageRepository, userRepository, eventPublisher, terminator);
     }
 
@@ -132,6 +137,125 @@ class GroupAppServiceTest {
             assertThat(detail.getMembers()).hasSize(3);
             // 发布 GroupCreated 事件
             verify(eventPublisher).publish(any(GroupCreated.class));
+        }
+    }
+
+    @Nested
+    @DisplayName("知识库绑定（knowledge_base_config.kbIds）")
+    class KbBinding {
+
+        private KnowledgeBase kb(Long id) {
+            KnowledgeBase k = new KnowledgeBase();
+            k.setId(id);
+            k.setName("kb-" + id);
+            return k;
+        }
+
+        @Test
+        @DisplayName("创建群携带 kbIds：校验通过后写入 config")
+        void createWithKbIdsShouldPersistConfig() {
+            CreateGroupRequest req = new CreateGroupRequest();
+            req.setName("群");
+            req.setAgentIds(List.of(10L));
+            req.setKbIds(List.of(5L, 6L));
+            when(agentRepository.findByIds(List.of(10L))).thenReturn(List.of(agent(10L, "老王")));
+            when(knowledgeBaseRepository.findById(5L)).thenReturn(Optional.of(kb(5L)));
+            when(knowledgeBaseRepository.findById(6L)).thenReturn(Optional.of(kb(6L)));
+            when(groupRepository.save(any(Group.class))).thenAnswer(inv -> {
+                Group g = inv.getArgument(0);
+                g.setId(1L);
+                return 1L;
+            });
+            Group saved = new Group();
+            saved.setId(1L);
+            saved.setGroupMember(List.of(new GroupMember(1L, MemberType.USER, MemberRole.OWNER)));
+            when(groupRepository.findById(1L)).thenReturn(Optional.of(saved));
+            when(topicRepository.findActiveByGroupId(1L)).thenReturn(Optional.empty());
+
+            service.create(req);
+
+            // save 收到的聚合已带 kbIds 配置
+            var captor = org.mockito.ArgumentCaptor.forClass(Group.class);
+            verify(groupRepository).save(captor.capture());
+            assertThat(captor.getValue().getKnowledgeBaseConfig())
+                    .containsEntry("kbIds", List.of(5L, 6L));
+        }
+
+        @Test
+        @DisplayName("创建群携带无效 kbId：抛 ParamException")
+        void createWithInvalidKbIdShouldThrow() {
+            CreateGroupRequest req = new CreateGroupRequest();
+            req.setName("群");
+            req.setAgentIds(List.of(10L));
+            req.setKbIds(List.of(99L));
+            when(agentRepository.findByIds(List.of(10L))).thenReturn(List.of(agent(10L, "老王")));
+            when(knowledgeBaseRepository.findById(99L)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> service.create(req))
+                    .isInstanceOf(ParamException.class)
+                    .hasMessageContaining("无效的知识库 ID");
+        }
+
+        private Group groupWithBinding() {
+            Group g = new Group();
+            g.setId(1L);
+            g.setName("群");
+            g.setGroupMember(List.of(
+                    new GroupMember(1L, MemberType.USER, MemberRole.OWNER),
+                    new GroupMember(10L, MemberType.AGENT, MemberRole.MEMBER)
+            ));
+            // 模拟已有绑定（JsonMapTypeHandler 回读时数字为 Integer，kbIdsOf 需兼容）
+            g.setKnowledgeBaseConfig(java.util.Map.of("kbIds", List.of(5)));
+            return g;
+        }
+
+        private UpdateMembersRequest membersReq(List<Long> agentIds, List<Long> kbIds) {
+            UpdateMembersRequest req = new UpdateMembersRequest();
+            req.setAgentIds(agentIds);
+            req.setKbIds(kbIds);
+            return req;
+        }
+
+        @Test
+        @DisplayName("updateMembers 不传 kbIds：保留原绑定")
+        void updateWithoutKbIdsShouldKeepBinding() {
+            Group g = groupWithBinding();
+            when(groupRepository.findById(1L)).thenReturn(Optional.of(g));
+            when(agentRepository.findByIds(List.of(10L))).thenReturn(List.of(agent(10L, "老王")));
+            when(topicRepository.findActiveByGroupId(1L)).thenReturn(Optional.empty());
+
+            GroupDetail detail = service.updateMembers(1L, membersReq(List.of(10L), null));
+
+            // Integer 5 被归一为 Long 5
+            assertThat(detail.getKbIds()).containsExactly(5L);
+        }
+
+        @Test
+        @DisplayName("updateMembers 传空列表：清空绑定")
+        void updateWithEmptyKbIdsShouldClearBinding() {
+            Group g = groupWithBinding();
+            when(groupRepository.findById(1L)).thenReturn(Optional.of(g));
+            when(agentRepository.findByIds(List.of(10L))).thenReturn(List.of(agent(10L, "老王")));
+            when(topicRepository.findActiveByGroupId(1L)).thenReturn(Optional.empty());
+
+            GroupDetail detail = service.updateMembers(1L, membersReq(List.of(10L), List.of()));
+
+            assertThat(detail.getKbIds()).isEmpty();
+            assertThat(g.getKnowledgeBaseConfig()).isNull();
+        }
+
+        @Test
+        @DisplayName("updateMembers 传新 kbIds：整体覆盖")
+        void updateWithNewKbIdsShouldReplace() {
+            Group g = groupWithBinding();
+            when(groupRepository.findById(1L)).thenReturn(Optional.of(g));
+            when(agentRepository.findByIds(List.of(10L))).thenReturn(List.of(agent(10L, "老王")));
+            when(knowledgeBaseRepository.findById(7L)).thenReturn(Optional.of(kb(7L)));
+            when(topicRepository.findActiveByGroupId(1L)).thenReturn(Optional.empty());
+
+            GroupDetail detail = service.updateMembers(1L, membersReq(List.of(10L), List.of(7L)));
+
+            assertThat(detail.getKbIds()).containsExactly(7L);
         }
     }
 

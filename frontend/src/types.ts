@@ -37,6 +37,8 @@ export interface GroupDetail {
   name: string;
   ownerId: number;
   members: MemberInfo[];
+  /** 绑定的知识库 ID 列表（后端存 chat_group.knowledge_base_config.kbIds，未绑定为空数组） */
+  kbIds: number[];
   activeTopic: TopicSummary | null;
   createTime: string;
 }
@@ -183,6 +185,8 @@ export interface CreateGroupRequest {
 /** PUT /api/groups/{id}/members 更新群成员请求 */
 export interface UpdateMembersRequest {
   agentIds: number[];
+  /** 绑定的知识库 ID 列表（完整覆盖）；undefined 表示本次不修改绑定 */
+  kbIds?: number[];
 }
 
 // ---- SKILL ----

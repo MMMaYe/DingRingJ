@@ -14,9 +14,8 @@ public class KbSummary {
 
     private Long id;
     private String name;
-    /** 作用域：GLOBAL / GROUP */
-    private String scope;
-    private Long groupId;
+    /** 知识库描述（用途说明） */
+    private String description;
     /** 状态：ACTIVE / PROCESSING / FAILED */
     private String status;
     private LocalDateTime createTime;

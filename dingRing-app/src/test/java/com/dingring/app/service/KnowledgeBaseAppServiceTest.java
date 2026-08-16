@@ -6,6 +6,7 @@ import com.dingring.domain.knowledgebase.File;
 import com.dingring.domain.knowledgebase.FileRepository;
 import com.dingring.domain.knowledgebase.KnowledgeBase;
 import com.dingring.domain.knowledgebase.KnowledgeBaseRepository;
+import com.dingring.domain.group.GroupRepository;
 import com.dingring.domain.service.RagService;
 import com.dingring.infrastructure.rag.DocumentIngestionPipeline;
 import com.dingring.infrastructure.rag.FileStorageService;
@@ -21,7 +22,6 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -39,6 +39,7 @@ class KnowledgeBaseAppServiceTest {
     private FileStorageService fileStorageService;
     private RagService ragService;
     private VectorStoreCleaner vectorStoreCleaner;
+    private GroupRepository groupRepository;
     private KnowledgeBaseAppService service;
 
     @BeforeEach
@@ -49,15 +50,15 @@ class KnowledgeBaseAppServiceTest {
         fileStorageService = mock(FileStorageService.class);
         ragService = mock(RagService.class);
         vectorStoreCleaner = mock(VectorStoreCleaner.class);
+        groupRepository = mock(GroupRepository.class);
         service = new KnowledgeBaseAppService(knowledgeBaseRepository, fileRepository,
-                ingestionPipeline, fileStorageService, ragService, vectorStoreCleaner);
+                ingestionPipeline, fileStorageService, ragService, vectorStoreCleaner, groupRepository);
     }
 
     private KnowledgeBase kb(Long id) {
         KnowledgeBase kb = new KnowledgeBase();
         kb.setId(id);
         kb.setName("kb-" + id);
-        kb.setScope(KnowledgeBase.SCOPE_GLOBAL);
         kb.setStatus(KnowledgeBase.STATUS_ACTIVE);
         return kb;
     }
@@ -100,7 +101,7 @@ class KnowledgeBaseAppServiceTest {
                 .isInstanceOf(ParamException.class)
                 .hasMessageContaining(".md");
         verify(fileStorageService, never()).store(any());
-        verify(ingestionPipeline, never()).ingest(any(), any(), any());
+        verify(ingestionPipeline, never()).ingest(any());
     }
 
     @Test
@@ -114,6 +115,6 @@ class KnowledgeBaseAppServiceTest {
         assertThatCode(() -> service.upload(1L, md)).doesNotThrowAnyException();
         // 闭环验证：落盘确实发生（不只是摄入管道被调用）
         verify(fileStorageService).store(any());
-        verify(ingestionPipeline).ingest(any(), eq(KnowledgeBase.SCOPE_GLOBAL), any());
+        verify(ingestionPipeline).ingest(any());
     }
 }

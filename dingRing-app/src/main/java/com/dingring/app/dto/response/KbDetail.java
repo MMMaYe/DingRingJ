@@ -15,8 +15,8 @@ public class KbDetail {
 
     private Long id;
     private String name;
-    private String scope;
-    private Long groupId;
+    /** 知识库描述（用途说明） */
+    private String description;
     private String status;
     /** 知识库下的文件列表 */
     private List<FileDTO> files;

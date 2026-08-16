@@ -38,8 +38,8 @@ export const API = {
 export interface KbSummary {
   id: number;
   name: string;
-  scope: 'GLOBAL' | 'GROUP';
-  groupId: number | null;
+  /** 知识库描述（用途说明） */
+  description: string | null;
   status: string;
   createTime: string;
 }
@@ -66,7 +66,8 @@ export interface KbDetail extends KbSummary {
 
 export const KbApi = {
   list: () => API.get<KbSummary[]>('/api/kb'),
-  create: (data: { name: string; scope: 'GLOBAL' | 'GROUP'; groupId?: number }) =>
+  // 创建传名称+描述：作用域概念已移除，群与库的关联由群侧绑定（chat_group.knowledge_base_config）
+  create: (data: { name: string; description: string }) =>
     API.post<KbDetail>('/api/kb', data),
   detail: (id: number) => API.get<KbDetail>(`/api/kb/${id}`),
   remove: (id: number) => API.del<void>(`/api/kb/${id}`),

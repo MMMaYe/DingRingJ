@@ -12,7 +12,7 @@
     </resultMap>
 
     <sql id="columns">
-        id, name, scope, group_id, status, feature, create_time, update_time
+        id, name, description, status, feature, create_time, update_time
     </sql>
 
     <select id="findById" resultMap="kbMap">
@@ -29,8 +29,8 @@
 
     <insert id="insert" parameterType="com.dingring.domain.knowledgebase.KnowledgeBase"
             useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO knowledge_base (name, scope, group_id, status, feature, create_time, update_time)
-        VALUES (#{name}, #{scope}, #{groupId}, #{status},
+        INSERT INTO knowledge_base (name, description, status, feature, create_time, update_time)
+        VALUES (#{name}, #{description}, #{status},
                 #{feature, typeHandler=com.dingring.infrastructure.persistence.typehandler.JsonMapTypeHandler},
                 #{createTime}, #{updateTime})
     </insert>
@@ -38,8 +38,7 @@
     <update id="update" parameterType="com.dingring.domain.knowledgebase.KnowledgeBase">
         UPDATE knowledge_base
         SET name        = #{name},
-            scope       = #{scope},
-            group_id    = #{groupId},
+            description = #{description},
             status      = #{status},
             feature     = #{feature, typeHandler=com.dingring.infrastructure.persistence.typehandler.JsonMapTypeHandler},
             update_time = #{updateTime}

@@ -12,6 +12,7 @@ import com.dingring.domain.knowledgebase.File;
 import com.dingring.domain.knowledgebase.FileRepository;
 import com.dingring.domain.knowledgebase.KnowledgeBase;
 import com.dingring.domain.knowledgebase.KnowledgeBaseRepository;
+import com.dingring.domain.group.GroupRepository;
 import com.dingring.domain.service.RagService;
 import com.dingring.infrastructure.rag.DocumentIngestionPipeline;
 import com.dingring.infrastructure.rag.FileStorageService;
@@ -36,27 +37,18 @@ public class KnowledgeBaseAppService {
     private final FileStorageService fileStorageService;
     private final RagService ragService;
     private final VectorStoreCleaner vectorStoreCleaner;
+    private final GroupRepository groupRepository;
 
     /** 创建知识库（空库默认 ACTIVE，文件状态由摄入管道流转） */
     public KbDetail create(CreateKbRequest request) {
-        String scope = request.getScope();
-        if (scope == null || scope.isBlank()) {
-            scope = KnowledgeBase.SCOPE_GLOBAL;
-        }
-        // 群专属知识库必须关联群 ID，否则检索时无法定位归属
-        if (KnowledgeBase.SCOPE_GROUP.equals(scope) && request.getGroupId() == null) {
-            throw new ParamException("群专属知识库必须指定 groupId");
-        }
-
         KnowledgeBase kb = new KnowledgeBase();
         kb.setName(request.getName());
-        kb.setScope(scope);
-        kb.setGroupId(KnowledgeBase.SCOPE_GROUP.equals(scope) ? request.getGroupId() : null);
+        kb.setDescription(request.getDescription());
         kb.setStatus(KnowledgeBase.STATUS_ACTIVE);
         knowledgeBaseRepository.save(kb);
 
         LogHelper.printLog(KnowledgeBaseAppService.class, "create", "KB_CREATE",
-                "知识库已创建", "id={} name={} scope={}", kb.getId(), kb.getName(), kb.getScope());
+                "知识库已创建", "id={} name={}", kb.getId(), kb.getName());
         return detail(kb.getId());
     }
 
@@ -75,8 +67,7 @@ public class KnowledgeBaseAppService {
         return KbDetail.builder()
                 .id(kb.getId())
                 .name(kb.getName())
-                .scope(kb.getScope())
-                .groupId(kb.getGroupId())
+                .description(kb.getDescription())
                 .status(kb.getStatus())
                 .files(files)
                 .createTime(kb.getCreateTime())
@@ -124,8 +115,8 @@ public class KnowledgeBaseAppService {
         entity.setStatus(File.STATUS_UPLOADED);
         fileRepository.save(entity);
 
-        // 异步摄入：scope/groupId 用于向量库双层过滤
-        ingestionPipeline.ingest(entity, kb.getScope(), kb.getGroupId());
+        // 异步摄入：向量 metadata 按 kbId 溯源（检索过滤/删除清理均按 kbId）
+        ingestionPipeline.ingest(entity);
 
         LogHelper.printLog(KnowledgeBaseAppService.class, "upload", "KB_FILE_UPLOAD",
                 "文件已上传", "kbId={} fileId={} name={} size={}",
@@ -157,21 +148,22 @@ public class KnowledgeBaseAppService {
     }
 
     /**
-     * 检索测试（dev only）：直接调用 RAG 检索，便于人工验证召回效果。
+     * 检索测试（dev only）：以指定群视角调用 RAG 检索，便于人工验证召回效果。
      *
      * @param query   检索文本
-     * @param groupId 群 ID（null 时仅检索全局知识）
+     * @param groupId 群 ID（按该群绑定的知识库过滤；null 或群不存在时无结果）
      */
     public String search(String query, Long groupId) {
-        return ragService.retrieve(query, groupId);
+        List<Long> kbIds = groupId == null ? List.of()
+                : groupRepository.findById(groupId).map(g -> g.boundKbIds()).orElse(List.of());
+        return ragService.retrieve(query, kbIds);
     }
 
     private KbSummary toSummary(KnowledgeBase kb) {
         return KbSummary.builder()
                 .id(kb.getId())
                 .name(kb.getName())
-                .scope(kb.getScope())
-                .groupId(kb.getGroupId())
+                .description(kb.getDescription())
                 .status(kb.getStatus())
                 .createTime(kb.getCreateTime())
                 .build();

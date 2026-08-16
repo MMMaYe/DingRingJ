@@ -21,6 +21,7 @@ import com.dingring.domain.group.GroupRepository;
 import com.dingring.domain.group.MemberRole;
 import com.dingring.domain.group.MemberType;
 import com.dingring.domain.group.MessageRepository;
+import com.dingring.domain.knowledgebase.KnowledgeBaseRepository;
 import com.dingring.domain.service.DomainEventPublisher;
 import com.dingring.domain.user.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -47,6 +48,7 @@ public class GroupAppService {
 
     private final GroupRepository groupRepository;
     private final AgentRepository agentRepository;
+    private final KnowledgeBaseRepository knowledgeBaseRepository;
     private final TopicRepository topicRepository;
     private final MessageRepository messageRepository;
     private final UserRepository userRepository;
@@ -68,6 +70,7 @@ public class GroupAppService {
             members.add(new GroupMember(agentId, MemberType.AGENT, MemberRole.MEMBER));
         }
         group.setGroupMember(members);
+        applyKbBinding(group, request.getKbIds());
         groupRepository.save(group);
         eventPublisher.publish(new GroupCreated(group.getId(), group.getName()));
         return detail(group.getId());
@@ -87,6 +90,7 @@ public class GroupAppService {
                 .name(group.getName())
                 .ownerId(group.getOwnerId())
                 .members(toMemberInfos(group))
+                .kbIds(group.boundKbIds())
                 .activeTopic(topicRepository.findActiveByGroupId(groupId)
                         .map(this::toTopicSummary).orElse(null))
                 .createTime(group.getCreateTime())
@@ -125,9 +129,31 @@ public class GroupAppService {
         }
 
         group.setGroupMember(members);
+        // kbIds 为 null 时不动绑定（旧语义仅改成员）；空列表表示解绑全部
+        applyKbBinding(group, request.getKbIds());
         group.setUpdateTime(LocalDateTime.now());
         groupRepository.update(group);
         return detail(groupId);
+    }
+
+    /**
+     * 应用知识库绑定到 knowledge_base_config.kbIds。
+     * <p>kbIds 为 null 时不修改（创建场景即不设置绑定；更新场景即保留原绑定），
+     * 空列表表示清空绑定。
+     * <p>绑定 ID 逐个校验存在性，防止落库脏引用（删除知识库不会级联清理群侧配置）。
+     */
+    private void applyKbBinding(Group group, List<Long> kbIds) {
+        if (kbIds == null) {
+            return;
+        }
+        for (Long kbId : kbIds) {
+            knowledgeBaseRepository.findById(kbId)
+                    .orElseThrow(() -> new ParamException("存在无效的知识库 ID: " + kbId));
+        }
+        // 当前 config 仅承载 kbIds 一个 key，直接整体写入；后续扩展多 key 时需改为合并语义
+        group.setKnowledgeBaseConfig(kbIds.isEmpty()
+                ? null
+                : Map.of(Group.KB_IDS_KEY, kbIds.stream().distinct().toList()));
     }
 
     private GroupSummary toSummary(Group group) {

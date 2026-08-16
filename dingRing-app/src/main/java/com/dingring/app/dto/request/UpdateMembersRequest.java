@@ -16,4 +16,10 @@ public class UpdateMembersRequest {
     /** 成员 Agent ID 列表（完整覆盖，任意 Agent 均可参与讨论与总结） */
     @NotEmpty(message = "至少保留一个成员 Agent")
     private List<Long> agentIds;
+
+    /**
+     * 绑定的知识库 ID 列表（完整覆盖）。
+     * <p>null 表示本次不修改知识库绑定（兼容仅改成员的旧调用）；非 null（含空列表）则整体覆盖。
+     */
+    private List<Long> kbIds;
 }

@@ -1,6 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import Avatar from './Avatar';
+import MultiSelect from './MultiSelect';
 import { API } from '../api';
+import type { KbSummary } from '../api';
 import { toast } from './Toast';
 import type { GroupDetail, AgentDTO, UpdateMembersRequest } from '../types';
 
@@ -9,38 +11,50 @@ interface GroupSettingsProps {
   onClose: () => void;
   group: GroupDetail;
   agents: AgentDTO[];
+  /** 可绑定的知识库列表（由聊天页统一加载传入） */
+  kbs: KbSummary[];
   /** 成员更新成功后的回调，传入最新的群详情 */
   onUpdated: (detail: GroupDetail) => void;
 }
 
 /**
- * 群设置抽屉（成员管理）— Editorial 风格。
+ * 群设置抽屉（成员管理 + 知识库绑定）— Editorial 风格。
  *
  * 设计要点：
  * - 顶部「刊头」：大号衬线群名 + 头像堆叠 + 装饰性元数据
  * - 章节式排版：左侧大号编号 + 细横线 + 标题描述，呈现目录感
  * - 成员卡片：印章式选中态、错峰入场动画
+ * - 知识库绑定：下拉多选（区别于成员的卡片多选，库数量多时下拉更省空间）
  * - 改动检测：精确计数「N 项改动」徽章 + 脉冲提示
  */
-export default function GroupSettings({ open, onClose, group, agents, onUpdated }: GroupSettingsProps) {
+export default function GroupSettings({ open, onClose, group, agents, kbs, onUpdated }: GroupSettingsProps) {
   const [selectedAgents, setSelectedAgents] = useState<Set<number>>(new Set());
+  const [selectedKbs, setSelectedKbs] = useState<number[]>([]);
   const [saving, setSaving] = useState(false);
 
-  // 打开时根据当前群成员初始化勾选状态，并作为改动检测基线
+  // 打开时根据当前群成员/知识库绑定初始化勾选状态，并作为改动检测基线
   useEffect(() => {
     if (!open) return;
     const members = group.members.filter(m => m.type === 'AGENT');
     setSelectedAgents(new Set(members.map(m => m.id)));
+    setSelectedKbs([...(group.kbIds ?? [])]);
   }, [open, group]);
 
-  // 改动检测：精确计算「成员变化数」
-  const dirtyCount = useMemo(() => {
+  // 改动检测：成员变化数 + 知识库绑定变化数
+  const { memberDirty, kbDirty } = useMemo(() => {
     const baseMembers = new Set(group.members.filter(m => m.type === 'AGENT').map(m => m.id));
     let added = 0, removed = 0;
     for (const id of selectedAgents) if (!baseMembers.has(id)) added++;
     for (const id of baseMembers) if (!selectedAgents.has(id)) removed++;
-    return added + removed;
-  }, [selectedAgents, group]);
+
+    const baseKbs = new Set(group.kbIds ?? []);
+    let kbAdded = 0, kbRemoved = 0;
+    for (const id of selectedKbs) if (!baseKbs.has(id)) kbAdded++;
+    for (const id of baseKbs) if (!selectedKbs.includes(id)) kbRemoved++;
+
+    return { memberDirty: added + removed, kbDirty: kbAdded + kbRemoved };
+  }, [selectedAgents, selectedKbs, group]);
+  const dirtyCount = memberDirty + kbDirty;
 
   if (!open) return null;
 
@@ -69,9 +83,11 @@ export default function GroupSettings({ open, onClose, group, agents, onUpdated 
     try {
       const payload: UpdateMembersRequest = {
         agentIds: [...selectedAgents],
+        // 与成员同为整体覆盖语义：空数组即解绑全部
+        kbIds: selectedKbs,
       };
       const detail = await API.put<GroupDetail>(`/api/groups/${group.id}/members`, payload);
-      toast('成员已更新', 'success');
+      toast('群设置已更新', 'success');
       onUpdated(detail);
       onClose();
     } catch (e) {
@@ -165,6 +181,29 @@ export default function GroupSettings({ open, onClose, group, agents, onUpdated 
               })}
             </div>
           </section>
+
+          {/* 章节 02：知识库绑定 */}
+          <section className="chapter">
+            <header className="chapter__head">
+              <span className="chapter__num">02</span>
+              <div className="chapter__title-wrap">
+                <h3 className="chapter__title">知识库绑定</h3>
+                <span className="chapter__hint">讨论时作为 RAG 检索源注入本群，可多选</span>
+              </div>
+              <span className="chapter__count">{selectedKbs.length}<span className="chapter__count-sep">/</span>{kbs.length}</span>
+            </header>
+            <MultiSelect
+              options={kbs.map(kb => ({
+                value: kb.id,
+                label: kb.name,
+                desc: kb.description ? (kb.description.length > 18 ? kb.description.slice(0, 18) + '…' : kb.description) : undefined,
+              }))}
+              selected={selectedKbs}
+              onChange={setSelectedKbs}
+              placeholder="选择要绑定的知识库（可多选）"
+              emptyText="暂无知识库，可到「知识库管理」页创建"
+            />
+          </section>
         </div>
 
         <footer className="drawer__footer">
@@ -173,7 +212,9 @@ export default function GroupSettings({ open, onClose, group, agents, onUpdated 
               <span className="dirty-badge" role="status">
                 <span className="dirty-badge__dot" aria-hidden />
                 {dirtyCount} 项改动未保存
-                <span className="dirty-badge__detail">成员 {dirtyCount}</span>
+                <span className="dirty-badge__detail">
+                  成员 {memberDirty}{kbDirty > 0 ? ` · 知识库 ${kbDirty}` : ''}
+                </span>
               </span>
             ) : (
               <span className="drawer__saved-hint">
