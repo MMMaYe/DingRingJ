@@ -24,6 +24,9 @@ public class FixedSizeTextSplitter implements DocumentTransformer {
     private final int chunkSize;
     private final int overlap;
 
+    // 双构造器场景 Spring 无法自动选择：@Autowired 指定容器装配走此构造器
+    // （包私有双参构造器仅供单测直接传参，不经容器）
+    @org.springframework.beans.factory.annotation.Autowired
     public FixedSizeTextSplitter(RagProperties ragProperties) {
         this(ragProperties.getChunk().getFixedSize(), ragProperties.getChunk().getOverlap());
     }
