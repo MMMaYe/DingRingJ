@@ -344,7 +344,7 @@ public abstract class AgentHook implements Hook {
 - **删除 `RagInjectionHook`（含单测）**
 - 4 个调用节点 context 增补 intent：ChatNode→"CHAT"、DiscussNode→"DISCUSS"、WorkNode→"WORK"、ConclusionService→"CONCLUDE"（沿用 `StateKeys.INTENT`）
 
-**容错**：任一检索源异常 → 该源跳过 + LogHelper WARN（`@Event(eventCode = "INJECT_KB")` 切面记录命中矩阵与耗时），双源全失败返回 `Map.of()`，绝不阻塞 Agent 发言。
+**容错**：任一检索源异常 → 该源跳过 + LogHelper WARN，双源全失败返回 `Map.of()`，绝不阻塞 Agent 发言。命中矩阵与耗时用 LogHelper 在方法内记录（不用 @Event 切面：OverAllState 含消息对象，fastjson 序列化入参日志有体积与兼容风险）。
 
 ### 6.11 上传校验（改造 KnowledgeBaseAppService.upload）
 
