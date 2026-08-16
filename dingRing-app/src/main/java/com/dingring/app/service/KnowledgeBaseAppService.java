@@ -15,6 +15,7 @@ import com.dingring.domain.knowledgebase.KnowledgeBaseRepository;
 import com.dingring.domain.service.RagService;
 import com.dingring.infrastructure.rag.DocumentIngestionPipeline;
 import com.dingring.infrastructure.rag.FileStorageService;
+import com.dingring.infrastructure.rag.VectorStoreCleaner;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -34,6 +35,7 @@ public class KnowledgeBaseAppService {
     private final DocumentIngestionPipeline ingestionPipeline;
     private final FileStorageService fileStorageService;
     private final RagService ragService;
+    private final VectorStoreCleaner vectorStoreCleaner;
 
     /** 创建知识库（空库默认 ACTIVE，文件状态由摄入管道流转） */
     public KbDetail create(CreateKbRequest request) {
@@ -84,7 +86,7 @@ public class KnowledgeBaseAppService {
 
     /**
      * 删除知识库：连带清理文件元数据与物理文件。
-     * <p>向量库条目因缺乏按 metadata 批删入口暂不清理（后续补全），不影响知识库重建。
+     * <p>向量条目按 kbId 联动清理（失败仅告警）。
      */
     public void delete(Long id) {
         knowledgeBaseRepository.findById(id)
@@ -93,6 +95,8 @@ public class KnowledgeBaseAppService {
             fileStorageService.delete(file.getPath());
             fileRepository.deleteById(file.getId());
         }
+        // P2：按 kbId 一次清理该知识库全部向量（fileId 溯源 metadata 已在摄入时写入）
+        vectorStoreCleaner.deleteByKbId(id);
         knowledgeBaseRepository.deleteById(id);
         LogHelper.printLog(KnowledgeBaseAppService.class, "delete", "KB_DELETE",
                 "知识库已删除", "id={}", id);
@@ -142,6 +146,8 @@ public class KnowledgeBaseAppService {
             throw new ParamException("文件不属于该知识库");
         }
         fileStorageService.delete(file.getPath());
+        // P2：联动清理该文件全部切片向量（失败仅告警，不阻断删除）
+        vectorStoreCleaner.deleteByFileId(fileId);
         fileRepository.deleteById(fileId);
         LogHelper.printLog(KnowledgeBaseAppService.class, "deleteFile", "KB_FILE_DELETE",
                 "文件已删除", "kbId={} fileId={}", kbId, fileId);
