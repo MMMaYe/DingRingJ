@@ -165,7 +165,9 @@ public class WorkNode implements NodeAction {
             context.put("groupId", groupId);
             context.put("userId", 1L);
             context.put("speakerAgentId", workAgent.getId());
-            // RAG 检索词：以任务输入为查询（RagInjectionHook 读取）
+            // 场景意图（InjectKbHook：WORK 仅 kb 源）
+            context.put(StateKeys.INTENT, "WORK");
+            // RAG 检索词：以任务输入为查询（InjectKbHook 读取）
             context.put("ragQuery", input);
 
             // 深度 ReAct 执行（recursionLimit=40，ToolSet.WORK）
@@ -271,6 +273,8 @@ public class WorkNode implements NodeAction {
             inputs.put("userId", 1L);
             inputs.put("speakerAgentId", supervisorAgent.getId());
             inputs.put("ragQuery", input);
+            // 场景意图（InjectKbHook：WORK 仅 kb 源，Supervisor 运行前注入一次）
+            inputs.put(StateKeys.INTENT, "WORK");
             inputs.put(StateKeys.MENTIONED_AGENT_IDS, mentionedAgentIds);
 
             LogHelper.printLog(WorkNode.class, "executeWithSupervisor", "WORK_NODE",

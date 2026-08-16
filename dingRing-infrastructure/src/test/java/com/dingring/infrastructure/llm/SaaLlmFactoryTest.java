@@ -3,9 +3,9 @@ package com.dingring.infrastructure.llm;
 import com.dingring.domain.agent.Agent;
 import com.dingring.domain.service.LlmService.CallOptions;
 import com.dingring.infrastructure.agent.hook.GroupRosterHook;
+import com.dingring.infrastructure.agent.hook.InjectKbHook;
 import com.dingring.infrastructure.agent.hook.MemoryInjectionHook;
 import com.dingring.infrastructure.agent.hook.ProfileInjectionHook;
-import com.dingring.infrastructure.agent.hook.RagInjectionHook;
 import com.dingring.infrastructure.agent.hook.SystemMessageMergeHook;
 import com.dingring.infrastructure.agent.tool.KnowledgeSearchTool;
 import com.dingring.infrastructure.agent.tool.TopicHistoryTool;
@@ -118,7 +118,7 @@ class SaaLlmFactoryTest {
                 mock(MemoryInjectionHook.class),
                 mock(ProfileInjectionHook.class),
                 mock(GroupRosterHook.class),
-                mock(RagInjectionHook.class),
+                mock(InjectKbHook.class),
                 mock(SystemMessageMergeHook.class),
                 mock(UserProfileQueryTool.class),
                 mock(TopicHistoryTool.class),

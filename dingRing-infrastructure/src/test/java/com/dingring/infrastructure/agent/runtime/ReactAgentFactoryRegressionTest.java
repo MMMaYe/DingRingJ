@@ -10,10 +10,11 @@ import com.dingring.domain.service.LlmService.ToolSet;
 import com.dingring.domain.service.MemoryService;
 import com.dingring.domain.service.ProfileService;
 import com.dingring.domain.service.RagService;
+import com.dingring.domain.service.TopicVectorService;
 import com.dingring.infrastructure.agent.hook.GroupRosterHook;
+import com.dingring.infrastructure.agent.hook.InjectKbHook;
 import com.dingring.infrastructure.agent.hook.MemoryInjectionHook;
 import com.dingring.infrastructure.agent.hook.ProfileInjectionHook;
-import com.dingring.infrastructure.agent.hook.RagInjectionHook;
 import com.dingring.infrastructure.agent.hook.SystemMessageMergeHook;
 import com.dingring.infrastructure.agent.tool.KnowledgeSearchTool;
 import com.dingring.infrastructure.agent.tool.TopicHistoryTool;
@@ -58,6 +59,7 @@ class ReactAgentFactoryRegressionTest {
     private final MemoryService memoryService = mock(MemoryService.class);
     private final ProfileService profileService = mock(ProfileService.class);
     private final RagService ragService = mock(RagService.class);
+    private final TopicVectorService topicVectorService = mock(TopicVectorService.class);
     private final TopicRepository topicRepository = mock(TopicRepository.class);
 
     /** 真实工具实例（依赖用 mock 服务），走 ToolCallbacks.from 转 ToolCallback */
@@ -66,7 +68,7 @@ class ReactAgentFactoryRegressionTest {
                 new MemoryInjectionHook(memoryService),
                 new ProfileInjectionHook(profileService),
                 new GroupRosterHook(groupRepository, agentRepository),
-                new RagInjectionHook(ragService),
+                new InjectKbHook(ragService, topicVectorService, topicRepository),
                 new SystemMessageMergeHook(),
                 new UserProfileQueryTool(profileService),
                 new TopicHistoryTool(topicRepository),

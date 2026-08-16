@@ -7,9 +7,9 @@ import com.dingring.domain.agent.Agent;
 import com.dingring.domain.service.LlmService.CallOptions;
 import com.dingring.domain.service.LlmService.ToolSet;
 import com.dingring.infrastructure.agent.hook.GroupRosterHook;
+import com.dingring.infrastructure.agent.hook.InjectKbHook;
 import com.dingring.infrastructure.agent.hook.MemoryInjectionHook;
 import com.dingring.infrastructure.agent.hook.ProfileInjectionHook;
-import com.dingring.infrastructure.agent.hook.RagInjectionHook;
 import com.dingring.infrastructure.agent.hook.SystemMessageMergeHook;
 import com.dingring.infrastructure.agent.tool.KnowledgeSearchTool;
 import com.dingring.infrastructure.agent.tool.TopicHistoryTool;
@@ -68,7 +68,7 @@ public class SaaLlmFactory {
     private final MemoryInjectionHook memoryInjectionHook;
     private final ProfileInjectionHook profileInjectionHook;
     private final GroupRosterHook groupRosterHook;
-    private final RagInjectionHook ragInjectionHook;
+    private final InjectKbHook injectKbHook;
     private final SystemMessageMergeHook systemMessageMergeHook;
     private final UserProfileQueryTool userProfileQueryTool;
     private final TopicHistoryTool topicHistoryTool;
@@ -169,9 +169,10 @@ public class SaaLlmFactory {
                 .model(buildChatModel(domainAgent, null))
                 .tools(tools)
                 // Hook 单例共享安全：实现仅从 state 读 per-call 参数，不使用 agent 引用。
+                // InjectKbHook（AgentHook）：每次 ReAct 运行前按意图门控注入一次，贯穿全程模型调用；
                 // 合并 Hook 必须注册在最后：ReactAgent 按注册顺序执行 Hook，保证模型调用前
                 // 已把所有 SystemMessage 收敛为单条置顶（SystemMessageMergeHook.beforeModel）
-                .hooks(memoryInjectionHook, profileInjectionHook, groupRosterHook, ragInjectionHook,
+                .hooks(memoryInjectionHook, profileInjectionHook, groupRosterHook, injectKbHook,
                         systemMessageMergeHook)
                 .compileConfig(CompileConfig.builder()
                         .recursionLimit(recursionLimit)

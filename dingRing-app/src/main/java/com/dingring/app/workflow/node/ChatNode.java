@@ -209,7 +209,9 @@ public class ChatNode implements NodeAction {
             context.put("groupId", groupId);
             context.put("userId", 1L);  // 当前单用户系统默认 ID
             context.put("speakerAgentId", agent.getId());
-            // RAG 检索词：以用户输入为查询（RagInjectionHook 读取）
+            // 场景意图（InjectKbHook 按意图门控：CHAT 跳过知识注入）
+            context.put(StateKeys.INTENT, "CHAT");
+            // RAG 检索词：以用户输入为查询（InjectKbHook 读取）
             context.put("ragQuery", input);
 
             // Agent 发言（失败重试 1 次）；流式模式下重试前废弃旧流、换新 streamId 重开

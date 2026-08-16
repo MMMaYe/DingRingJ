@@ -23,6 +23,7 @@ import com.dingring.domain.group.SenderType;
 import com.dingring.domain.service.LlmService;
 import com.dingring.domain.service.DomainEventPublisher;
 import com.dingring.domain.service.GroupBroadcastService;
+import com.dingring.domain.workflow.StateKeys;
 import com.dingring.infrastructure.aop.Event;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -166,7 +167,9 @@ public class ConclusionService {
             context.put("topicId", topic.getId());
             context.put("userId", 1L);  // 当前单用户系统默认 ID
             context.put("speakerAgentId", concluder.getId());
-            // RAG 检索词：以主题标题为查询（RagInjectionHook 读取，让结论引用知识库）
+            // 场景意图（InjectKbHook：CONCLUDE 仅 topic 源，相似历史结论辅助总结）
+            context.put(StateKeys.INTENT, "CONCLUDE");
+            // RAG 检索词：以主题标题为查询（CONCLUDE 意图下 InjectKbHook 不消费 kb 源，保留供检索语义）
             context.put("ragQuery", topic.getTitle());
             LlmService.AgentResult agentResult;
             try {
