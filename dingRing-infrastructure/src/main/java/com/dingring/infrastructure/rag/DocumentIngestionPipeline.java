@@ -4,11 +4,11 @@ import com.alibaba.cloud.ai.parser.tika.TikaDocumentParser;
 import com.dingring.common.util.LogHelper;
 import com.dingring.domain.knowledgebase.File;
 import com.dingring.domain.knowledgebase.FileRepository;
-import lombok.RequiredArgsConstructor;
+import com.dingring.infrastructure.rag.splitter.FixedSizeTextSplitter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.document.Document;
-import org.springframework.ai.transformer.splitter.TokenTextSplitter;
 import org.springframework.ai.vectorstore.VectorStore;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
@@ -29,19 +29,31 @@ import java.util.Map;
  */
 @Slf4j
 @Component
-@RequiredArgsConstructor
 @ConditionalOnProperty(name = "dingring.rag.enabled", havingValue = "true", matchIfMissing = true)
 public class DocumentIngestionPipeline {
 
     private final VectorStore vectorStore;
     private final FileRepository fileRepository;
+    private final TikaDocumentParser tikaDocumentParser;
+    private final FixedSizeTextSplitter textSplitter;
 
-    /** 切片大小（token 数） */
-    private static final int CHUNK_SIZE = 800;
-    /** 切片重叠（token 数） */
-    private static final int CHUNK_OVERLAP = 200;
     /** 向量入库批次大小 */
     private static final int BATCH_SIZE = 50;
+
+    /**
+     * 显式构造器：kbVectorStore 必须用 @Qualifier 指名注入
+     * （P2 起容器中存在 kb/topic 两个 PgVectorStore Bean）。
+     */
+    public DocumentIngestionPipeline(
+            @Qualifier("kbVectorStore") VectorStore vectorStore,
+            FileRepository fileRepository,
+            TikaDocumentParser tikaDocumentParser,
+            FixedSizeTextSplitter textSplitter) {
+        this.vectorStore = vectorStore;
+        this.fileRepository = fileRepository;
+        this.tikaDocumentParser = tikaDocumentParser;
+        this.textSplitter = textSplitter;
+    }
 
     /**
      * 异步执行文档摄入。
@@ -72,9 +84,8 @@ public class DocumentIngestionPipeline {
             file.setStatus(File.STATUS_CHUNKED);
             fileRepository.update(file);
 
-            // 2. 切片
-            TokenTextSplitter splitter = new TokenTextSplitter(CHUNK_SIZE, CHUNK_OVERLAP, 5, 10000, true);
-            List<Document> chunks = splitter.apply(documents);
+            // 2. 切片（P2：Fixed-size 512/64 字符滑窗，替换 TokenTextSplitter 800/200）
+            List<Document> chunks = textSplitter.apply(documents);
             LogHelper.printLog(DocumentIngestionPipeline.class, "ingest", "RAG_INGEST",
                     "切片完成", "fileId={} 切片数={}", file.getId(), chunks.size());
 
@@ -83,10 +94,12 @@ public class DocumentIngestionPipeline {
             file.setChunkCount(chunks.size());
             fileRepository.update(file);
 
-            // 3. 构建 metadata 并入库
-            for (Document chunk : chunks) {
+            // 3. 构建 metadata 并入库（fileId/chunkIndex 为 P2 新增：删除文件/知识库时按 metadata 清理向量的关键）
+            for (int i = 0; i < chunks.size(); i++) {
                 Map<String, Object> metadata = buildMetadata(file, scope, groupId);
-                chunk.getMetadata().putAll(metadata);
+                metadata.put("fileId", file.getId());
+                metadata.put("chunkIndex", i);
+                chunks.get(i).getMetadata().putAll(metadata);
             }
             // 分批入库（避免单次 API 调用过大）
             for (int i = 0; i < chunks.size(); i += BATCH_SIZE) {
@@ -113,21 +126,20 @@ public class DocumentIngestionPipeline {
     /** 用 SAA Tika parser 读取文件内容（P2：parse() 直接返回 Spring AI Document，生态统一） */
     private List<Document> readDocument(File file) throws IOException {
         try (InputStream is = Files.newInputStream(Paths.get(file.getPath()))) {
-            return new TikaDocumentParser().parse(is);
+            return tikaDocumentParser.parse(is);
         }
     }
 
-    /** 构建 metadata（双层过滤用） */
+    /** 构建 metadata（双层过滤 + 溯源清理用） */
     private Map<String, Object> buildMetadata(File file, String scope, Long groupId) {
         Map<String, Object> metadata = new HashMap<>();
-        metadata.put("source", "UPLOAD");
+        metadata.put("kbId", file.getKnowledgeBaseId());
+        metadata.put("fileName", file.getName());
         metadata.put("docType", file.getFileType());
         metadata.put("scope", scope);
         if (groupId != null) {
             metadata.put("groupId", groupId);
         }
-        metadata.put("docId", file.getKnowledgeBaseId());
-        metadata.put("docName", file.getName());
         metadata.put("uploadTime", LocalDateTime.now().toString());
         return metadata;
     }
