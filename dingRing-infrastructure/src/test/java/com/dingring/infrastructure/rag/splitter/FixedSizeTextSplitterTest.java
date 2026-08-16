@@ -54,9 +54,9 @@ class FixedSizeTextSplitterTest {
         List<Document> chunks = splitter(512, 64).apply(List.of(new Document(text)));
 
         assertThat(chunks.size()).isGreaterThanOrEqualTo(4);
-        // 按字符切的强断言：每块字符数都达上限 512（若误按字节切，中文 3 字节/字，块长仅 ~170）
-        for (Document chunk : chunks) {
-            assertThat(chunk.getText().length()).isLessThanOrEqualTo(512);
+        // 按字符切的强断言：非末块恰为 512 字符（若误按字节切，中文 3 字节/字，每块仅 ~300 字符，此断言必失败）
+        for (int i = 0; i < chunks.size() - 1; i++) {
+            assertThat(chunks.get(i).getText().length()).isEqualTo(512);
         }
         assertThat(chunks.stream().mapToInt(c -> c.getText().length()).sum()).isGreaterThan(2000);
     }

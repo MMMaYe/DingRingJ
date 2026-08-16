@@ -134,7 +134,8 @@ public class SiliconFlowEmbeddingModel extends AbstractEmbeddingModel {
         }
 
         JSONObject json = JSONObject.parseObject(responseBody);
-        JSONArray data = json.getJSONArray("data");
+        // 空 body 时 parseObject 返回 null，一并纳入下方快速失败分支（统一错误出口）
+        JSONArray data = json == null ? null : json.getJSONArray("data");
         if (data == null || data.size() != batch.size()) {
             // 畸形/短返回会给上游留下 NPE 或难定位的条数不匹配，这里快速失败并携带期望条数
             throw new IllegalStateException(
