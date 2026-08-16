@@ -90,10 +90,16 @@ export default function KBPage() {
     const name = newName.trim();
     if (!name) { toast('请输入知识库名称', 'info'); return; }
     if (newScope === 'GROUP' && !newGroupId.trim()) { toast('群专属知识库需填写 groupId', 'info'); return; }
+    // 数字校验：Number('abc')->NaN 会以 null 落库，创建出无归属的 GROUP 库
+    const groupId = Number(newGroupId);
+    if (newScope === 'GROUP' && (!Number.isInteger(groupId) || groupId <= 0)) {
+      toast('groupId 必须为正整数', 'info');
+      return;
+    }
     try {
       const created = await KbApi.create({
         name, scope: newScope,
-        ...(newScope === 'GROUP' ? { groupId: Number(newGroupId) } : {}),
+        ...(newScope === 'GROUP' ? { groupId } : {}),
       });
       toast(`知识库「${created.name}」已创建`, 'success');
       setCreating(false); setNewName(''); setNewGroupId('');
@@ -116,9 +122,11 @@ export default function KBPage() {
   };
 
   const handleUpload = async (f: File) => {
-    if (selectedId == null) { toast('请先选择或创建知识库', 'info'); return; }
+    // 早退路径也要重置 input value：否则再选同一文件不触发 onChange，用户需换文件才能重试
+    const resetInput = () => { if (fileInputRef.current) fileInputRef.current.value = ''; };
+    if (selectedId == null) { toast('请先选择或创建知识库', 'info'); resetInput(); return; }
     // 与后端双检对齐：扩展名 .md/.markdown（contentType 由后端校验）
-    if (!/\.(md|markdown)$/i.test(f.name)) { toast('当前仅支持 .md 文件', 'error'); return; }
+    if (!/\.(md|markdown)$/i.test(f.name)) { toast('当前仅支持 .md 文件', 'error'); resetInput(); return; }
     setUploading(true);
     try {
       await KbApi.uploadFile(selectedId, f);

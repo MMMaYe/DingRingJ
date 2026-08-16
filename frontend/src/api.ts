@@ -79,9 +79,15 @@ export const KbApi = {
   uploadFile: async (id: number, file: File): Promise<KbFileDTO> => {
     const form = new FormData();
     form.append('file', file);
-    const resp = await fetch(`/api/kb/${id}/files`, { method: 'POST', body: form });
-    const body = await resp.json();
+    const resp = await fetch(`/api/kb/$glm-5.3_common/files`, { method: 'POST', body: form });
+    // 非 JSON 响应（如网关 500 的 HTML 页）时 json() 抛英文 SyntaxError，转译为友好提示
+    let body: { success?: boolean; message?: string; data?: KbFileDTO } | null = null;
+    try {
+      body = await resp.json();
+    } catch {
+      throw new Error('上传失败：服务响应异常');
+    }
     if (!body?.success) throw new Error(body?.message || '上传失败');
-    return body.data;
+    return body.data as KbFileDTO;
   },
 };

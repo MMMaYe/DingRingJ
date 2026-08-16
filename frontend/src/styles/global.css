@@ -935,10 +935,6 @@ textarea.input { resize: none; }
 .page-transition .page--editorial .page__body {
   animation: page-section-in .32s cubic-bezier(.16, 1, .3, 1) .1s backwards;
 }
-/* KB 页面专属：Roadmap 区独立级联 */
-.page-transition .page--editorial .kb-empty-stack {
-  animation: page-section-in .32s cubic-bezier(.16, 1, .3, 1) .12s backwards;
-}
 
 @keyframes page-section-in {
   from {
@@ -957,7 +953,6 @@ textarea.input { resize: none; }
   .page-transition .page--editorial .page__head,
   .page-transition .page--editorial .page__stats,
   .page-transition .page--editorial .page__body,
-  .page-transition .page--editorial .kb-empty-stack,
   .toast,
   .toast--leaving,
   .chat-jump {
