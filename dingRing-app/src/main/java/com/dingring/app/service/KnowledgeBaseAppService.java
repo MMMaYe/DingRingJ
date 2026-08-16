@@ -107,6 +107,8 @@ public class KnowledgeBaseAppService {
      * <p>摄入失败不影响上传结果，状态由摄入管道回写为 FAILED。
      */
     public FileDTO upload(Long kbId, MultipartFile file) {
+        // P2：当前仅支持 md 文档（解析与切片链路按 markdown 调优）
+        validateMarkdown(file);
         KnowledgeBase kb = knowledgeBaseRepository.findById(kbId)
                 .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "知识库不存在: " + kbId));
 
@@ -202,5 +204,23 @@ public class KnowledgeBaseAppService {
             return File.TYPE_MARKDOWN;
         }
         return File.TYPE_TXT;
+    }
+
+    /**
+     * md 双检：扩展名必须 .md/.markdown；contentType 非空时须为 text/*
+     * （浏览器对 .md 可能上报 text/markdown 或 text/plain，均放行；
+     * 明确的二进制类型如 application/pdf 直接拒绝，防止改名伪装）。
+     */
+    private void validateMarkdown(MultipartFile file) {
+        String name = file.getOriginalFilename();
+        boolean extOk = name != null && (name.toLowerCase().endsWith(".md")
+                || name.toLowerCase().endsWith(".markdown"));
+        if (!extOk) {
+            throw new ParamException("当前仅支持 .md 文件: " + name);
+        }
+        String contentType = file.getContentType();
+        if (contentType != null && !contentType.isBlank() && !contentType.toLowerCase().startsWith("text/")) {
+            throw new ParamException("文件类型不支持（仅支持 Markdown 文本）: " + contentType);
+        }
     }
 }
