@@ -7,30 +7,42 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 /**
- * PgVectorStore Bean 配置（Phase E）。
- * <p>手动创建 PgVectorStore，注入 PostgreSQL JdbcTemplate + EmbeddingModel。
- * <p>排除 Spring AI 的 PgVectorStoreAutoConfiguration（因为要用第二数据源，不是主 MySQL DataSource）。
- * <p>initialize-schema=true：首次启动时自动创建 vector_store 表 + HNSW 索引。
+ * PgVectorStore 双实例配置（P2）。
+ * <p>kb_store：知识库文档切片向量；topic_id_store：话题标题向量（语义回溯）。
+ * 两者共用 vectorJdbcTemplate 与同一 EmbeddingModel（Qwen3-0.6B/1024 维）。
+ * <p>kbVectorStore 标 @Primary：按类型注入 VectorStore 的既有代码
+ * （SaaRagService / DocumentIngestionPipeline 等）无需改动即指向 kb 库。
+ * <p>initialize-schema=true：首次启动自动建表 + HNSW 索引（vectorTableName 各自独立）。
  */
 @Slf4j
 @Configuration
 @ConditionalOnProperty(name = "dingring.rag.enabled", havingValue = "true", matchIfMissing = true)
 public class PgVectorStoreConfig {
 
-    /**
-     * PgVectorStore Bean。
-     * <p>distance-type=COSINE_DISTANCE（余弦相似度，适合文本语义检索）
-     * <p>index-type=HNSW（近似最近邻索引，检索性能好）
-     */
     @Bean
-    public PgVectorStore pgVectorStore(
+    @Primary
+    public PgVectorStore kbVectorStore(
             @Qualifier("vectorJdbcTemplate") JdbcTemplate jdbcTemplate,
             EmbeddingModel embeddingModel) {
-        log.info("PgVectorStore 初始化: dimensions={} distance-type=COSINE", embeddingModel.dimensions());
+        return build("kb_store", jdbcTemplate, embeddingModel);
+    }
+
+    @Bean
+    public PgVectorStore topicVectorStore(
+            @Qualifier("vectorJdbcTemplate") JdbcTemplate jdbcTemplate,
+            EmbeddingModel embeddingModel) {
+        return build("topic_id_store", jdbcTemplate, embeddingModel);
+    }
+
+    private PgVectorStore build(String tableName, JdbcTemplate jdbcTemplate, EmbeddingModel embeddingModel) {
+        log.info("PgVectorStore 初始化: table={} dimensions={} distance-type=COSINE",
+                tableName, embeddingModel.dimensions());
         return PgVectorStore.builder(jdbcTemplate, embeddingModel)
+                .vectorTableName(tableName)
                 .dimensions(embeddingModel.dimensions())
                 .distanceType(PgVectorStore.PgDistanceType.COSINE_DISTANCE)
                 .indexType(PgVectorStore.PgIndexType.HNSW)
