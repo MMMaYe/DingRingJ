@@ -86,9 +86,20 @@ dingring:
     # Phase E：RAG 知识库总开关。false 时不加载向量库数据源/PgVectorStore/RAG Hook，
     # 群聊主流程不受影响（RAG 是增强不是依赖）
     enabled: true
-    # Embedding 模型提供商：mock=本地确定性向量（无 API 成本，用于框架联调）；后续接入真实模型改配置即可
     embedding:
-      provider: mock
+      # P2：切换真实 SiliconFlow Embedding；mock 保留给单测/联调降级
+      provider: siliconflow
+      siliconflow:
+        base-url: https://api.siliconflow.cn/v1/embeddings
+        api-key: ${SILICONFLOW_API_KEY:}
+        model: Qwen/Qwen3-Embedding-0.6B
+        dimensions: 1024
+        batch-size: 16
+        timeout-seconds: 30
+        retry-backoff-base-ms: 500
+    chunk:
+      fixed-size: 512
+      overlap: 64
     # 上传文件本地存储根目录
     storage:
       local-path: ./rag-files

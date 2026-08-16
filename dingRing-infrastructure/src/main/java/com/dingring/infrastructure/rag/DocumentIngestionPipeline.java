@@ -1,19 +1,22 @@
 package com.dingring.infrastructure.rag;
 
+import com.alibaba.cloud.ai.parser.tika.TikaDocumentParser;
 import com.dingring.common.util.LogHelper;
 import com.dingring.domain.knowledgebase.File;
 import com.dingring.domain.knowledgebase.FileRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.document.Document;
-import org.springframework.ai.reader.tika.TikaDocumentReader;
 import org.springframework.ai.transformer.splitter.TokenTextSplitter;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.core.io.FileSystemResource;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
@@ -54,7 +57,13 @@ public class DocumentIngestionPipeline {
                 "摄入开始", "fileId={} fileName={} scope={}", file.getId(), file.getName(), scope);
         try {
             // 1. 读取文件
-            List<Document> documents = readDocument(file);
+            List<Document> documents;
+            try {
+                documents = readDocument(file);
+            } catch (IOException e) {
+                updateFailed(file, "文件读取失败: " + e.getMessage());
+                return;
+            }
             if (documents.isEmpty()) {
                 updateFailed(file, "文件内容为空或读取失败");
                 return;
@@ -101,11 +110,11 @@ public class DocumentIngestionPipeline {
         }
     }
 
-    /** 用 Tika 读取文件内容 */
-    private List<Document> readDocument(File file) {
-        FileSystemResource resource = new FileSystemResource(file.getPath());
-        TikaDocumentReader reader = new TikaDocumentReader(resource);
-        return reader.get();
+    /** 用 SAA Tika parser 读取文件内容（P2：parse() 直接返回 Spring AI Document，生态统一） */
+    private List<Document> readDocument(File file) throws IOException {
+        try (InputStream is = Files.newInputStream(Paths.get(file.getPath()))) {
+            return new TikaDocumentParser().parse(is);
+        }
     }
 
     /** 构建 metadata（双层过滤用） */

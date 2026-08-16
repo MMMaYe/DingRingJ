@@ -7,7 +7,6 @@ import org.springframework.ai.embedding.EmbeddingOptions;
 import org.springframework.ai.embedding.EmbeddingRequest;
 import org.springframework.ai.embedding.EmbeddingResponse;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
@@ -23,7 +22,6 @@ import java.util.Map;
  */
 @Slf4j
 @Component("mockEmbeddingModel")
-@Primary
 @ConditionalOnProperty(name = "dingring.rag.embedding.provider", havingValue = "mock", matchIfMissing = true)
 public class MockEmbeddingModel implements EmbeddingModel {
 

@@ -54,10 +54,18 @@
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
         </dependency>
-        <!-- Spring AI Tika 文档读取（Phase E：PDF/Markdown/TXT 文档解析） -->
+        <!-- SAA Tika 文档解析（P2：1.1.2.2 起 parse() 返回 Spring AI Document，替换 spring-ai tika reader，生态统一） -->
         <dependency>
-            <groupId>org.springframework.ai</groupId>
-            <artifactId>spring-ai-tika-document-reader</artifactId>
+            <groupId>com.alibaba.cloud.ai</groupId>
+            <artifactId>spring-ai-alibaba-starter-document-parser-tika</artifactId>
+            <version>${spring-ai-alibaba.version}</version>
+        </dependency>
+        <!-- SAA DashScope SDK：tika parser 实现的 DocumentParser 接口所在 jar（starter 声明为 optional 不传递，
+             编译期解析 parse() 签名与运行期加载实现类均需在 classpath，须显式引入且与 starter 同版本） -->
+        <dependency>
+            <groupId>com.alibaba.cloud.ai</groupId>
+            <artifactId>spring-ai-alibaba-dashscope</artifactId>
+            <version>${spring-ai-alibaba.version}</version>
         </dependency>
         <!-- Spring AOP -->
         <dependency>
