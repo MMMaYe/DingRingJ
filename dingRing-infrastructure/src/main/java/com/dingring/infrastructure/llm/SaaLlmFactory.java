@@ -170,8 +170,10 @@ public class SaaLlmFactory {
                 .tools(tools)
                 // Hook 单例共享安全：实现仅从 state 读 per-call 参数，不使用 agent 引用。
                 // InjectKbHook（AgentHook）：每次 ReAct 运行前按意图门控注入一次，贯穿全程模型调用；
-                // 合并 Hook 必须注册在最后：ReactAgent 按注册顺序执行 Hook，保证模型调用前
-                // 已把所有 SystemMessage 收敛为单条置顶（SystemMessageMergeHook.beforeModel）
+                // 合并 Hook 必须注册在最后：Hook 按 getOrder 稳定排序、同序保持注册顺序（当前
+                // 各 Hook 均未覆写 getOrder，默认 0），保证模型调用前已把所有 SystemMessage
+                // 收敛为单条置顶（SystemMessageMergeHook.beforeModel）；若有 Hook 覆写为非 0
+                // 需同步调整此假设
                 .hooks(memoryInjectionHook, profileInjectionHook, groupRosterHook, injectKbHook,
                         systemMessageMergeHook)
                 .compileConfig(CompileConfig.builder()
