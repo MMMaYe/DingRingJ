@@ -3,6 +3,7 @@ package com.dingring.infrastructure.agent.hook;
 import com.alibaba.cloud.ai.graph.OverAllState;
 import com.alibaba.cloud.ai.graph.RunnableConfig;
 import com.alibaba.cloud.ai.graph.agent.hook.AgentHook;
+import com.dingring.common.util.JsonHelper;
 import com.dingring.common.util.LogHelper;
 import com.dingring.domain.discussion.Topic;
 import com.dingring.domain.discussion.TopicRepository;
@@ -75,6 +76,11 @@ public class InjectKbHook extends AgentHook {
         Long groupId = state.<Long>value("groupId").orElse(null);
         Long topicId = state.<Long>value(StateKeys.TOPIC_ID).orElse(null);
         String topicTitle = state.value(StateKeys.TOPIC_TITLE, "");
+
+        LogHelper.printLog(InjectKbHook.class,
+                "InjectKbHook.beforeAgent",
+                "RAG_TOPIC_MEMORY","增强主题记忆",
+                "msg={}", JsonHelper.toJsonStr("intent",intent, "ragQuery", ragQuery, "groupId", groupId, "topicId", topicId, "topicTitle", topicTitle));
 
         long start = System.currentTimeMillis();
 

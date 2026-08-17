@@ -14,6 +14,16 @@ export default function TopicsPage() {
   const [cards, setCards] = useState<KnowledgeCardDTO[]>([]);
   const [loadingList, setLoadingList] = useState(true);
   const [loadingDetail, setLoadingDetail] = useState(false);
+  // 左侧主题列表收起状态（持久化到 localStorage，跨刷新保留）
+  const [listCollapsed, setListCollapsed] = useState<boolean>(() => {
+    try { return localStorage.getItem('topics:listCollapsed') === '1'; }
+    catch { return false; }
+  });
+
+  useEffect(() => {
+    try { localStorage.setItem('topics:listCollapsed', listCollapsed ? '1' : '0'); }
+    catch { /* 隐私模式或配额满 — 静默忽略 */ }
+  }, [listCollapsed]);
 
   const loadTopics = useCallback(async () => {
     try {
@@ -91,38 +101,52 @@ export default function TopicsPage() {
         </header>
 
         <div className="page__body topics-body">
-          {/* 左侧主题列表 */}
-          <div className="topics-list">
-            {loadingList ? (
-              Array.from({ length: 5 }).map((_, i) => (
-                <div key={`sk-${i}`} className="topic-item-skeleton" style={{ animationDelay: `${i * 40}ms` }}>
-                  <div className="topic-item-skeleton__title" />
-                  <div className="topic-item-skeleton__meta" />
+          {/* 左侧主题列表 — 支持收起 */}
+          <div className={`topics-list-wrap${listCollapsed ? ' topics-list-wrap--collapsed' : ''}`}>
+            <div className="topics-list">
+              {loadingList ? (
+                Array.from({ length: 5 }).map((_, i) => (
+                  <div key={`sk-${i}`} className="topic-item-skeleton" style={{ animationDelay: `${i * 40}ms` }}>
+                    <div className="topic-item-skeleton__title" />
+                    <div className="topic-item-skeleton__meta" />
+                  </div>
+                ))
+              ) : !filtered.length ? (
+                <div className="empty empty--editorial topics-list__empty">
+                  <div className="empty__icon">📜</div>
+                  <div className="empty__title">暂无沉淀主题</div>
+                  <div className="empty__hint">在群聊中结束讨论后会自动沉淀到这里</div>
                 </div>
-              ))
-            ) : !filtered.length ? (
-              <div className="empty empty--editorial topics-list__empty">
-                <div className="empty__icon">📜</div>
-                <div className="empty__title">暂无沉淀主题</div>
-                <div className="empty__hint">在群聊中结束讨论后会自动沉淀到这里</div>
-              </div>
-            ) : filtered.map((t, idx) => (
-              <div
-                key={t.id}
-                className={`topic-item${t.id === selectedId ? ' topic-item--active' : ''}`}
-                style={{ animationDelay: `${Math.min(idx, 8) * 25}ms` }}
-                onClick={() => selectTopic(t.id)}
-              >
-                <div className="topic-item__title">{t.title}</div>
-                <div className="topic-item__meta">
-                  <span className="tag tag--neutral">{t.groupName}</span>
-                  <span className="topic-item__count">{t.messageCount} 条消息</span>
+              ) : filtered.map((t, idx) => (
+                <div
+                  key={t.id}
+                  className={`topic-item${t.id === selectedId ? ' topic-item--active' : ''}`}
+                  style={{ animationDelay: `${Math.min(idx, 8) * 25}ms` }}
+                  onClick={() => selectTopic(t.id)}
+                >
+                  <div className="topic-item__title">{t.title}</div>
+                  <div className="topic-item__meta">
+                    <span className="tag tag--neutral">{t.groupName}</span>
+                    <span className="topic-item__count">{t.messageCount} 条消息</span>
+                  </div>
+                  <div className="topic-item__time">
+                    {t.closedAt ? new Date(t.closedAt).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : ''}
+                  </div>
                 </div>
-                <div className="topic-item__time">
-                  {t.closedAt ? new Date(t.closedAt).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : ''}
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
+            <button
+              type="button"
+              className="topics-list__toggle"
+              onClick={() => setListCollapsed(v => !v)}
+              aria-label={listCollapsed ? '展开主题列表' : '收起主题列表'}
+              aria-expanded={!listCollapsed}
+              title={listCollapsed ? '展开主题列表' : '收起主题列表'}
+            >
+              <span className="topics-list__toggle-icon" aria-hidden>
+                {listCollapsed ? '›' : '‹'}
+              </span>
+            </button>
           </div>
 
           {/* 右侧详情 */}

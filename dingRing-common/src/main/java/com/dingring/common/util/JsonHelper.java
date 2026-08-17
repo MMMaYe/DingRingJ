@@ -7,6 +7,7 @@ import com.alibaba.fastjson.serializer.SerializerFeature;
 
 import java.lang.reflect.Type;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -39,6 +40,36 @@ public final class JsonHelper {
             LogHelper.printErrorLog(JsonHelper.class, "JsonHelper.toJson", "SERIALIZE_FAIL", "序列化失败", "error={}", e, e.getMessage());
             return null;
         }
+    }
+
+    /**
+     * 将交错排列的 key, value, key, value, ... 可变参数组装为 Map 后序列化为 JSON 字符串。
+     * <p>参数按成对读取，键一般为 {@link String}，值可为任意类型；使用 {@link LinkedHashMap}
+     * 保留插入顺序；最终调用 {@link #mapToJsonStr(Map)} 完成序列化。
+     *
+     * @param o 交错排列的 key, value 序列，长度必须为偶数
+     * @return JSON 字符串；参数为 null/空/奇数、key 为 null 或异常时返回 null
+     */
+    public static String toJsonStr(Object... o) {
+        if (o == null || o.length == 0) {
+            return null;
+        }
+        if ((o.length & 1) != 0) {
+            LogHelper.printErrorLog(JsonHelper.class, "JsonHelper.toJsonStr", "TO_JSON_STR_PARAM_ODD",
+                    "参数数量必须为偶数", "size={}", o.length);
+            return null;
+        }
+        Map<String, Object> map = new LinkedHashMap<>(o.length / 2);
+        for (int i = 0; i < o.length; i += 2) {
+            Object key = o[i];
+            if (key == null) {
+                LogHelper.printErrorLog(JsonHelper.class, "JsonHelper.toJsonStr", "TO_JSON_STR_KEY_NULL",
+                        "key 不能为 null", "index={}", i);
+                return null;
+            }
+            map.put(key.toString(), o[i + 1]);
+        }
+        return mapToJsonStr(map);
     }
 
     /**
