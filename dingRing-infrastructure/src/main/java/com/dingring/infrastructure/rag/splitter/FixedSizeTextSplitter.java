@@ -15,7 +15,8 @@ import java.util.List;
  * <p>策略：步进 chunkSize-overlap 取窗，相邻块共享 overlap 字符保证边界语义连续；
  * 短尾块保留（不足步进时取到文本末尾），短于 chunkSize 的文本整块返回。
  * <p>按 String.length()（字符）而非字节计数：中文场景 1 字 = 1 块单位，直观可控。
- * <p>md 按标题结构切片（SAA MarkdownDocumentParser + Header 切分）列为后续演进，本次严格 Fixed-size。
+ * <p>上游已接入 SAA MarkdownDocumentParser（md 按标题结构切分），
+ * 本切片器退化为长度兜底：超长章节（> chunkSize）二次滑窗，短块整块保留并透传 parser metadata。
  */
 @Component
 @ConditionalOnProperty(name = "dingring.rag.enabled", havingValue = "true", matchIfMissing = true)

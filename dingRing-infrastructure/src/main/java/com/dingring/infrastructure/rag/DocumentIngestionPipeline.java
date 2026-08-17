@@ -1,5 +1,6 @@
 package com.dingring.infrastructure.rag;
 
+import com.alibaba.cloud.ai.parser.markdown.MarkdownDocumentParser;
 import com.alibaba.cloud.ai.parser.tika.TikaDocumentParser;
 import com.dingring.common.util.LogHelper;
 import com.dingring.domain.knowledgebase.File;
@@ -35,6 +36,7 @@ public class DocumentIngestionPipeline {
     private final VectorStore vectorStore;
     private final FileRepository fileRepository;
     private final TikaDocumentParser tikaDocumentParser;
+    private final MarkdownDocumentParser markdownDocumentParser;
     private final FixedSizeTextSplitter textSplitter;
 
     /** 向量入库批次大小 */
@@ -48,10 +50,12 @@ public class DocumentIngestionPipeline {
             @Qualifier("kbVectorStore") VectorStore vectorStore,
             FileRepository fileRepository,
             TikaDocumentParser tikaDocumentParser,
+            MarkdownDocumentParser markdownDocumentParser,
             FixedSizeTextSplitter textSplitter) {
         this.vectorStore = vectorStore;
         this.fileRepository = fileRepository;
         this.tikaDocumentParser = tikaDocumentParser;
+        this.markdownDocumentParser = markdownDocumentParser;
         this.textSplitter = textSplitter;
     }
 
@@ -122,9 +126,17 @@ public class DocumentIngestionPipeline {
         }
     }
 
-    /** 用 SAA Tika parser 读取文件内容（P2：parse() 直接返回 Spring AI Document，生态统一） */
+    /**
+     * 按 fileType 分流解析：
+     * md → MarkdownDocumentParser（commonmark AST 按标题/代码块结构切分，保留 category/lang metadata）；
+     * 其他 → TikaDocumentParser 兜底（纯文本提取，为未来多格式扩展预留）。
+     * 解析后的块统一过 FixedSizeTextSplitter 长度兜底（超长章节二次滑窗，短块整块保留）。
+     */
     private List<Document> readDocument(File file) throws IOException {
         try (InputStream is = Files.newInputStream(Paths.get(file.getPath()))) {
+            if (File.TYPE_MARKDOWN.equals(file.getFileType())) {
+                return markdownDocumentParser.parse(is);
+            }
             return tikaDocumentParser.parse(is);
         }
     }

@@ -60,6 +60,13 @@
             <artifactId>spring-ai-alibaba-starter-document-parser-tika</artifactId>
             <version>${spring-ai-alibaba.version}</version>
         </dependency>
+        <!-- SAA Markdown 解析器（md 按标题结构切分，commonmark AST + category/lang metadata；
+             BOM 1.1.2.3 不管理此模块，显式版本（同 nacos-prompt 模式）） -->
+        <dependency>
+            <groupId>com.alibaba.cloud.ai</groupId>
+            <artifactId>spring-ai-alibaba-starter-document-parser-markdown</artifactId>
+            <version>${spring-ai-alibaba.version}</version>
+        </dependency>
         <!-- SAA DashScope SDK：tika parser 实现的 DocumentParser 接口所在 jar（starter 声明为 optional 不传递，
              编译期解析 parse() 签名与运行期加载实现类均需在 classpath，须显式引入且与 starter 同版本） -->
         <dependency>
