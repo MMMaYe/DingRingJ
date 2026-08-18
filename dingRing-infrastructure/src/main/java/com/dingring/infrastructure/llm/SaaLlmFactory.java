@@ -12,6 +12,7 @@ import com.dingring.infrastructure.agent.hook.GroupRosterHook;
 import com.dingring.infrastructure.agent.hook.InjectKbHook;
 import com.dingring.infrastructure.agent.hook.ProfileInjectionHook;
 import com.dingring.infrastructure.agent.hook.SystemMessageMergeHook;
+import com.dingring.infrastructure.agent.interceptor.ModelRequestLoggingInterceptor;
 import com.dingring.infrastructure.agent.tool.WebTools;
 import com.dingring.infrastructure.aop.Event;
 import lombok.RequiredArgsConstructor;
@@ -68,6 +69,7 @@ public class SaaLlmFactory {
     private final GroupRosterHook groupRosterHook;
     private final InjectKbHook injectKbHook;
     private final SystemMessageMergeHook systemMessageMergeHook;
+    private final ModelRequestLoggingInterceptor modelRequestLoggingInterceptor;
     private final WebTools webTools;
 
     public OpenAiChatModel buildChatModel(Agent agent, CallOptions options) {
@@ -170,6 +172,9 @@ public class SaaLlmFactory {
         //TODO:这里的SystemPrompt缺失
 //                .systemPrompt缺失
         ReactAgent agent = builder
+                // 模型调用请求日志拦截器：每次模型调用打印最终 messages/工具装配，
+                // 观察用（dingring.llm.log-model-request 开关控制），不改变请求内容
+                .interceptors(modelRequestLoggingInterceptor)
                 // Hook 单例共享安全：实现仅从 state 读 per-call 参数，不使用 agent 引用。
                 // GroupContextMemoryHook（AgentHook）：按意图组装人设+群上下文记忆，整表替换 messages，
                 // 必须注册在 InjectKbHook（append）之前，否则会吃掉 kb 注入；

@@ -12,6 +12,7 @@ import com.dingring.infrastructure.agent.hook.GroupRosterHook;
 import com.dingring.infrastructure.agent.hook.InjectKbHook;
 import com.dingring.infrastructure.agent.hook.ProfileInjectionHook;
 import com.dingring.infrastructure.agent.hook.WorkProgressBroadcastHook;
+import com.dingring.infrastructure.agent.interceptor.ModelRequestLoggingInterceptor;
 import com.dingring.infrastructure.agent.tool.WebTools;
 import com.dingring.infrastructure.llm.SaaLlmFactory;
 import com.dingring.infrastructure.skill.SkillToolkitFactory;
@@ -65,6 +66,7 @@ public class SupervisorAgentFactory {
     private final SkillToolkitFactory skillToolkitFactory;
     private final SkillLoaderService skillLoaderService;
     private final WebTools webTools;
+    private final ModelRequestLoggingInterceptor modelRequestLoggingInterceptor;
 
     /**
      * 构建 Supervisor Agent。
@@ -87,6 +89,8 @@ public class SupervisorAgentFactory {
                 .model(llmFactory.buildChatModel(supervisorAgent, null))
                 .systemPrompt(systemPrompt)
                 .tools(subTools)
+                // 模型调用请求日志拦截器：观察 Supervisor 拆解/委派每轮模型调用的请求结构
+                .interceptors(modelRequestLoggingInterceptor)
                 // Supervisor 的 state 含 groupId（WorkNode 注入），state 依赖 Hook 可正常工作；
                 // InjectKbHook 防御行——Worker 被 AgentTool 委派时 clearContext 后 state 无 intent/ragQuery/topicId，自然跳过
                 .hooks(workProgressBroadcastHook, groupContextMemoryHook, profileInjectionHook,
@@ -116,6 +120,8 @@ public class SupervisorAgentFactory {
                 .model(llmFactory.buildChatModel(agent, null))
                 .systemPrompt(systemPrompt)
                 .tools(tools)
+                // 模型调用请求日志拦截器：Worker（AgentTool 委派）的模型调用同样经过拦截链
+                .interceptors(modelRequestLoggingInterceptor)
                 .hooks(groupContextMemoryHook, profileInjectionHook, groupRosterHook, injectKbHook)
                 .compileConfig(CompileConfig.builder()
                         .recursionLimit(WORKER_RECURSION_LIMIT)

@@ -7,6 +7,7 @@ import com.dingring.common.util.LogHelper;
 import com.dingring.domain.agent.Agent;
 import com.dingring.domain.service.LlmService;
 import com.dingring.infrastructure.agent.hook.SystemMessageMergeHook;
+import com.dingring.infrastructure.agent.interceptor.ModelRequestLoggingInterceptor;
 import com.dingring.infrastructure.aop.Event;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.messages.AssistantMessage;
@@ -41,9 +42,13 @@ public class ReactAgentLlmService implements LlmService {
 
     /** 统一 LLM runtime 构建工厂（模型 + 工具 Agent） */
     private final SaaLlmFactory llmFactory;
+    /** 模型调用请求日志拦截器（观察用，与带工具路径共用同一实例） */
+    private final ModelRequestLoggingInterceptor modelRequestLoggingInterceptor;
 
-    public ReactAgentLlmService(@Lazy SaaLlmFactory llmFactory) {
+    public ReactAgentLlmService(@Lazy SaaLlmFactory llmFactory,
+                                ModelRequestLoggingInterceptor modelRequestLoggingInterceptor) {
         this.llmFactory = llmFactory;
+        this.modelRequestLoggingInterceptor = modelRequestLoggingInterceptor;
     }
 
     @Override
@@ -178,7 +183,9 @@ public class ReactAgentLlmService implements LlmService {
         ChatModel chatModel = llmFactory.buildChatModel(agent, options);
         var builder = ReactAgent.builder()
                 .name(agent.getName())
-                .model(chatModel);
+                .model(chatModel)
+                // 模型调用请求日志拦截器：观察意图分类/摘要等无工具调用的请求结构
+                .interceptors(modelRequestLoggingInterceptor);
         if (systemPrompt != null && !systemPrompt.isBlank()) {
             builder.systemPrompt(systemPrompt);
         }
