@@ -1,6 +1,7 @@
 package com.dingring.infrastructure.agent.tool;
 
 import com.dingring.common.util.LogHelper;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
@@ -197,10 +198,11 @@ public class WebTools {
 
     /** Tavily /extract 响应（failed_results 为提取失败的 URL 及原因） */
     record TavilyExtractResponse(List<TavilyExtractResult> results,
-                                 List<TavilyFailedResult> failedResults) {}
+                                 @JsonProperty("failed_results") List<TavilyFailedResult> failedResults) {}
 
-    /** 单条提取结果（title 来自用户调研响应确认存在） */
-    record TavilyExtractResult(String title, String url, String rawContent) {}
+    /** 单条提取结果（title 来自用户调研响应确认存在；raw_content 为 snake_case 需显式映射） */
+    record TavilyExtractResult(String title, String url,
+                               @JsonProperty("raw_content") String rawContent) {}
 
     /** 提取失败项 */
     record TavilyFailedResult(String url, String error) {}
