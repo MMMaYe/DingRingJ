@@ -3,6 +3,7 @@ package com.dingring.infrastructure.rag;
 import com.dingring.common.util.LogHelper;
 import com.dingring.domain.service.RagService;
 import com.dingring.domain.service.Reranker;
+import com.dingring.infrastructure.aop.Event;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.document.Document;
@@ -39,6 +40,7 @@ public class SaaRagService implements RagService {
     private static final double SIMILARITY_THRESHOLD = 0.7;
 
     @Override
+    @Event(eventCode = "RETRIEVE_KB_BASE", eventName = "召回向量化的知识")
     public String retrieve(String query, List<Long> kbIds) {
         // 未绑定任何知识库的群：不注入知识，也省一次无效向量检索
         if (query == null || query.isBlank() || kbIds == null || kbIds.isEmpty()) {
