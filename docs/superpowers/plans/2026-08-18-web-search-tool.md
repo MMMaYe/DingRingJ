@@ -2,11 +2,11 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** 删除 3 个旧工具 Bean，新增 Tavily 联网搜索工具（SAA `methodTools()` 挂载），CHAT/DISCUSS/WORK 三场景生效。
+**Goal:** 删除 3 个旧工具 Bean，新增 Tavily 联网工具集 `WebTools`（webSearch 搜索 + webFetch 网页深读，SAA `methodTools()` 挂载），CHAT/DISCUSS/WORK 三场景生效。
 
-**Architecture:** 单类 `WebSearchTools`（`@Tool` 注解方法）+ `SaaLlmFactory`/`SupervisorAgentFactory` 挂载点替换 + `SkillToolkitFactory` 注册表更新。工具输出截断防 token 溢出，失败返回提示语不抛异常防 ReAct 死循环。
+**Architecture:** 单类 `WebTools`（两个 `@Tool` 注解方法构成 ReAct 检索链：搜索→答案+来源，摘要不够→深读网页）+ `SaaLlmFactory`/`SupervisorAgentFactory` 挂载点替换 + `SkillToolkitFactory` 注册表更新。工具输出截断防 token 溢出，失败返回提示语不抛异常防 ReAct 死循环。
 
-**Tech Stack:** Spring AI `@Tool`/`@ToolParam`、SAA `Builder.methodTools()`、Spring `RestClient`（Jackson 反序列化）、Tavily Search API。
+**Tech Stack:** Spring AI `@Tool`/`@ToolParam`、SAA `Builder.methodTools()`、Spring `RestClient`（Jackson record 反序列化；Tavily 无 Java SDK，直接 REST 调用）、Tavily Search + Extract API。
 
 **对应方案:** `docs/superpowers/specs/2026-08-18-web-search-tool-design.md`
 
@@ -16,11 +16,16 @@
 
 ---
 
-### Task 1: WebSearchTools 工具类（TDD）
+### Task 1: WebTools 工具类（TDD，含 webSearch + webFetch 双工具）
 
 **Files:**
-- Create: `dingRing-infrastructure/src/main/java/com/dingring/infrastructure/agent/tool/WebSearchTools.java`
-- Test: `dingRing-infrastructure/src/test/java/com/dingring/infrastructure/agent/tool/WebSearchToolsTest.java`
+- Create: `dingRing-infrastructure/src/main/java/com/dingring/infrastructure/agent/tool/WebTools.java`
+- Test: `dingRing-infrastructure/src/test/java/com/dingring/infrastructure/agent/tool/WebToolsTest.java`
+
+**Tavily API 要点（用户调研确认）：**
+- Search（`POST /search`）：请求 `{query, max_results: 5, search_depth: "basic", include_answer: "basic"}`（REST 参数 snake_case）；响应含 `answer`（合成的参考答案）+ `results[].url/title/content/score`（content 为 md 格式）
+- Extract（`POST /extract`）：请求 `{urls: [url], format: "markdown"}`；响应 `results[].url/raw_content`。format 选 markdown 非 text：与 search 的 content 格式统一，保留标题/列表结构利于模型消费
+- include_images/favicon/usage 均不传：对 LLM 工具无用（YAGNI）
 
 - [ ] **Step 1: 写失败的单元测试（纯函数部分：格式化/截断）**
 
@@ -32,59 +37,97 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * WebSearchTools 纯函数单测：结果格式化与截断。
- * HTTP 调用链路由 debug 端点（/api/test/tool/web-search）手动验证，不在此 mock。
+ * WebTools 纯函数单测：搜索/提取结果的格式化与截断。
+ * HTTP 调用链路由 debug 端点（/api/test/tool/web-search|web-fetch）手动验证，不在此 mock。
  */
-class WebSearchToolsTest {
+class WebToolsTest {
 
-    private WebSearchTools.TavilyResult result(String title, String url, String content) {
-        return new WebSearchTools.TavilyResult(title, url, content, 0.9);
+    private WebTools.TavilyResult result(String title, String url, String content) {
+        return new WebTools.TavilyResult(title, url, content, 0.9);
+    }
+
+    // ---------- webSearch: formatSearch ----------
+
+    @Test
+    void 搜索_空结果返回提示语() {
+        assertEquals("未搜索到相关结果", WebTools.formatSearch(null, null));
+        assertEquals("未搜索到相关结果", WebTools.formatSearch(null, List.of()));
     }
 
     @Test
-    void 空结果返回提示语() {
-        assertEquals("未搜索到相关结果", WebSearchTools.formatResults(null));
-        assertEquals("未搜索到相关结果", WebSearchTools.formatResults(List.of()));
-    }
-
-    @Test
-    void 正常结果带编号标题URL() {
-        String out = WebSearchTools.formatResults(List.of(
+    void 搜索_参考答案置顶_后接来源列表() {
+        String out = WebTools.formatSearch("MCP 是模型上下文协议", List.of(
                 result("AI 新闻", "https://a.com", "今天发布了新模型")));
-        assertTrue(out.startsWith("[1] AI 新闻 (https://a.com)"));
+        assertTrue(out.startsWith("【参考答案】MCP 是模型上下文协议"));
+        assertTrue(out.contains("【来源】"));
+        assertTrue(out.contains("[1] AI 新闻 (https://a.com)"));
         assertTrue(out.contains("今天发布了新模型"));
     }
 
     @Test
-    void 单条摘要超300字截断加省略号() {
-        String longContent = "字".repeat(400);
-        String out = WebSearchTools.formatResults(List.of(
-                result("t", "https://a.com", longContent)));
-        assertTrue(out.contains("字".repeat(300) + "..."));
-        assertTrue(!out.contains("字".repeat(301)));
+    void 搜索_无answer时只有来源列表() {
+        String out = WebTools.formatSearch(null, List.of(
+                result("t", "https://a.com", "c")));
+        assertFalse(out.contains("【参考答案】"));
+        assertTrue(out.startsWith("【来源】"));
     }
 
     @Test
-    void 总量超2000字提前停止() {
+    void 搜索_单条摘要超300字截断加省略号() {
+        String longContent = "字".repeat(400);
+        String out = WebTools.formatSearch(null, List.of(
+                result("t", "https://a.com", longContent)));
+        assertTrue(out.contains("字".repeat(300) + "..."));
+        assertFalse(out.contains("字".repeat(301)));
+    }
+
+    @Test
+    void 搜索_总量超2000字提前停止() {
         // 10 条 × 每条约 350 字 > 2000 上限，输出必须被截停
-        List<WebSearchTools.TavilyResult> many = java.util.stream.IntStream.range(0, 10)
+        List<WebTools.TavilyResult> many = java.util.stream.IntStream.range(0, 10)
                 .mapToObj(i -> result("t" + i, "https://a.com/" + i, "字".repeat(350)))
                 .toList();
-        String out = WebSearchTools.formatResults(many);
-        assertTrue(out.length() <= 2000 + 100); // 余量容纳编号/URL 行
+        String out = WebTools.formatSearch(null, many);
+        assertTrue(out.length() <= 2000 + 100); // 余量容纳【来源】等头部行
+    }
+
+    // ---------- webFetch: formatExtract ----------
+
+    @Test
+    void 提取_正常结果带URL与正文() {
+        String out = WebTools.formatExtract(List.of(
+                new WebTools.TavilyExtractResult("https://a.com", "正文内容第一段")));
+        assertTrue(out.contains("https://a.com"));
+        assertTrue(out.contains("正文内容第一段"));
+    }
+
+    @Test
+    void 提取_空结果返回提示语() {
+        assertEquals("网页内容读取失败或为空", WebTools.formatExtract(null));
+        assertEquals("网页内容读取失败或为空", WebTools.formatExtract(List.of()));
+    }
+
+    @Test
+    void 提取_正文超3000字截断() {
+        String longContent = "字".repeat(5000);
+        String out = WebTools.formatExtract(List.of(
+                new WebTools.TavilyExtractResult("https://a.com", longContent)));
+        assertTrue(out.contains("字".repeat(3000) + "..."));
+        assertFalse(out.contains("字".repeat(3001)));
     }
 }
 ```
 
 - [ ] **Step 2: 运行测试确认编译失败**
 
-Run: `mvn test -pl dingRing-infrastructure -Dtest=WebSearchToolsTest -q`
-Expected: 编译错误 `WebSearchTools` 不存在
+Run: `mvn test -pl dingRing-infrastructure -Dtest=WebToolsTest -q`
+Expected: 编译错误 `WebTools` 不存在
 
-- [ ] **Step 3: 实现 WebSearchTools**
+- [ ] **Step 3: 实现 WebTools**
 
 ```java
 package com.dingring.infrastructure.agent.tool;
@@ -105,32 +148,39 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 联网搜索工具集（Tavily Search API）。
+ * 联网工具集（Tavily Search + Extract，一个类管理所有联网相关 @Tool）。
+ * <p>两个工具构成完整 ReAct 检索链：webSearch（关键词→答案+来源列表）→
+ * webFetch（URL→网页正文，摘要不够时深读）。
+ * <p>调用方式决策：Tavily 无官方 Java SDK（仅 Python/JS），直接用 Spring RestClient
+ * 调 REST——同步调用天然匹配工具方法顺序执行，SaaLlmFactory 已有 RestClient 使用先例。
  * <p>为什么选 Tavily：为 LLM Agent 设计的结构化搜索（url/title/content/score），
- * 支持 keyless 免费模式（api-key 留空时自动降级）；配置 Key 后走 1000 次/月免费额度。
+ * 支持 keyless 免费模式（api-key 留空时自动降级）；配置 Key 后走免费月度额度。
  * <p>设计约定：
  * <ul>
- *   <li>schema 只暴露 query：max_results 等收敛在方法内，参数越少模型调用越准</li>
- *   <li>结果截断：工具输出会回流进模型上下文，单条 300 字、总量 2000 字防 token 溢出</li>
+ *   <li>schema 最小化：webSearch 只暴露 query，webFetch 只暴露 url——参数越少模型调用越准</li>
+ *   <li>结果截断：工具输出会回流进模型上下文，搜索单条 300 字/总量 2000 字，提取 3000 字</li>
  *   <li>失败返回提示语不抛异常：沿用项目工具约定，防 ReAct 循环因报错反复重试</li>
  * </ul>
  */
 @Slf4j
 @Component
-public class WebSearchTools {
+public class WebTools {
 
     private static final String SEARCH_URL = "https://api.tavily.com/search";
+    private static final String EXTRACT_URL = "https://api.tavily.com/extract";
     /** 每次搜索返回条数：学习项目默认 5 条平衡信息量与 token */
     private static final int MAX_RESULTS = 5;
-    /** 单条摘要截断长度（字符） */
+    /** 搜索：单条摘要截断长度（字符） */
     static final int SNIPPET_MAX_LEN = 300;
-    /** 格式化输出总量上限（字符） */
-    static final int TOTAL_MAX_LEN = 2000;
+    /** 搜索：格式化输出总量上限（字符） */
+    static final int SEARCH_TOTAL_MAX_LEN = 2000;
+    /** 提取：正文截断长度（字符）——深读场景比搜索摘要宽 */
+    static final int FETCH_MAX_LEN = 3000;
 
     private final String apiKey;
     private final RestClient restClient;
 
-    public WebSearchTools(@Value("${dingring.tool.web-search.api-key:}") String apiKey) {
+    public WebTools(@Value("${dingring.tool.web-search.api-key:}") String apiKey) {
         // trim 防 yml 缩进空格导致 Bearer 头非法；空值走 keyless 免费模式
         this.apiKey = apiKey == null ? "" : apiKey.trim();
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
@@ -143,23 +193,54 @@ public class WebSearchTools {
     public String webSearch(
             @ToolParam(description = "搜索关键词，建议用简洁明确的中文或英文查询词") String query) {
         try {
-            TavilyResponse resp = restClient.post()
+            // include_answer=basic：Tavily 合成的参考答案置顶返回（免费 mini-RAG）；
+            // search_depth=basic：1 credit/次低延迟（advanced 2 credits 且 ~4.5s，群聊等待感明显）
+            TavilySearchResponse resp = restClient.post()
                     .uri(SEARCH_URL)
                     .headers(this::applyAuth)
                     .contentType(MediaType.APPLICATION_JSON)
-                    .body(Map.of("query", query, "max_results", MAX_RESULTS))
+                    .body(Map.of(
+                            "query", query,
+                            "max_results", MAX_RESULTS,
+                            "search_depth", "basic",
+                            "include_answer", "basic"))
                     .retrieve()
-                    .body(TavilyResponse.class);
-            String formatted = formatResults(resp == null ? null : resp.results());
-            LogHelper.printLog(WebSearchTools.class, "webSearch", "TOOL_WEB_SEARCH",
+                    .body(TavilySearchResponse.class);
+            String formatted = formatSearch(resp == null ? null : resp.answer(),
+                    resp == null ? null : resp.results());
+            LogHelper.printLog(WebTools.class, "webSearch", "TOOL_WEB_SEARCH",
                     "联网搜索完成", "query={} 结果条数={}", query,
                     resp == null || resp.results() == null ? 0 : resp.results().size());
             return formatted;
         } catch (Exception e) {
             // 网络/限流/Key 无效统一兜底：给模型一句可自纠的提示，不阻断 ReAct
-            LogHelper.printWarnLog(WebSearchTools.class, "webSearch", "TOOL_WEB_SEARCH",
+            LogHelper.printWarnLog(WebTools.class, "webSearch", "TOOL_WEB_SEARCH",
                     "联网搜索失败", "query={} 错误: {}", query, e.getMessage());
             return "联网搜索暂不可用，请基于已有知识回答";
+        }
+    }
+
+    @Tool(description = "读取指定网页的正文内容。当搜索结果的摘要不足以回答问题时，用它深入阅读该网页")
+    public String webFetch(
+            @ToolParam(description = "要读取的网页 URL，优先使用搜索结果中返回的链接") String url) {
+        try {
+            // format=markdown：与 search 的 content 格式统一（保留标题/列表结构，模型消费体验一致）
+            // schema 只暴露单 url：ReAct 逐步深挖模式，比批量 20 个更符合模型行为
+            TavilyExtractResponse resp = restClient.post()
+                    .uri(EXTRACT_URL)
+                    .headers(this::applyAuth)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(Map.of("urls", List.of(url), "format", "markdown"))
+                    .retrieve()
+                    .body(TavilyExtractResponse.class);
+            String formatted = formatExtract(resp == null ? null : resp.results());
+            LogHelper.printLog(WebTools.class, "webFetch", "TOOL_WEB_FETCH",
+                    "网页读取完成", "url={} 长度={}", url, formatted.length());
+            return formatted;
+        } catch (Exception e) {
+            LogHelper.printWarnLog(WebTools.class, "webFetch", "TOOL_WEB_FETCH",
+                    "网页读取失败", "url={} 错误: {}", url, e.getMessage());
+            return "网页读取暂不可用，请基于搜索摘要回答";
         }
     }
 
@@ -172,20 +253,24 @@ public class WebSearchTools {
         }
     }
 
-    /** 搜索结果 → 编号列表文本；空结果返回提示语（包私有供单测） */
-    static String formatResults(List<TavilyResult> results) {
+    /** 搜索结果 → 参考答案 + 来源列表；空结果返回提示语（包私有供单测） */
+    static String formatSearch(String answer, List<TavilyResult> results) {
         if (results == null || results.isEmpty()) {
             return "未搜索到相关结果";
         }
         StringBuilder sb = new StringBuilder();
-        int total = 0;
+        if (answer != null && !answer.isBlank()) {
+            sb.append("【参考答案】").append(answer.trim()).append("\n\n");
+        }
+        sb.append("【来源】\n");
+        int total = sb.length();
         int idx = 1;
         for (TavilyResult r : results) {
             String title = r.title() == null ? "" : r.title();
             String url = r.url() == null ? "" : r.url();
             String snippet = r.content() == null ? "" : truncate(r.content(), SNIPPET_MAX_LEN);
             String entry = "[" + idx++ + "] " + title + " (" + url + ")\n" + snippet + "\n\n";
-            if (total + entry.length() > TOTAL_MAX_LEN) {
+            if (total + entry.length() > SEARCH_TOTAL_MAX_LEN) {
                 break; // 超总量上限直接停，不截半条
             }
             sb.append(entry);
@@ -194,28 +279,51 @@ public class WebSearchTools {
         return sb.toString().trim();
     }
 
+    /** 提取结果 → URL + 正文；空结果返回提示语（包私有供单测） */
+    static String formatExtract(List<TavilyExtractResult> results) {
+        if (results == null || results.isEmpty()) {
+            return "网页内容读取失败或为空";
+        }
+        StringBuilder sb = new StringBuilder();
+        for (TavilyExtractResult r : results) {
+            if (sb.length() > 0) {
+                sb.append("\n\n");
+            }
+            sb.append("【网页】").append(r.url() == null ? "" : r.url()).append("\n");
+            String content = r.rawContent() == null ? "" : truncate(r.rawContent(), FETCH_MAX_LEN);
+            sb.append(content);
+        }
+        return sb.toString();
+    }
+
     static String truncate(String s, int max) {
         return s.length() <= max ? s : s.substring(0, max) + "...";
     }
 
-    /** Tavily /search 响应（仅取用到的字段，answer 等忽略） */
-    record TavilyResponse(List<TavilyResult> results) {}
+    /** Tavily /search 响应（answer 为合成参考答案；favicon/raw_content/id 等字段 Jackson 默认忽略） */
+    record TavilySearchResponse(String answer, List<TavilyResult> results) {}
 
     /** 单条搜索结果 */
     record TavilyResult(String title, String url, String content, Double score) {}
+
+    /** Tavily /extract 响应 */
+    record TavilyExtractResponse(List<TavilyExtractResult> results) {}
+
+    /** 单条提取结果 */
+    record TavilyExtractResult(String url, String rawContent) {}
 }
 ```
 
 - [ ] **Step 4: 运行测试确认通过**
 
-Run: `mvn test -pl dingRing-infrastructure -Dtest=WebSearchToolsTest -q`
-Expected: 4 tests PASS
+Run: `mvn test -pl dingRing-infrastructure -Dtest=WebToolsTest -q`
+Expected: 8 tests PASS
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add dingRing-infrastructure/src/main/java/com/dingring/infrastructure/agent/tool/WebSearchTools.java dingRing-infrastructure/src/test/java/com/dingring/infrastructure/agent/tool/WebSearchToolsTest.java
-git commit -m "feat(tool): 新增 Tavily 联网搜索工具（@Tool + keyless/Bearer 自适应）"
+git add dingRing-infrastructure/src/main/java/com/dingring/infrastructure/agent/tool/WebTools.java dingRing-infrastructure/src/test/java/com/dingring/infrastructure/agent/tool/WebToolsTest.java
+git commit -m "feat(tool): 新增 WebTools（Tavily webSearch+webFetch，keyless/Bearer 自适应）"
 ```
 
 ---
@@ -231,7 +339,7 @@ git commit -m "feat(tool): 新增 Tavily 联网搜索工具（@Tool + keyless/Be
 package com.dingring.adapter.rest;
 
 import com.dingring.common.response.ApiResponse;
-import com.dingring.infrastructure.agent.tool.WebSearchTools;
+import com.dingring.infrastructure.agent.tool.WebTools;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -255,15 +363,28 @@ import java.util.Map;
 @ConditionalOnProperty(name = "dingring.debug.llm.enabled", havingValue = "true")
 public class ToolTestController {
 
-    private final WebSearchTools webSearchTools;
+    private final WebTools webTools;
 
     /** GET /api/test/tool/web-search?query=今天AI新闻 */
     @GetMapping("/web-search")
     public ApiResponse<Map<String, Object>> webSearch(@RequestParam String query) {
         long start = System.currentTimeMillis();
-        String result = webSearchTools.webSearch(query);
+        String result = webTools.webSearch(query);
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("query", query);
+        body.put("result", result);
+        body.put("length", result == null ? 0 : result.length());
+        body.put("durationMs", System.currentTimeMillis() - start);
+        return ApiResponse.ok(body);
+    }
+
+    /** GET /api/test/tool/web-fetch?url=https://example.com */
+    @GetMapping("/web-fetch")
+    public ApiResponse<Map<String, Object>> webFetch(@RequestParam String url) {
+        long start = System.currentTimeMillis();
+        String result = webTools.webFetch(url);
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("url", url);
         body.put("result", result);
         body.put("length", result == null ? 0 : result.length());
         body.put("durationMs", System.currentTimeMillis() - start);
@@ -281,13 +402,15 @@ Expected: BUILD SUCCESS
 
 Run: 启动 `DingRingApplication`，然后请求
 `curl "http://localhost:8080/api/test/tool/web-search?query=今天AI新闻"`
-Expected: 返回含 `[1] 标题 (url)` 格式的真实搜索结果；用错误 Key 验证时返回兜底提示语（可选）
+Expected: 返回含 `【参考答案】...【来源】[1] 标题 (url)` 格式的真实搜索结果
+`curl "http://localhost:8080/api/test/tool/web-fetch?url=https://www.ibm.com/cn-zh/think/topics/model-context-protocol"`
+Expected: 返回 `【网页】url + 正文`（markdown）；用无效 URL 验证时返回兜底提示语（可选）
 
 - [ ] **Step 4: Commit**
 
 ```bash
 git add dingRing-adapter/src/main/java/com/dingring/adapter/rest/ToolTestController.java
-git commit -m "feat(adapter): 新增 /api/test/tool/web-search 调试端点"
+git commit -m "feat(adapter): 新增 /api/test/tool/web-search|web-fetch 调试端点"
 ```
 
 ---
@@ -316,12 +439,12 @@ import com.dingring.infrastructure.agent.tool.UserProfileQueryTool;
 新增 import：
 ```java
 import com.alibaba.cloud.ai.graph.agent.Builder;
-import com.dingring.infrastructure.agent.tool.WebSearchTools;
+import com.dingring.infrastructure.agent.tool.WebTools;
 ```
 
 字段区新增（Hook 字段之后）：
 ```java
-    private final WebSearchTools webSearchTools;
+    private final WebTools webTools;
 ```
 
 build() 方法整体替换（**保留** `@Event` 注解、TODO 注释、Hook 链注释块原文）：
@@ -332,10 +455,10 @@ build() 方法整体替换（**保留** `@Event` 注解、TODO 注释、Hook 链
                 .name(domainAgent.getName())
                 .description(domainAgent.getDescription() != null ? domainAgent.getDescription() : "")
                 .model(buildChatModel(domainAgent, null));
-        // 联网搜索：除 CONCLUDE（收束总结无需外查）外全场景挂载。
+        // 联网工具集（webSearch+webFetch）：除 CONCLUDE（收束总结无需外查）外全场景挂载。
         // methodTools 由 SAA 扫描 @Tool 方法注册——后续新增工具方法零装配代码
         if (toolSet != ToolSet.CONCLUDE) {
-            builder.methodTools(webSearchTools);
+            builder.methodTools(webTools);
         }
         //TODO:这里的SystemPrompt缺失
 //                .systemPrompt缺失
@@ -399,21 +522,21 @@ import com.dingring.infrastructure.agent.tool.UserProfileQueryTool;
 
 新增 import 与字段：
 ```java
-import com.dingring.infrastructure.agent.tool.WebSearchTools;
+import com.dingring.infrastructure.agent.tool.WebTools;
 ```
 ```java
-    private final WebSearchTools webSearchTools;
+    private final WebTools webTools;
 ```
 
 resolveWorkerTools() 替换（L138-146）：
 ```java
     /**
-     * 子 Agent 工具集 = 通用工作工具（联网搜索）+ SKILL 声明工具。
+     * 子 Agent 工具集 = 通用工作工具（联网搜索/网页深读）+ SKILL 声明工具。
      * <p>SKILL 工具按名称从 SkillToolkitFactory 注册表解析，未命中（名称拼错或工具未注册）由工厂 WARN 跳过。
      */
     private ToolCallback[] resolveWorkerTools(Agent agent) {
         List<ToolCallback> tools = new ArrayList<>();
-        tools.addAll(Arrays.asList(ToolCallbacks.from(webSearchTools)));
+        tools.addAll(Arrays.asList(ToolCallbacks.from(webTools)));
         List<Skill> skills = skillLoaderService.loadAgentSkills(agent.getId());
         for (Skill skill : skills) {
             tools.addAll(Arrays.asList(skillToolkitFactory.resolveTools(skill)));
@@ -423,7 +546,7 @@ resolveWorkerTools() 替换（L138-146）：
 ```
 
 buildWorkerPrompt() 文案更新（L155）：
-`必要时调用可用工具（知识检索/历史结论/用户画像等）辅助，` → `必要时调用可用工具（如联网搜索）辅助，`
+`必要时调用可用工具（知识检索/历史结论/用户画像等）辅助，` → `必要时调用可用工具（如联网搜索、网页深读）辅助，`
 
 - [ ] **Step 2: 编译验证**
 
@@ -455,10 +578,10 @@ git commit -m "refactor(supervisor): worker 通用工具切换为 WebSearchTools
 
 新增 import 与字段：
 ```java
-import com.dingring.infrastructure.agent.tool.WebSearchTools;
+import com.dingring.infrastructure.agent.tool.WebTools;
 ```
 ```java
-    private final WebSearchTools webSearchTools;
+    private final WebTools webTools;
 ```
 
 init() 替换（L38-45）：
@@ -466,13 +589,13 @@ init() 替换（L38-45）：
     /** 初始化工具注册表（Bean 构造完成后执行，先于 SkillLoader 装配） */
     @PostConstruct
     public void init() {
-        register(webSearchTools);
+        register(webTools);
         LogHelper.printLog(SkillToolkitFactory.class, "init", "SKILL_TOOLKIT",
                 "工具注册表初始化完成", "tools={}", toolRegistry.keySet());
     }
 ```
 
-类 javadoc 第 21 行同步更新：`工具注册表是固定的 @Tool Bean（Phase D 的 UserProfileQueryTool/TopicHistoryTool/KnowledgeSearchTool）` → `工具注册表是固定的 @Tool Bean（当前为 WebSearchTools）`
+类 javadoc 第 21 行同步更新：`工具注册表是固定的 @Tool Bean（Phase D 的 UserProfileQueryTool/TopicHistoryTool/KnowledgeSearchTool）` → `工具注册表是固定的 @Tool Bean（当前为 WebTools：webSearch/webFetch）`
 
 - [ ] **Step 2: 编译验证**
 
@@ -530,9 +653,9 @@ git commit -m "refactor(tool): 删除与 Hook 注入重复的 3 个旧工具 Bea
 [
   {
     "name": "web-search",
-    "description": "联网搜索技能：查询实时资讯、新闻与模型不确定的事实",
-    "toolNames": "webSearch",
-    "systemPrompt": "你可以调用联网搜索工具查询最新信息。当问题涉及实时资讯、新闻、近期事件或你不确定的事实时，先搜索再回答，并注明信息来源。",
+    "description": "联网检索技能：搜索实时资讯与深读网页（webSearch/webFetch）",
+    "toolNames": "webSearch,webFetch",
+    "systemPrompt": "你可以调用联网搜索工具查询最新信息，并在摘要不足时读取网页原文。当问题涉及实时资讯、新闻、近期事件或你不确定的事实时，先搜索再回答，并注明信息来源。",
     "scope": "GLOBAL",
     "agentId": null,
     "status": "ACTIVE"
@@ -574,12 +697,12 @@ git commit -m "chore(skill): 种子技能对齐新工具表（web-search 替代�
 
 - [ ] **Step 1: 启动应用，确认注册表与技能日志无 WARN**
 
-启动日志应见：`SKILL_TOOLKIT ... tools=[webSearch]`；无"技能声明了未知工具"WARN
+启动日志应见：`SKILL_TOOLKIT ... tools=[webSearch, webFetch]`；无"技能声明了未知工具"WARN
 
 - [ ] **Step 2: 群聊端到端（真实 LLM）**
 
 前端群聊发送："帮我查一下最近的 AI 大新闻"
-Expected: Agent 发言引用实时信息；日志出现 `TOOL_WEB_SEARCH 联网搜索完成 query=... 结果条数=5`（或类似）；`REACT_AGENT_BUILD ... webSearch=true`
+Expected: Agent 发言引用实时信息；日志出现 `TOOL_WEB_SEARCH 联网搜索完成 query=... 结果条数=5`（或类似）；`REACT_AGENT_BUILD ... webSearch=true`。若模型进一步调 `TOOL_WEB_FETCH` 深读网页，属预期 ReAct 行为
 
 - [ ] **Step 3: CONCLUDE 场景回归**
 
@@ -590,7 +713,7 @@ Expected: 收束发言正常，`REACT_AGENT_BUILD ... toolSet=CONCLUDE ... webSe
 
 ## Self-Review 记录
 
-- **Spec 覆盖**：方案 §3.1 删除清单 → Task 3/4/5/6；§3.2 WebSearchTools → Task 1；§3.3 挂载矩阵 → Task 3；§3.4 连带修复 → Task 4/5/7；§3.5 配置 → 前置已完成；§3.6 debug 端点 → Task 2；§5 测试策略 → Task 1 单测 + Task 2/8 手动。无缺口。
+- **Spec 覆盖**：方案 §3.1 删除清单 → Task 3/4/5/6；§3.2 WebTools（webSearch+webFetch，用户调研的 Search/Extract 双模式）→ Task 1；§3.3 挂载矩阵 → Task 3；§3.4 连带修复 → Task 4/5/7；§3.5 配置 → 前置已完成；§3.6 debug 端点 → Task 2；§5 测试策略 → Task 1 单测（8 项）+ Task 2/8 手动。无缺口。
 - **占位符扫描**：无 TBD/TODO 式步骤；所有代码步骤含完整代码。
-- **类型一致性**：`WebSearchTools.webSearch(String)` 在 Task 1/2 一致；`TavilyResult(title,url,content,score)` 在实现与单测一致；`Builder` 类型为 SAA `com.alibaba.cloud.ai.graph.agent.Builder`。
+- **类型一致性**：`WebTools.webSearch(String)`/`webFetch(String)` 在 Task 1/2 一致；`TavilySearchResponse(answer, results)`/`TavilyExtractResponse(results)` 与单测 `formatSearch(answer, results)`/`formatExtract(results)` 一致；`Builder` 类型为 SAA `com.alibaba.cloud.ai.graph.agent.Builder`；`TavilyResult(title,url,content,score)`、`TavilyExtractResult(url, rawContent)`（Jackson 自动映射 raw_content→rawContent）一致。
 - **顺序安全**：每 Task 结束态均可编译（旧工具类删除前引用已全部清除）。

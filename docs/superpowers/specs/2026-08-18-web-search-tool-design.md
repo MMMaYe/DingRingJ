@@ -1,9 +1,9 @@
-# Tool 简化改造技术方案（SAA 原生 methodTools + WebSearch）
+# Tool 简化改造技术方案（SAA 原生 methodTools + Tavily WebTools）
 
-- 日期：2026-08-18
-- 状态：待评审
-- 影响模块：dingRing-infrastructure / start
-- 前置依赖：SAA 1.1.2.3（`Builder.methodTools()`）、Spring AI `@Tool`/`@ToolParam`
+- 日期：2026-08-18（同日更新：用户调研确认 Tavily Search/Extract 双模式，工具集扩为 webSearch+webFetch）
+- 状态：已评审（实施中）
+- 影响模块：dingRing-infrastructure / dingRing-adapter / start
+- 前置依赖：SAA 1.1.2.3（`Builder.methodTools()`）、Spring AI `@Tool`/`@ToolParam`、Spring RestClient（Tavily 无 Java SDK，直接 REST 调用）
 - 取代：`2026-08-18-tool-mechanism-design.md`（动态装配方案，已废弃）
 
 ---
@@ -37,45 +37,51 @@
 
 **影响说明**：删除 `KnowledgeSearchTool` 后，知识库信息仅通过 `InjectKbHook` Push 注入（检索仍由 RAG 管道执行），Agent 失去"迭代改写 query 二次检索"能力——当前知识库规模下可接受，未来需要时再以 @Tool 形式重建。
 
-### 3.2 新增 `WebSearchTools`（infrastructure/agent/tool/）
+### 3.2 新增 `WebTools`（infrastructure/agent/tool/，一个类管理全部联网工具）
+
+两个 `@Tool` 方法构成完整 ReAct 检索链（基于用户调研的 Tavily Search/Extract 双模式）：
 
 ```java
 @Slf4j
 @Component
-public class WebSearchTools {
+public class WebTools {
 
     @Value("${dingring.tool.web-search.api-key:}")
-    private String apiKey;
-
-    private final RestClient restClient;  // 构造时创建：connect 5s / read 15s
+    private String apiKey;          // 空 = keyless 免费模式
+    private final RestClient restClient;  // Tavily 无 Java SDK，直接 REST（同步匹配工具执行）
 
     @Tool(description = "联网搜索最新信息。当问题涉及实时资讯、新闻、近期事件或模型不确定的事实时调用")
-    public String webSearch(
-            @ToolParam(description = "搜索关键词，建议用简洁明确的中文或英文查询词") String query) {
-        // POST https://api.tavily.com/search
-        // 认证：apiKey 为空 → 头 X-Tavily-Access-Mode: keyless（免费模式）
-        //       非空     → 头 Authorization: Bearer {apiKey}（1000次/月免费额度）
-        // body: {"query": query, "max_results": 5}
-        // 输出格式化：每条 [n] 标题 (url) + 摘要，单条摘要截断 300 字，总量 ≤ 2000 字
-        // 异常/无结果 → 返回友好提示语（不抛异常，防 ReAct 循环因报错反复重试）
+    public String webSearch(@ToolParam(description = "搜索关键词") String query) {
+        // POST /search  body: {query, max_results: 5, search_depth: "basic", include_answer: "basic"}
+        // include_answer=basic：Tavily 合成参考答案置顶（免费 mini-RAG）
+        // search_depth=basic：1 credit 低延迟（advanced 2 credits ~4.5s，群聊等待感明显）
+        // 输出：【参考答案】...\n【来源】[n] 标题 (url)\n摘要（单条 300 字，总量 2000 字）
+    }
+
+    @Tool(description = "读取指定网页的正文内容。当搜索结果的摘要不足以回答问题时，用它深入阅读该网页")
+    public String webFetch(@ToolParam(description = "网页 URL") String url) {
+        // POST /extract  body: {urls: [url], format: "markdown"}
+        // format=markdown：与 search content 格式统一（保留标题/列表结构）
+        // schema 只暴露单 url：ReAct 逐步深挖模式（Extract API 支持批量 20 个但不用）
+        // 输出：【网页】url\n正文（截断 3000 字）
     }
 }
 ```
 
 关键决策：
 
-- **参数只暴露 `query`**：max_results 等收敛在方法内。schema 越简单模型调用越准，复杂度留在 Java 侧
-- **结果截断**：工具输出会回流进模型上下文，不截断会撑爆 token（300 字/条 × 5 条 + 标题链接 ≈ 2000 字上限）
-- **keyless 优先**：零注册跑通；以后配 `api-key` 即升级，代码零改动
-- **失败不抛异常**：沿用项目工具约定（无结果返回提示语），保持 ReAct 循环稳定
+- **Java 调用方式**：Tavily 官方仅 Python/JS SDK，Java 侧 Spring `RestClient` 直调 REST——同步调用匹配工具顺序执行，Jackson record 直接映射响应
+- **schema 最小化**：webSearch 只暴露 query、webFetch 只暴露 url——参数越少模型调用越准，max_results/format 等收敛在 Java 侧
+- **结果截断**：工具输出回流进模型上下文——搜索单条 300 字/总量 2000 字、提取 3000 字
+- **失败不抛异常**：返回提示语（"联网搜索暂不可用，请基于已有知识回答"），防 ReAct 循环因报错反复重试
 
 ### 3.3 装配改造（SaaLlmFactory）
 
 ```java
-// 删除 3 个工具 Bean 字段与 resolveTools()；新增 WebSearchTools 注入
+// 删除 3 个工具 Bean 字段与 resolveTools()；新增 WebTools 注入
 // build() 内：
 if (toolSet != ToolSet.CONCLUDE) {
-    builder.methodTools(webSearchTools);  // SAA 原生：扫描 @Tool 方法注册为工具
+    builder.methodTools(webTools);  // SAA 原生：扫描类内全部 @Tool 方法注册
 }
 ```
 
@@ -90,8 +96,8 @@ if (toolSet != ToolSet.CONCLUDE) {
 
 ### 3.4 连带修复（编译必需）
 
-- `SkillToolkitFactory`：注入被删的 3 个 Bean 会编译失败 → 改为注册 `WebSearchTools`
-- `skill-config.json` 种子：引用的旧工具名（searchKnowledge 等）改为 `webSearch`（未改名工具 WARN 跳过本就是设计容错，改种子是为消除启动噪音）
+- `SkillToolkitFactory`：注入被删的 3 个 Bean 会编译失败 → 改为注册 `WebTools`（webSearch+webFetch 两方法都进注册表）
+- `skill-config.json` 种子：引用的旧工具名（searchKnowledge 等）改为 `webSearch,webFetch`（未改名工具 WARN 跳过本就是设计容错，改种子是为消除启动噪音）
 
 ### 3.5 配置
 
@@ -104,7 +110,10 @@ dingring:
 
 ### 3.6 Debug 端点（adapter/rest，复用 TestController 模式）
 
-`GET /api/test/tool/web-search?query=...` → 直接调 `webSearchTools.webSearch(query)` 返回原始结果，`@ConditionalOnProperty` 控制开关。用于不经过 LLM 单独验证工具链路。
+- `GET /api/test/tool/web-search?query=...` → 调 `webTools.webSearch(query)` 验证搜索链路
+- `GET /api/test/tool/web-fetch?url=...` → 调 `webTools.webFetch(url)` 验证网页提取链路
+
+均 `@ConditionalOnProperty` 控制开关。用于不经过 LLM 单独验证工具链路。
 
 ## 4. 错误处理
 
