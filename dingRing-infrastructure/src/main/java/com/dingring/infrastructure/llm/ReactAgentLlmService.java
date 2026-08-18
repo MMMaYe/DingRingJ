@@ -6,8 +6,8 @@ import com.dingring.common.exception.ErrorCode;
 import com.dingring.common.util.LogHelper;
 import com.dingring.domain.agent.Agent;
 import com.dingring.domain.service.LlmService;
-import com.dingring.infrastructure.aop.Event;
 import com.dingring.infrastructure.agent.hook.SystemMessageMergeHook;
+import com.dingring.infrastructure.aop.Event;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.Message;
@@ -142,6 +142,7 @@ public class ReactAgentLlmService implements LlmService {
         return result;
     }
 
+    @Event(eventCode = "AGENT_SPEAK_INPUTS", eventName = "构建Agent发言输入")
     private Map<String, Object> buildAgentInputs(String systemPrompt, List<ChatTurn> messages,
                                                   Map<String, Object> context) {
         Map<String, Object> inputs = new HashMap<>();

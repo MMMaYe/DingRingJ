@@ -14,6 +14,7 @@ import com.dingring.infrastructure.agent.hook.SystemMessageMergeHook;
 import com.dingring.infrastructure.agent.tool.KnowledgeSearchTool;
 import com.dingring.infrastructure.agent.tool.TopicHistoryTool;
 import com.dingring.infrastructure.agent.tool.UserProfileQueryTool;
+import com.dingring.infrastructure.aop.Event;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.openai.OpenAiChatModel;
@@ -160,6 +161,7 @@ public class SaaLlmFactory {
     /**
      * 构建 ReactAgent 通用方法。
      */
+    @Event(eventCode = "SaaLlmFactory.build", eventName ="ReactAgent构建")
     private ReactAgent build(Agent domainAgent, ToolSet toolSet, int recursionLimit) {
         ToolCallback[] tools = resolveTools(toolSet);
 
@@ -168,6 +170,8 @@ public class SaaLlmFactory {
                 .description(domainAgent.getDescription() != null ? domainAgent.getDescription() : "")
                 .model(buildChatModel(domainAgent, null))
                 .tools(tools)
+                //TODO:这里的SystemPrompt缺失
+//                .systemPrompt缺失
                 // Hook 单例共享安全：实现仅从 state 读 per-call 参数，不使用 agent 引用。
                 // GroupContextMemoryHook（AgentHook）：按意图组装人设+群上下文记忆，整表替换 messages，
                 // 必须注册在 InjectKbHook（append）之前，否则会吃掉 kb 注入；
