@@ -1,9 +1,7 @@
 package com.dingring.infrastructure.skill;
 
 import com.dingring.domain.skill.Skill;
-import com.dingring.infrastructure.agent.tool.KnowledgeSearchTool;
-import com.dingring.infrastructure.agent.tool.TopicHistoryTool;
-import com.dingring.infrastructure.agent.tool.UserProfileQueryTool;
+import com.dingring.infrastructure.agent.tool.WebTools;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -24,10 +22,7 @@ class SkillToolkitFactoryTest {
 
     @BeforeEach
     void setUp() {
-        factory = new SkillToolkitFactory(
-                mock(UserProfileQueryTool.class),
-                mock(TopicHistoryTool.class),
-                mock(KnowledgeSearchTool.class));
+        factory = new SkillToolkitFactory(new WebTools(""));
         factory.init();
     }
 
@@ -39,36 +34,36 @@ class SkillToolkitFactoryTest {
     }
 
     @Test
-    @DisplayName("init 后注册表包含三个 @Tool 方法名")
+    @DisplayName("init 后注册表包含两个 @Tool 方法名")
     void shouldRegisterAllTools() {
-        Skill s = skillWithTools("searchKnowledge", "queryTopicHistory", "queryUserProfile");
+        Skill s = skillWithTools("webSearch", "webFetch");
 
         ToolCallback[] callbacks = factory.resolveTools(s);
 
         assertThat(callbacks).extracting(cb -> cb.getToolDefinition().name())
-                .containsExactlyInAnyOrder("searchKnowledge", "queryTopicHistory", "queryUserProfile");
+                .containsExactlyInAnyOrder("webSearch", "webFetch");
     }
 
     @Test
     @DisplayName("按声明顺序返回工具（LinkedHashMap 保持注册顺序）")
     void shouldResolveInDeclaredOrder() {
-        Skill s = skillWithTools("queryUserProfile", "searchKnowledge");
+        Skill s = skillWithTools("webFetch", "webSearch");
 
         ToolCallback[] callbacks = factory.resolveTools(s);
 
         assertThat(callbacks).extracting(cb -> cb.getToolDefinition().name())
-                .containsExactly("queryUserProfile", "searchKnowledge");
+                .containsExactly("webFetch", "webSearch");
     }
 
     @Test
     @DisplayName("未知工具名跳过，已注册工具正常解析")
     void shouldSkipUnknownTool() {
-        Skill s = skillWithTools("searchKnowledge", "no-such-tool");
+        Skill s = skillWithTools("webSearch", "no-such-tool");
 
         ToolCallback[] callbacks = factory.resolveTools(s);
 
         assertThat(callbacks).extracting(cb -> cb.getToolDefinition().name())
-                .containsExactly("searchKnowledge");
+                .containsExactly("webSearch");
     }
 
     @Test

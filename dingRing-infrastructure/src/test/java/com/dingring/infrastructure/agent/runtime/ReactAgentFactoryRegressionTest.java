@@ -16,9 +16,7 @@ import com.dingring.infrastructure.agent.hook.InjectKbHook;
 import com.dingring.infrastructure.agent.hook.GroupContextMemoryHook;
 import com.dingring.infrastructure.agent.hook.ProfileInjectionHook;
 import com.dingring.infrastructure.agent.hook.SystemMessageMergeHook;
-import com.dingring.infrastructure.agent.tool.KnowledgeSearchTool;
-import com.dingring.infrastructure.agent.tool.TopicHistoryTool;
-import com.dingring.infrastructure.agent.tool.UserProfileQueryTool;
+import com.dingring.infrastructure.agent.tool.WebTools;
 import com.dingring.infrastructure.llm.SaaLlmFactory;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -62,7 +60,9 @@ class ReactAgentFactoryRegressionTest {
     private final TopicVectorService topicVectorService = mock(TopicVectorService.class);
     private final TopicRepository topicRepository = mock(TopicRepository.class);
 
-    /** 真实工具实例（依赖用 mock 服务），走 ToolCallbacks.from 转 ToolCallback */
+    /** mock WebTools：避免单测真实联网，webSearch 由 stub 返回固定文本 */
+    private final WebTools webTools = mock(WebTools.class);
+
     private SaaLlmFactory newFactory() {
         SaaLlmFactory factory = spy(new SaaLlmFactory(
                 new GroupContextMemoryHook(contextMemoryService, agentRepository),
@@ -70,9 +70,7 @@ class ReactAgentFactoryRegressionTest {
                 new GroupRosterHook(groupRepository, agentRepository),
                 new InjectKbHook(ragService, topicVectorService, topicRepository, groupRepository),
                 new SystemMessageMergeHook(),
-                new UserProfileQueryTool(profileService),
-                new TopicHistoryTool(topicRepository),
-                new KnowledgeSearchTool(ragService, groupRepository)));
+                webTools));
         doReturn(chatModel).when(factory).buildChatModel(any(), any());
         return factory;
     }
@@ -86,6 +84,7 @@ class ReactAgentFactoryRegressionTest {
                 new ChatResponse(List.of(new Generation(new AssistantMessage("这是老王的回复")))));
 
         when(profileService.getProfile(any())).thenReturn("程序员老王，专注高并发与缓存");
+        when(webTools.webSearch(any())).thenReturn("【来源】\n[1] 搜索结果 (https://a.com)");
         when(ragService.retrieve(any(), any())).thenReturn("");
         when(agentRepository.findByIds(any())).thenReturn(List.of(domainAgent));
         Group group = mock(Group.class);
@@ -107,16 +106,14 @@ class ReactAgentFactoryRegressionTest {
     @DisplayName("回归：工具调用后需第二轮回读最终文本（recursionLimit 需支撑两轮）")
     void toolCallThenFinalTextInvokesModel() throws Exception {
         stubBaseMocks();
-        // 第一轮：模型决定调 queryUserProfile 工具（无文本）；第二轮：输出最终发言文本
+        // 第一轮：模型决定调 webSearch 工具（无文本）；第二轮：输出最终发言文本
         when(chatModel.call(any(Prompt.class))).thenReturn(
                 new ChatResponse(List.of(new Generation(AssistantMessage.builder()
                         .content("")
                         .toolCalls(List.of(new AssistantMessage.ToolCall(
-                                "call_1", "function", "queryUserProfile", "{\"userId\":1}")))
+                                "call_1", "function", "webSearch", "{\"query\":\"Java 面试\"}")))
                         .build()))),
                 new ChatResponse(List.of(new Generation(new AssistantMessage("这是老王的回复")))));
-        // 覆盖 stubBaseMocks 里的固定响应
-        when(profileService.getProfile(any())).thenReturn("程序员老王，专注高并发与缓存");
 
         ReactAgent agent = newFactory().buildDiscussAgent(domainAgent, ToolSet.CHAT);
         AssistantMessage result = callAgent(agent);

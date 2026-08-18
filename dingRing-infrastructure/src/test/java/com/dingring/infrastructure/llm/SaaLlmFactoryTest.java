@@ -7,9 +7,7 @@ import com.dingring.infrastructure.agent.hook.InjectKbHook;
 import com.dingring.infrastructure.agent.hook.GroupContextMemoryHook;
 import com.dingring.infrastructure.agent.hook.ProfileInjectionHook;
 import com.dingring.infrastructure.agent.hook.SystemMessageMergeHook;
-import com.dingring.infrastructure.agent.tool.KnowledgeSearchTool;
-import com.dingring.infrastructure.agent.tool.TopicHistoryTool;
-import com.dingring.infrastructure.agent.tool.UserProfileQueryTool;
+import com.dingring.infrastructure.agent.tool.WebTools;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.ai.openai.OpenAiChatModel;
@@ -120,9 +118,7 @@ class SaaLlmFactoryTest {
                 mock(GroupRosterHook.class),
                 mock(InjectKbHook.class),
                 mock(SystemMessageMergeHook.class),
-                mock(UserProfileQueryTool.class),
-                mock(TopicHistoryTool.class),
-                mock(KnowledgeSearchTool.class));
+                mock(WebTools.class));
         ReflectionTestUtils.setField(factory, "connectTimeoutSeconds", 10L);
         ReflectionTestUtils.setField(factory, "readTimeoutSeconds", 120L);
         ReflectionTestUtils.setField(factory, "defaultMaxTokens", maxTokens);
