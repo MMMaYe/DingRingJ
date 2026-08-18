@@ -58,11 +58,10 @@ const MessageItem = memo(function MessageItem({ m, isMatch, isCurrent, agentName
           <div className="msg__reply">↩ {m.replyToSenderName}: {m.replyToContent}</div>
         )}
         <div className="msg__bubble md-body" dangerouslySetInnerHTML={{ __html: html }} />
-        {!self && (
-          <div className="msg__actions">
-            <button className="msg__action-btn" onClick={() => onReply(m)}>引用回复</button>
-          </div>
-        )}
+        {/* 允许引用任何消息（含自己的）：SYSTEM 已在上方提前返回；流式半成品由外层 .msg-streaming 隐藏 */}
+        <div className="msg__actions">
+          <button className="msg__action-btn" onClick={() => onReply(m)}>引用回复</button>
+        </div>
       </div>
     </div>
   );

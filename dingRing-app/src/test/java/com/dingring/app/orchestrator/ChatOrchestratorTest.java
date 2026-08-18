@@ -192,6 +192,27 @@ class ChatOrchestratorTest {
             verify(discussionEngine).onUserSignal(eq(1L), captor.capture());
             assertThat(captor.getValue().repliedToAgentId()).isEqualTo(10L);
         }
+
+        @Test
+        @DisplayName("引用自己（USER 消息）时 repliedToAgentId 为 null，不偏向任何 Agent")
+        void replyToOwnUserMessageShouldNotResolveAgent() {
+            // 兼容前端放开「用户引用自己的消息」的场景：
+            // 后端不应因为 replyTo 目标非 Agent 而报错；scheduler 也不应得到 +500 加成
+            Group g = groupWithMembers(1L, List.of(10L));
+            when(groupRepository.findById(1L)).thenReturn(Optional.of(g));
+            when(topicRepository.findActiveByGroupId(1L)).thenReturn(Optional.empty());
+            GroupMessage ownPrev = savedMessage(50L, 1L, null, 1L, SenderType.USER);
+            when(messageRepository.findById(50L)).thenReturn(Optional.of(ownPrev));
+            when(agentRepository.findByIds(any())).thenReturn(List.of());
+            when(messageAssembler.toDto(any())).thenReturn(MessageDTO.builder().build());
+
+            orchestrator.onUserMessage(1L, 1L, "我补充一下", 50L);
+
+            ArgumentCaptor<DiscussionEngine.UserSignal> captor =
+                    ArgumentCaptor.forClass(DiscussionEngine.UserSignal.class);
+            verify(discussionEngine).onUserSignal(eq(1L), captor.capture());
+            assertThat(captor.getValue().repliedToAgentId()).isNull();
+        }
     }
 
     /* ==================== 收束域：conclude ==================== */
