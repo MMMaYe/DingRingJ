@@ -12,9 +12,7 @@ import com.dingring.infrastructure.agent.hook.GroupRosterHook;
 import com.dingring.infrastructure.agent.hook.InjectKbHook;
 import com.dingring.infrastructure.agent.hook.ProfileInjectionHook;
 import com.dingring.infrastructure.agent.hook.WorkProgressBroadcastHook;
-import com.dingring.infrastructure.agent.tool.KnowledgeSearchTool;
-import com.dingring.infrastructure.agent.tool.TopicHistoryTool;
-import com.dingring.infrastructure.agent.tool.UserProfileQueryTool;
+import com.dingring.infrastructure.agent.tool.WebTools;
 import com.dingring.infrastructure.llm.SaaLlmFactory;
 import com.dingring.infrastructure.skill.SkillToolkitFactory;
 import lombok.RequiredArgsConstructor;
@@ -66,9 +64,7 @@ public class SupervisorAgentFactory {
     private final InjectKbHook injectKbHook;
     private final SkillToolkitFactory skillToolkitFactory;
     private final SkillLoaderService skillLoaderService;
-    private final KnowledgeSearchTool knowledgeSearchTool;
-    private final TopicHistoryTool topicHistoryTool;
-    private final UserProfileQueryTool userProfileQueryTool;
+    private final WebTools webTools;
 
     /**
      * 构建 Supervisor Agent。
@@ -132,12 +128,12 @@ public class SupervisorAgentFactory {
     }
 
     /**
-     * 子 Agent 工具集 = 通用工作工具（知识检索/历史/画像）+ SKILL 声明工具。
+     * 子 Agent 工具集 = 通用工作工具（联网搜索/网页深读）+ SKILL 声明工具。
      * <p>SKILL 工具按名称从 SkillToolkitFactory 注册表解析，未命中（名称拼错或工具未注册）由工厂 WARN 跳过。
      */
     private ToolCallback[] resolveWorkerTools(Agent agent) {
         List<ToolCallback> tools = new ArrayList<>();
-        tools.addAll(Arrays.asList(ToolCallbacks.from(knowledgeSearchTool, topicHistoryTool, userProfileQueryTool)));
+        tools.addAll(Arrays.asList(ToolCallbacks.from(webTools)));
         List<Skill> skills = skillLoaderService.loadAgentSkills(agent.getId());
         for (Skill skill : skills) {
             tools.addAll(Arrays.asList(skillToolkitFactory.resolveTools(skill)));
@@ -152,7 +148,7 @@ public class SupervisorAgentFactory {
             sp.append(agent.getSystemPrompt()).append("\n\n");
         }
         sp.append("你是工作流中的专业执行者。Supervisor 会委派给你一个具体子任务，");
-        sp.append("请专注完成该子任务：必要时调用可用工具（知识检索/历史结论/用户画像等）辅助，");
+        sp.append("请专注完成该子任务：必要时调用可用工具（如联网搜索、网页深读）辅助，");
         sp.append("然后直接输出子任务结果，不要自行扩展任务范围。");
         return sp.toString();
     }
