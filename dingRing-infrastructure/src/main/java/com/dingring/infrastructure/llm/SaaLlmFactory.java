@@ -1,6 +1,7 @@
 package com.dingring.infrastructure.llm;
 
 import com.alibaba.cloud.ai.graph.CompileConfig;
+import com.alibaba.cloud.ai.graph.agent.Builder;
 import com.alibaba.cloud.ai.graph.agent.ReactAgent;
 import com.dingring.common.util.LogHelper;
 import com.dingring.domain.agent.Agent;
@@ -11,9 +12,7 @@ import com.dingring.infrastructure.agent.hook.GroupRosterHook;
 import com.dingring.infrastructure.agent.hook.InjectKbHook;
 import com.dingring.infrastructure.agent.hook.ProfileInjectionHook;
 import com.dingring.infrastructure.agent.hook.SystemMessageMergeHook;
-import com.dingring.infrastructure.agent.tool.KnowledgeSearchTool;
-import com.dingring.infrastructure.agent.tool.TopicHistoryTool;
-import com.dingring.infrastructure.agent.tool.UserProfileQueryTool;
+import com.dingring.infrastructure.agent.tool.WebTools;
 import com.dingring.infrastructure.aop.Event;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,8 +23,6 @@ import org.springframework.ai.openai.api.ResponseFormat;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.http.client.reactive.JdkClientHttpConnector;
-import org.springframework.ai.support.ToolCallbacks;
-import org.springframework.ai.tool.ToolCallback;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -71,9 +68,7 @@ public class SaaLlmFactory {
     private final GroupRosterHook groupRosterHook;
     private final InjectKbHook injectKbHook;
     private final SystemMessageMergeHook systemMessageMergeHook;
-    private final UserProfileQueryTool userProfileQueryTool;
-    private final TopicHistoryTool topicHistoryTool;
-    private final KnowledgeSearchTool knowledgeSearchTool;
+    private final WebTools webTools;
 
     public OpenAiChatModel buildChatModel(Agent agent, CallOptions options) {
         double temperature = options != null && options.temperature() != null
@@ -163,15 +158,18 @@ public class SaaLlmFactory {
      */
     @Event(eventCode = "SaaLlmFactory.build", eventName ="ReactAgent构建")
     private ReactAgent build(Agent domainAgent, ToolSet toolSet, int recursionLimit) {
-        ToolCallback[] tools = resolveTools(toolSet);
-
-        ReactAgent agent = ReactAgent.builder()
+        Builder builder = ReactAgent.builder()
                 .name(domainAgent.getName())
                 .description(domainAgent.getDescription() != null ? domainAgent.getDescription() : "")
-                .model(buildChatModel(domainAgent, null))
-                .tools(tools)
-                //TODO:这里的SystemPrompt缺失
+                .model(buildChatModel(domainAgent, null));
+        // 联网工具集（webSearch+webFetch）：除 CONCLUDE（收束总结无需外查）外全场景挂载。
+        // methodTools 由 SAA 扫描 @Tool 方法注册——后续新增工具方法零装配代码
+        if (toolSet != ToolSet.CONCLUDE) {
+            builder.methodTools(webTools);
+        }
+        //TODO:这里的SystemPrompt缺失
 //                .systemPrompt缺失
+        ReactAgent agent = builder
                 // Hook 单例共享安全：实现仅从 state 读 per-call 参数，不使用 agent 引用。
                 // GroupContextMemoryHook（AgentHook）：按意图组装人设+群上下文记忆，整表替换 messages，
                 // 必须注册在 InjectKbHook（append）之前，否则会吃掉 kb 注入；
@@ -188,21 +186,8 @@ public class SaaLlmFactory {
                 .build();
 
         LogHelper.printLog(SaaLlmFactory.class, "SaaLlmFactory.build", "REACT_AGENT_BUILD",
-                "ReactAgent 构建完成", "agent={} toolSet={} recursionLimit={} tools={}",
-                domainAgent.getName(), toolSet, recursionLimit, tools.length);
+                "ReactAgent 构建完成", "agent={} toolSet={} recursionLimit={} webSearch={}",
+                domainAgent.getName(), toolSet, recursionLimit, toolSet != ToolSet.CONCLUDE);
         return agent;
-    }
-
-    /**
-     * 按 ToolSet 解析工具集。
-     * <p>使用 Spring AI {@link ToolCallbacks#from(Object...)} 将 @Tool 注解方法转为 ToolCallback。
-     */
-    private ToolCallback[] resolveTools(ToolSet toolSet) {
-        return switch (toolSet) {
-            case CHAT -> ToolCallbacks.from(userProfileQueryTool);
-            case DISCUSS -> ToolCallbacks.from(knowledgeSearchTool, userProfileQueryTool);
-            case CONCLUDE -> ToolCallbacks.from(topicHistoryTool);
-            case WORK -> ToolCallbacks.from(knowledgeSearchTool, topicHistoryTool, userProfileQueryTool);
-        };
     }
 }
