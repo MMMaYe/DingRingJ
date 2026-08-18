@@ -82,6 +82,10 @@ dingring:
     read-timeout-seconds: 120
     # Agent 未显式配置 feature.maxTokens 时的默认输出上限（统一 100000）
     default-max-tokens: 100000
+  tool:
+    web-search:
+      # Tavily 联网搜索 API Key；留空走 keyless 免费模式（有速率限制）
+      api-key: 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
   rag:
     # Phase E：RAG 知识库总开关。false 时不加载向量库数据源/PgVectorStore/RAG Hook，
     # 群聊主流程不受影响（RAG 是增强不是依赖）
