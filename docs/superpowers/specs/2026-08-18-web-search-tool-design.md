@@ -63,7 +63,9 @@ public class WebTools {
         // POST /extract  body: {urls: [url], format: "markdown"}
         // format=markdown：与 search content 格式统一（保留标题/列表结构）
         // schema 只暴露单 url：ReAct 逐步深挖模式（Extract API 支持批量 20 个但不用）
-        // 输出：【网页】url\n正文（截断 3000 字）
+        // 响应含 results[].title/raw_content + failed_results[].url/error（用户调研确认）：
+        //   成功 → 【网页】标题 (url)\n正文（截断 3000 字）
+        //   失败 → 带回 url+error 供模型自纠（换来源或基于摘要回答），而非笼统提示语
     }
 }
 ```

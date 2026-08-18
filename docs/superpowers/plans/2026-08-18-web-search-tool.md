@@ -24,7 +24,8 @@
 
 **Tavily API 要点（用户调研确认）：**
 - Search（`POST /search`）：请求 `{query, max_results: 5, search_depth: "basic", include_answer: "basic"}`（REST 参数 snake_case）；响应含 `answer`（合成的参考答案）+ `results[].url/title/content/score`（content 为 md 格式）
-- Extract（`POST /extract`）：请求 `{urls: [url], format: "markdown"}`；响应 `results[].url/raw_content`。format 选 markdown 非 text：与 search 的 content 格式统一，保留标题/列表结构利于模型消费
+- Extract（`POST /extract`）：请求 `{urls: [url], format: "markdown"}`；响应 `results[].url/title/raw_content` + `failed_results[]`（提取失败的 URL 及原因）。format 选 markdown 非 text：与 search 的 content 格式统一，保留标题/列表结构利于模型消费
+- `failed_results` 处理：单 URL 模式下要么成功要么失败——失败时把 url+error 带回给模型（自纠换来源），而非笼统提示语
 - include_images/favicon/usage 均不传：对 LLM 工具无用（YAGNI）
 
 - [ ] **Step 1: 写失败的单元测试（纯函数部分：格式化/截断）**
@@ -98,24 +99,33 @@ class WebToolsTest {
     // ---------- webFetch: formatExtract ----------
 
     @Test
-    void 提取_正常结果带URL与正文() {
+    void 提取_正常结果带标题URL与正文() {
         String out = WebTools.formatExtract(List.of(
-                new WebTools.TavilyExtractResult("https://a.com", "正文内容第一段")));
-        assertTrue(out.contains("https://a.com"));
+                new WebTools.TavilyExtractResult("什么是MCP？", "https://a.com", "正文内容第一段")),
+                null);
+        assertTrue(out.contains("【网页】什么是MCP？ (https://a.com)"));
         assertTrue(out.contains("正文内容第一段"));
     }
 
     @Test
-    void 提取_空结果返回提示语() {
-        assertEquals("网页内容读取失败或为空", WebTools.formatExtract(null));
-        assertEquals("网页内容读取失败或为空", WebTools.formatExtract(List.of()));
+    void 提取_全空返回提示语() {
+        assertEquals("网页内容读取失败或为空", WebTools.formatExtract(null, null));
+        assertEquals("网页内容读取失败或为空", WebTools.formatExtract(List.of(), List.of()));
+    }
+
+    @Test
+    void 提取_失败结果带回URL与原因供模型自纠() {
+        String out = WebTools.formatExtract(List.of(),
+                List.of(new WebTools.TavilyFailedResult("https://a.com", "404 Not Found")));
+        assertTrue(out.contains("https://a.com"));
+        assertTrue(out.contains("404 Not Found"));
     }
 
     @Test
     void 提取_正文超3000字截断() {
         String longContent = "字".repeat(5000);
         String out = WebTools.formatExtract(List.of(
-                new WebTools.TavilyExtractResult("https://a.com", longContent)));
+                new WebTools.TavilyExtractResult("t", "https://a.com", longContent)), null);
         assertTrue(out.contains("字".repeat(3000) + "..."));
         assertFalse(out.contains("字".repeat(3001)));
     }
@@ -233,7 +243,8 @@ public class WebTools {
                     .body(Map.of("urls", List.of(url), "format", "markdown"))
                     .retrieve()
                     .body(TavilyExtractResponse.class);
-            String formatted = formatExtract(resp == null ? null : resp.results());
+            String formatted = formatExtract(resp == null ? null : resp.results(),
+                    resp == null ? null : resp.failedResults());
             LogHelper.printLog(WebTools.class, "webFetch", "TOOL_WEB_FETCH",
                     "网页读取完成", "url={} 长度={}", url, formatted.length());
             return formatted;
@@ -279,21 +290,41 @@ public class WebTools {
         return sb.toString().trim();
     }
 
-    /** 提取结果 → URL + 正文；空结果返回提示语（包私有供单测） */
-    static String formatExtract(List<TavilyExtractResult> results) {
-        if (results == null || results.isEmpty()) {
+    /**
+     * 提取结果 → 标题+URL+正文；失败项带回 url+error 供模型自纠（换来源或用摘要）；
+     * 全空返回提示语（包私有供单测）
+     */
+    static String formatExtract(List<TavilyExtractResult> results, List<TavilyFailedResult> failedResults) {
+        boolean noResults = results == null || results.isEmpty();
+        boolean noFailed = failedResults == null || failedResults.isEmpty();
+        if (noResults && noFailed) {
             return "网页内容读取失败或为空";
         }
         StringBuilder sb = new StringBuilder();
-        for (TavilyExtractResult r : results) {
+        if (!noResults) {
+            for (TavilyExtractResult r : results) {
+                if (sb.length() > 0) {
+                    sb.append("\n\n");
+                }
+                String title = r.title() == null || r.title().isBlank() ? "" : r.title() + " ";
+                sb.append("【网页】").append(title).append("(").append(r.url() == null ? "" : r.url())
+                        .append(")\n");
+                String content = r.rawContent() == null ? "" : truncate(r.rawContent(), FETCH_MAX_LEN);
+                sb.append(content);
+            }
+        }
+        if (!noFailed) {
             if (sb.length() > 0) {
                 sb.append("\n\n");
             }
-            sb.append("【网页】").append(r.url() == null ? "" : r.url()).append("\n");
-            String content = r.rawContent() == null ? "" : truncate(r.rawContent(), FETCH_MAX_LEN);
-            sb.append(content);
+            sb.append("以下网页读取失败：\n");
+            for (TavilyFailedResult f : failedResults) {
+                sb.append("- ").append(f.url() == null ? "" : f.url())
+                        .append("（").append(f.error() == null ? "未知原因" : f.error()).append("）\n");
+            }
+            sb.append("请尝试其他来源链接，或基于搜索摘要回答。");
         }
-        return sb.toString();
+        return sb.toString().trim();
     }
 
     static String truncate(String s, int max) {
@@ -306,18 +337,22 @@ public class WebTools {
     /** 单条搜索结果 */
     record TavilyResult(String title, String url, String content, Double score) {}
 
-    /** Tavily /extract 响应 */
-    record TavilyExtractResponse(List<TavilyExtractResult> results) {}
+    /** Tavily /extract 响应（failed_results 为提取失败的 URL 及原因） */
+    record TavilyExtractResponse(List<TavilyExtractResult> results,
+                                 List<TavilyFailedResult> failedResults) {}
 
-    /** 单条提取结果 */
-    record TavilyExtractResult(String url, String rawContent) {}
+    /** 单条提取结果（title 来自用户调研响应确认存在） */
+    record TavilyExtractResult(String title, String url, String rawContent) {}
+
+    /** 提取失败项 */
+    record TavilyFailedResult(String url, String error) {}
 }
 ```
 
 - [ ] **Step 4: 运行测试确认通过**
 
 Run: `mvn test -pl dingRing-infrastructure -Dtest=WebToolsTest -q`
-Expected: 8 tests PASS
+Expected: 9 tests PASS
 
 - [ ] **Step 5: Commit**
 
@@ -713,7 +748,7 @@ Expected: 收束发言正常，`REACT_AGENT_BUILD ... toolSet=CONCLUDE ... webSe
 
 ## Self-Review 记录
 
-- **Spec 覆盖**：方案 §3.1 删除清单 → Task 3/4/5/6；§3.2 WebTools（webSearch+webFetch，用户调研的 Search/Extract 双模式）→ Task 1；§3.3 挂载矩阵 → Task 3；§3.4 连带修复 → Task 4/5/7；§3.5 配置 → 前置已完成；§3.6 debug 端点 → Task 2；§5 测试策略 → Task 1 单测（8 项）+ Task 2/8 手动。无缺口。
+- **Spec 覆盖**：方案 §3.1 删除清单 → Task 3/4/5/6；§3.2 WebTools（webSearch+webFetch，用户调研的 Search/Extract 双模式含 title/failed_results）→ Task 1；§3.3 挂载矩阵 → Task 3；§3.4 连带修复 → Task 4/5/7；§3.5 配置 → 前置已完成；§3.6 debug 端点 → Task 2；§5 测试策略 → Task 1 单测（9 项）+ Task 2/8 手动。无缺口。
 - **占位符扫描**：无 TBD/TODO 式步骤；所有代码步骤含完整代码。
-- **类型一致性**：`WebTools.webSearch(String)`/`webFetch(String)` 在 Task 1/2 一致；`TavilySearchResponse(answer, results)`/`TavilyExtractResponse(results)` 与单测 `formatSearch(answer, results)`/`formatExtract(results)` 一致；`Builder` 类型为 SAA `com.alibaba.cloud.ai.graph.agent.Builder`；`TavilyResult(title,url,content,score)`、`TavilyExtractResult(url, rawContent)`（Jackson 自动映射 raw_content→rawContent）一致。
+- **类型一致性**：`WebTools.webSearch(String)`/`webFetch(String)` 在 Task 1/2 一致；`TavilySearchResponse(answer, results)`、`TavilyExtractResponse(results, failedResults)` 与单测 `formatSearch(answer, results)`/`formatExtract(results, failedResults)` 一致；`Builder` 类型为 SAA `com.alibaba.cloud.ai.graph.agent.Builder`；`TavilyResult(title,url,content,score)`、`TavilyExtractResult(title,url,rawContent)`、`TavilyFailedResult(url,error)`（Jackson 自动映射 snake_case→camelCase）一致。
 - **顺序安全**：每 Task 结束态均可编译（旧工具类删除前引用已全部清除）。
