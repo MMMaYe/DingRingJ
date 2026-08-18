@@ -7,13 +7,13 @@ import com.dingring.domain.discussion.TopicRepository;
 import com.dingring.domain.group.Group;
 import com.dingring.domain.group.GroupRepository;
 import com.dingring.domain.service.LlmService.ToolSet;
-import com.dingring.domain.service.MemoryService;
+import com.dingring.domain.service.GroupContextMemoryService;
 import com.dingring.domain.service.ProfileService;
 import com.dingring.domain.service.RagService;
 import com.dingring.domain.service.TopicVectorService;
 import com.dingring.infrastructure.agent.hook.GroupRosterHook;
 import com.dingring.infrastructure.agent.hook.InjectKbHook;
-import com.dingring.infrastructure.agent.hook.MemoryInjectionHook;
+import com.dingring.infrastructure.agent.hook.GroupContextMemoryHook;
 import com.dingring.infrastructure.agent.hook.ProfileInjectionHook;
 import com.dingring.infrastructure.agent.hook.SystemMessageMergeHook;
 import com.dingring.infrastructure.agent.tool.KnowledgeSearchTool;
@@ -56,7 +56,7 @@ class ReactAgentFactoryRegressionTest {
 
     private final AgentRepository agentRepository = mock(AgentRepository.class);
     private final GroupRepository groupRepository = mock(GroupRepository.class);
-    private final MemoryService memoryService = mock(MemoryService.class);
+    private final GroupContextMemoryService contextMemoryService = mock(GroupContextMemoryService.class);
     private final ProfileService profileService = mock(ProfileService.class);
     private final RagService ragService = mock(RagService.class);
     private final TopicVectorService topicVectorService = mock(TopicVectorService.class);
@@ -65,7 +65,7 @@ class ReactAgentFactoryRegressionTest {
     /** 真实工具实例（依赖用 mock 服务），走 ToolCallbacks.from 转 ToolCallback */
     private SaaLlmFactory newFactory() {
         SaaLlmFactory factory = spy(new SaaLlmFactory(
-                new MemoryInjectionHook(memoryService),
+                new GroupContextMemoryHook(contextMemoryService, agentRepository),
                 new ProfileInjectionHook(profileService),
                 new GroupRosterHook(groupRepository, agentRepository),
                 new InjectKbHook(ragService, topicVectorService, topicRepository, groupRepository),
@@ -85,14 +85,12 @@ class ReactAgentFactoryRegressionTest {
         when(chatModel.call(any(Prompt.class))).thenReturn(
                 new ChatResponse(List.of(new Generation(new AssistantMessage("这是老王的回复")))));
 
-        when(memoryService.retrieveMemory(10L)).thenReturn("历史结论：Redis 用 ZSET 缓存热点数据");
         when(profileService.getProfile(any())).thenReturn("程序员老王，专注高并发与缓存");
         when(ragService.retrieve(any(), any())).thenReturn("");
         when(agentRepository.findByIds(any())).thenReturn(List.of(domainAgent));
         Group group = mock(Group.class);
         when(group.memberAgentIds()).thenReturn(List.of(1L));
         when(groupRepository.findById(10L)).thenReturn(Optional.of(group));
-        when(topicRepository.findClosedByGroupId(10L)).thenReturn(List.of());
     }
 
     private AssistantMessage callAgent(ReactAgent agent) throws Exception {

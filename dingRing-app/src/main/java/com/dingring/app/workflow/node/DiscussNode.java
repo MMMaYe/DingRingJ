@@ -2,12 +2,12 @@ package com.dingring.app.workflow.node;
 
 import com.alibaba.cloud.ai.graph.OverAllState;
 import com.alibaba.cloud.ai.graph.action.NodeAction;
-import com.dingring.app.orchestrator.ContextBuilder;
 import com.dingring.app.orchestrator.MessageContext;
 import com.dingring.app.orchestrator.SpeakerScheduler;
 import com.dingring.app.orchestrator.StreamMarkerGuard;
 import com.dingring.app.orchestrator.Terminator;
 import com.dingring.app.service.MessageAssembler;
+import com.dingring.common.constant.CollaborationMarkers;
 import com.dingring.common.constant.WsConstants;
 import com.dingring.common.exception.ErrorCode;
 import com.dingring.common.util.JsonHelper;
@@ -67,7 +67,6 @@ public class DiscussNode implements NodeAction {
     private final AgentRepository agentRepository;
     private final MessageRepository messageRepository;
     private final SpeakerScheduler speakerScheduler;
-    private final ContextBuilder contextBuilder;
     private final MessageAssembler messageAssembler;
     private final LlmService llmService;
     private final DomainEventPublisher eventPublisher;
@@ -249,32 +248,33 @@ public class DiscussNode implements NodeAction {
             pushTyping(ctx.getGroupId(), agent, true);
             StreamEmitter emitter = streamingEnabled ? new StreamEmitter(ctx.getGroupId(), agent) : null;
             try {
-                // 讨论态上下文（方案 6.3.6）：观点摘要列表 + 近期窗口，替代全量 200 条窗口
-                ContextBuilder.LlmContext llmCtx = contextBuilder.buildForDiscuss(
-                        agent, ctx.getGroupId(), ctx.getTopicId(),
-                        messageAssembler::resolveSenderName, userHistoryHint);
-
-                // 构建 ReactAgent 上下文（群记忆/用户画像/知识由 Hook 动态注入）
+                // 构建 ReactAgent 上下文（systemPrompt 与讨论上下文--观点摘要/进度引导/近期窗口--
+                // 由 GroupContextMemoryHook 按意图组装；画像/名单/知识由各自 Hook 注入）
+                // 触发调度的消息内容作为兜底 USER 轮传入
                 Map<String, Object> context = new HashMap<>();
                 context.put("groupId", ctx.getGroupId());
                 context.put("topicId", ctx.getTopicId());
                 context.put("userId", 1L);  // 当前单用户系统默认 ID
                 context.put("speakerAgentId", agent.getId());
-                // 场景意图（InjectKbHook：DISCUSS 双源注入 kb+topic）
+                // 场景意图（GroupContextMemoryHook 走讨论分支；InjectKbHook：DISCUSS 双源注入 kb+topic）
                 context.put(StateKeys.INTENT, "DISCUSS");
                 // RAG 检索词：以触发调度的消息为查询（InjectKbHook 读取）
                 context.put("ragQuery", ctx.getContent());
                 // 话题标题（InjectKbHook topic 源检索相似历史话题用）
                 context.put(StateKeys.TOPIC_TITLE, topicTitle);
+                // 话题重启的用户历史表现提示（GroupContextMemoryHook 讨论上下文读取）
+                context.put(StateKeys.USER_HISTORY_HINT, userHistoryHint);
+                List<LlmService.ChatTurn> fallbackTurns =
+                        List.of(LlmService.ChatTurn.user(ctx.getContent()));
 
                 // Agent 发言（失败重试 1 次）；流式模式下重试前废弃旧流、换新 streamId 重开
                 LlmService.AgentResult result;
                 long llmStart = System.currentTimeMillis();
                 try {
                     result = streamingEnabled
-                            ? llmService.chatStream(agent, llmCtx.systemPrompt(), llmCtx.turns(),
+                            ? llmService.chatStream(agent, "", fallbackTurns,
                                     LlmService.ToolSet.DISCUSS, context, emitter::onDelta)
-                            : llmService.chat(agent, llmCtx.systemPrompt(), llmCtx.turns(),
+                            : llmService.chat(agent, "", fallbackTurns,
                                     LlmService.ToolSet.DISCUSS, context);
                 } catch (Exception first) {
                     LogHelper.printWarnLog(DiscussNode.class, "DiscussNode.speakOnce", "DISCUSS_NODE", "Agent首次失败重试",
@@ -283,9 +283,9 @@ public class DiscussNode implements NodeAction {
                         emitter.reset();
                     }
                     result = streamingEnabled
-                            ? llmService.chatStream(agent, llmCtx.systemPrompt(), llmCtx.turns(),
+                            ? llmService.chatStream(agent, "", fallbackTurns,
                                     LlmService.ToolSet.DISCUSS, context, emitter::onDelta)
-                            : llmService.chat(agent, llmCtx.systemPrompt(), llmCtx.turns(),
+                            : llmService.chat(agent, "", fallbackTurns,
                                     LlmService.ToolSet.DISCUSS, context);
                 }
                 String content = result.content();
@@ -295,7 +295,7 @@ public class DiscussNode implements NodeAction {
 
                 boolean blank = content == null || content.isBlank();
                 // 空内容或 [[PASS]]：视为跳过本轮
-                if (blank || content.contains(ContextBuilder.PASS_MARKER)) {
+                if (blank || content.contains(CollaborationMarkers.PASS_MARKER)) {
                     if (emitter != null) {
                         emitter.abort();
                     }
@@ -304,9 +304,9 @@ public class DiscussNode implements NodeAction {
                     return new SpeakResult(SpeakOutcome.PASSED, agent);
                 }
 
-                boolean wantsConclude = content.contains(ContextBuilder.CONCLUDE_MARKER);
-                boolean asksUser = content.contains(ContextBuilder.ASK_USER_MARKER);
-                content = ContextBuilder.stripMarkers(content);
+                boolean wantsConclude = content.contains(CollaborationMarkers.CONCLUDE_MARKER);
+                boolean asksUser = content.contains(CollaborationMarkers.ASK_USER_MARKER);
+                content = CollaborationMarkers.stripMarkers(content);
                 if (content.isBlank()) {
                     // 剥离标记后为空，视为 PASS
                     if (emitter != null) {

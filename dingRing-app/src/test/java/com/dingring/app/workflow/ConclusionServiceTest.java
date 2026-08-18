@@ -1,6 +1,5 @@
 package com.dingring.app.workflow;
 
-import com.dingring.app.orchestrator.ContextBuilder;
 import com.dingring.app.orchestrator.SpeakerScheduler;
 import com.dingring.app.service.MessageAssembler;
 import com.dingring.common.constant.WsConstants;
@@ -55,7 +54,6 @@ class ConclusionServiceTest {
     private AgentRepository agentRepository;
     private MessageRepository messageRepository;
     private SpeakerScheduler speakerScheduler;
-    private ContextBuilder contextBuilder;
     private MessageAssembler messageAssembler;
     private LlmService llmService;
     private DomainEventPublisher eventPublisher;
@@ -74,14 +72,13 @@ class ConclusionServiceTest {
         agentRepository = mock(AgentRepository.class);
         messageRepository = mock(MessageRepository.class);
         speakerScheduler = mock(SpeakerScheduler.class);
-        contextBuilder = mock(ContextBuilder.class);
         messageAssembler = mock(MessageAssembler.class);
         llmService = mock(LlmService.class);
         eventPublisher = mock(DomainEventPublisher.class);
         groupBroadcastService = mock(GroupBroadcastService.class);
         conclusionExecutor = mock(ConclusionExecutor.class);
         service = new ConclusionService(topicRepository, groupRepository, agentRepository, messageRepository,
-                speakerScheduler, contextBuilder, messageAssembler, llmService,
+                speakerScheduler, messageAssembler, llmService,
                 eventPublisher, groupBroadcastService, conclusionExecutor);
     }
 
@@ -116,8 +113,6 @@ class ConclusionServiceTest {
         when(agentRepository.findByIds(List.of(AGENT_ID))).thenReturn(List.of(agent()));
         when(speakerScheduler.rank(any(), any()))
                 .thenReturn(List.of(new SpeakerScheduler.ScoredAgent(agent(), 100, "FREE_SCHEDULE")));
-        when(contextBuilder.buildForConclusion(any(), any(), any(), any(), any()))
-                .thenReturn(new ContextBuilder.LlmContext("sp", List.of()));
         when(llmService.chat(any(), any(), any(), any(), any()))
                 .thenReturn(LlmService.AgentResult.of("结论内容"));
         when(topicRepository.update(t)).thenReturn(true);
@@ -203,8 +198,6 @@ class ConclusionServiceTest {
         when(agentRepository.findByIds(List.of(AGENT_ID))).thenReturn(List.of(agent()));
         when(speakerScheduler.rank(any(), any()))
                 .thenReturn(List.of(new SpeakerScheduler.ScoredAgent(agent(), 100, "FREE_SCHEDULE")));
-        when(contextBuilder.buildForConclusion(any(), any(), any(), any(), any()))
-                .thenReturn(new ContextBuilder.LlmContext("sp", List.of()));
         when(llmService.chat(any(), any(), any(), any(), any()))
                 .thenReturn(LlmService.AgentResult.of(""));
 
@@ -243,7 +236,8 @@ class ConclusionServiceTest {
         verify(conclusionExecutor, times(2)).execute(captor.capture());
         ExecutorService pool = Executors.newFixedThreadPool(2);
         try {
-            List<Future<?>> futures = captor.getAllValues().stream().map(pool::submit).toList();
+            List<? extends Future<?>> list = captor.getAllValues().stream().map(pool::submit).toList();
+            List<Future<?>> futures = (List<Future<?>>) list;
             for (Future<?> f : futures) {
                 f.get(3, TimeUnit.SECONDS);
             }

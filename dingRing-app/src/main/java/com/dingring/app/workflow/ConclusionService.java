@@ -1,9 +1,9 @@
 package com.dingring.app.workflow;
 
-import com.dingring.app.orchestrator.ContextBuilder;
 import com.dingring.app.orchestrator.MessageContext;
 import com.dingring.app.orchestrator.SpeakerScheduler;
 import com.dingring.app.service.MessageAssembler;
+import com.dingring.common.constant.CollaborationMarkers;
 import com.dingring.common.constant.WsConstants;
 import com.dingring.common.exception.BizException;
 import com.dingring.common.exception.ErrorCode;
@@ -56,7 +56,6 @@ public class ConclusionService {
     private final AgentRepository agentRepository;
     private final MessageRepository messageRepository;
     private final SpeakerScheduler speakerScheduler;
-    private final ContextBuilder contextBuilder;
     private final MessageAssembler messageAssembler;
     private final LlmService llmService;
     private final DomainEventPublisher eventPublisher;
@@ -159,29 +158,30 @@ public class ConclusionService {
                 "agentName", concluder.getName(),
                 "isTyping", true));
         try {
-            ContextBuilder.LlmContext ctx = contextBuilder.buildForConclusion(
-                    concluder, topic.getChatGroupId(), topic.getId(), topic.getTitle(),
-                    messageAssembler::resolveSenderName);
+            // 构建 ReactAgent 上下文（systemPrompt 与收束上下文--观点清单/全量原文窗口--
+            // 由 GroupContextMemoryHook 按意图组装）；话题标题作为兜底 USER 轮传入
             Map<String, Object> context = new HashMap<>();
             context.put("groupId", topic.getChatGroupId());
             context.put("topicId", topic.getId());
             context.put("userId", 1L);  // 当前单用户系统默认 ID
             context.put("speakerAgentId", concluder.getId());
-            // 场景意图（InjectKbHook：CONCLUDE 仅 topic 源，相似历史结论辅助总结）
+            // 场景意图（GroupContextMemoryHook 走收束分支；InjectKbHook：CONCLUDE 仅 topic 源，相似历史结论辅助总结）
             context.put(StateKeys.INTENT, "CONCLUDE");
             // RAG 检索词：以主题标题为查询（CONCLUDE 意图下 InjectKbHook 不消费 kb 源，保留供检索语义）
             context.put("ragQuery", topic.getTitle());
-            // 话题标题（InjectKbHook topic 源检索相似历史话题用）
+            // 话题标题（InjectKbHook topic 源检索相似历史话题用；conclude 模板参数）
             context.put(StateKeys.TOPIC_TITLE, topic.getTitle());
+            List<LlmService.ChatTurn> fallbackTurns =
+                    List.of(LlmService.ChatTurn.user(topic.getTitle()));
             LlmService.AgentResult agentResult;
             try {
-                agentResult = llmService.chat(concluder, ctx.systemPrompt(), ctx.turns(),
+                agentResult = llmService.chat(concluder, "", fallbackTurns,
                         LlmService.ToolSet.CONCLUDE, context);
             } catch (Exception first) {
                 LogHelper.printWarnLog(ConclusionService.class, "ConclusionService.generate",
                         "GENERATE_CONCLUSION", "LLM首次失败重试", "agent={} 失败原因: {}",
                         concluder.getName(), first.getMessage());
-                agentResult = llmService.chat(concluder, ctx.systemPrompt(), ctx.turns(),
+                agentResult = llmService.chat(concluder, "", fallbackTurns,
                         LlmService.ToolSet.CONCLUDE, context);
             }
             String conclusion = agentResult.content();
@@ -192,7 +192,7 @@ public class ConclusionService {
                 throw new BizException(ErrorCode.TOPIC_CONCLUSION_FAILED, "总结 Agent 返回空结论");
             }
             // 结论中不应残留协作标记
-            conclusion = ContextBuilder.stripMarkers(conclusion);
+            conclusion = CollaborationMarkers.stripMarkers(conclusion);
 
             // CONCLUDING → CLOSED（乐观锁：更新失败说明已被并发关闭/看门狗回滚，放弃本次落库与广播）
             Topic fresh = topicRepository.findById(topicId).orElse(null);

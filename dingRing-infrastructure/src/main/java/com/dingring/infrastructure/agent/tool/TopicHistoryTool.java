@@ -15,7 +15,7 @@ import java.util.List;
  * 历史主题查询工具（Phase D）。
  * <p>Agent 收束讨论时可调用此工具查询群内已结束讨论的历史结论，
  * 用于参考过往共识、避免重复结论。
- * <p>迁移自 {@link com.dingring.app.orchestrator.ContextBuilder#buildForConclusion} 的历史记忆注入部分。
+ * <p>迁移自 ContextBuilder#buildForConclusion（已删，见 GroupContextMemoryServiceImpl） 的历史记忆注入部分。
  */
 @Slf4j
 @Component

@@ -59,7 +59,7 @@ class GroupRosterHookTest {
         when(agentRepository.findByIds(List.of(10L, 11L))).thenReturn(List.of(self, other));
 
         OverAllState state = new OverAllState(Map.of("groupId", 1L, "speakerAgentId", 10L));
-        Map<String, Object> result = hook.beforeModel(state, null).join();
+        Map<String, Object> result = hook.beforeAgent(state, null).join();
 
         assertThat(result).containsKey("messages");
         SystemMessage msg = (SystemMessage) result.get("messages");
@@ -77,7 +77,7 @@ class GroupRosterHookTest {
         when(groupRepository.findById(1L)).thenReturn(Optional.empty());
         OverAllState state = new OverAllState(Map.of("groupId", 1L));
 
-        Map<String, Object> result = hook.beforeModel(state, null).join();
+        Map<String, Object> result = hook.beforeAgent(state, null).join();
 
         assertThat(result).doesNotContainKey("messages");
     }
@@ -90,7 +90,7 @@ class GroupRosterHookTest {
         when(groupRepository.findById(1L)).thenReturn(Optional.of(group));
         OverAllState state = new OverAllState(Map.of("groupId", 1L));
 
-        Map<String, Object> result = hook.beforeModel(state, null).join();
+        Map<String, Object> result = hook.beforeAgent(state, null).join();
 
         assertThat(result).doesNotContainKey("messages");
     }
@@ -100,7 +100,7 @@ class GroupRosterHookTest {
     void shouldReturnEmptyWhenGroupIdNull() {
         OverAllState state = new OverAllState(Map.of());
 
-        Map<String, Object> result = hook.beforeModel(state, null).join();
+        Map<String, Object> result = hook.beforeAgent(state, null).join();
 
         assertThat(result).doesNotContainKey("messages");
     }

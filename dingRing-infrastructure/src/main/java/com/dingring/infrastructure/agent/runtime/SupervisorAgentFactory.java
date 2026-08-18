@@ -7,9 +7,9 @@ import com.dingring.common.util.LogHelper;
 import com.dingring.domain.agent.Agent;
 import com.dingring.domain.skill.Skill;
 import com.dingring.domain.skill.SkillLoaderService;
+import com.dingring.infrastructure.agent.hook.GroupContextMemoryHook;
 import com.dingring.infrastructure.agent.hook.GroupRosterHook;
 import com.dingring.infrastructure.agent.hook.InjectKbHook;
-import com.dingring.infrastructure.agent.hook.MemoryInjectionHook;
 import com.dingring.infrastructure.agent.hook.ProfileInjectionHook;
 import com.dingring.infrastructure.agent.hook.WorkProgressBroadcastHook;
 import com.dingring.infrastructure.agent.tool.KnowledgeSearchTool;
@@ -60,7 +60,7 @@ public class SupervisorAgentFactory {
 
     private final SaaLlmFactory llmFactory;
     private final WorkProgressBroadcastHook workProgressBroadcastHook;
-    private final MemoryInjectionHook memoryInjectionHook;
+    private final GroupContextMemoryHook groupContextMemoryHook;
     private final ProfileInjectionHook profileInjectionHook;
     private final GroupRosterHook groupRosterHook;
     private final InjectKbHook injectKbHook;
@@ -93,7 +93,7 @@ public class SupervisorAgentFactory {
                 .tools(subTools)
                 // Supervisor 的 state 含 groupId（WorkNode 注入），state 依赖 Hook 可正常工作；
                 // InjectKbHook 防御行——Worker 被 AgentTool 委派时 clearContext 后 state 无 intent/ragQuery/topicId，自然跳过
-                .hooks(workProgressBroadcastHook, memoryInjectionHook, profileInjectionHook,
+                .hooks(workProgressBroadcastHook, groupContextMemoryHook, profileInjectionHook,
                         groupRosterHook, injectKbHook)
                 .compileConfig(CompileConfig.builder()
                         .recursionLimit(SUPERVISOR_RECURSION_LIMIT)
@@ -120,7 +120,7 @@ public class SupervisorAgentFactory {
                 .model(llmFactory.buildChatModel(agent, null))
                 .systemPrompt(systemPrompt)
                 .tools(tools)
-                .hooks(memoryInjectionHook, profileInjectionHook, groupRosterHook, injectKbHook)
+                .hooks(groupContextMemoryHook, profileInjectionHook, groupRosterHook, injectKbHook)
                 .compileConfig(CompileConfig.builder()
                         .recursionLimit(WORKER_RECURSION_LIMIT)
                         .build())

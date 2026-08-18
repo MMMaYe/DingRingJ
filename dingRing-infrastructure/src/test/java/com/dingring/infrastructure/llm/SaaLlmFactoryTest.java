@@ -4,7 +4,7 @@ import com.dingring.domain.agent.Agent;
 import com.dingring.domain.service.LlmService.CallOptions;
 import com.dingring.infrastructure.agent.hook.GroupRosterHook;
 import com.dingring.infrastructure.agent.hook.InjectKbHook;
-import com.dingring.infrastructure.agent.hook.MemoryInjectionHook;
+import com.dingring.infrastructure.agent.hook.GroupContextMemoryHook;
 import com.dingring.infrastructure.agent.hook.ProfileInjectionHook;
 import com.dingring.infrastructure.agent.hook.SystemMessageMergeHook;
 import com.dingring.infrastructure.agent.tool.KnowledgeSearchTool;
@@ -115,7 +115,7 @@ class SaaLlmFactoryTest {
 
     private static SaaLlmFactory factoryWithDefaultMaxTokens(int maxTokens) {
         SaaLlmFactory factory = new SaaLlmFactory(
-                mock(MemoryInjectionHook.class),
+                mock(GroupContextMemoryHook.class),
                 mock(ProfileInjectionHook.class),
                 mock(GroupRosterHook.class),
                 mock(InjectKbHook.class),

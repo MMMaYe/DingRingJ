@@ -36,7 +36,7 @@ class ProfileInjectionHookTest {
         when(profileService.getProfile(1L)).thenReturn("用户偏好简洁、直接的表达方式");
         OverAllState state = new OverAllState(Map.of("userId", 1L));
 
-        Map<String, Object> result = hook.beforeModel(state, null).join();
+        Map<String, Object> result = hook.beforeAgent(state, null).join();
 
         assertThat(result).containsKey("messages");
         SystemMessage msg = (SystemMessage) result.get("messages");
@@ -51,7 +51,7 @@ class ProfileInjectionHookTest {
         when(profileService.getProfile(1L)).thenReturn("");
         OverAllState state = new OverAllState(Map.of("userId", 1L));
 
-        Map<String, Object> result = hook.beforeModel(state, null).join();
+        Map<String, Object> result = hook.beforeAgent(state, null).join();
 
         assertThat(result).doesNotContainKey("messages");
     }
@@ -62,7 +62,7 @@ class ProfileInjectionHookTest {
         when(profileService.getProfile(1L)).thenReturn("默认用户画像");
         OverAllState state = new OverAllState(Map.of());
 
-        Map<String, Object> result = hook.beforeModel(state, null).join();
+        Map<String, Object> result = hook.beforeAgent(state, null).join();
 
         assertThat(result).containsKey("messages");
         SystemMessage msg = (SystemMessage) result.get("messages");

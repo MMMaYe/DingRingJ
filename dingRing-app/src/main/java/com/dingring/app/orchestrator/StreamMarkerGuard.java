@@ -1,5 +1,7 @@
 package com.dingring.app.orchestrator;
 
+import com.dingring.common.constant.CollaborationMarkers;
+
 /**
  * 流式输出协作标记护栏：防止 [[CONCLUDE]] / [[PASS]] 被拆到多个 chunk 后泄漏给前端。
  * <p>策略：完整标记直接剥离；缓冲区尾部若可能是某标记的前缀则暂扣不下发，
@@ -7,7 +9,7 @@ package com.dingring.app.orchestrator;
  */
 public class StreamMarkerGuard {
 
-    private static final String[] MARKERS = {ContextBuilder.CONCLUDE_MARKER, ContextBuilder.PASS_MARKER};
+    private static final String[] MARKERS = {CollaborationMarkers.CONCLUDE_MARKER, CollaborationMarkers.PASS_MARKER};
 
     private final StringBuilder buf = new StringBuilder();
 

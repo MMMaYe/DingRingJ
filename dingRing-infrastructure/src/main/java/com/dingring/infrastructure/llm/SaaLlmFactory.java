@@ -6,9 +6,9 @@ import com.dingring.common.util.LogHelper;
 import com.dingring.domain.agent.Agent;
 import com.dingring.domain.service.LlmService.CallOptions;
 import com.dingring.domain.service.LlmService.ToolSet;
+import com.dingring.infrastructure.agent.hook.GroupContextMemoryHook;
 import com.dingring.infrastructure.agent.hook.GroupRosterHook;
 import com.dingring.infrastructure.agent.hook.InjectKbHook;
-import com.dingring.infrastructure.agent.hook.MemoryInjectionHook;
 import com.dingring.infrastructure.agent.hook.ProfileInjectionHook;
 import com.dingring.infrastructure.agent.hook.SystemMessageMergeHook;
 import com.dingring.infrastructure.agent.tool.KnowledgeSearchTool;
@@ -65,7 +65,7 @@ public class SaaLlmFactory {
     /** 工作场景 ReAct 上限：深度 ReAct，支撑约 3 轮模型推理（每轮约 10 步） */
     private static final int WORK_RECURSION_LIMIT = 40;
 
-    private final MemoryInjectionHook memoryInjectionHook;
+    private final GroupContextMemoryHook groupContextMemoryHook;
     private final ProfileInjectionHook profileInjectionHook;
     private final GroupRosterHook groupRosterHook;
     private final InjectKbHook injectKbHook;
@@ -169,12 +169,14 @@ public class SaaLlmFactory {
                 .model(buildChatModel(domainAgent, null))
                 .tools(tools)
                 // Hook 单例共享安全：实现仅从 state 读 per-call 参数，不使用 agent 引用。
+                // GroupContextMemoryHook（AgentHook）：按意图组装人设+群上下文记忆，整表替换 messages，
+                // 必须注册在 InjectKbHook（append）之前，否则会吃掉 kb 注入；
                 // InjectKbHook（AgentHook）：每次 ReAct 运行前按意图门控注入一次，贯穿全程模型调用；
                 // 合并 Hook 必须注册在最后：Hook 按 getOrder 稳定排序、同序保持注册顺序（当前
                 // 各 Hook 均未覆写 getOrder，默认 0），保证模型调用前已把所有 SystemMessage
                 // 收敛为单条置顶（SystemMessageMergeHook.beforeModel）；若有 Hook 覆写为非 0
                 // 需同步调整此假设
-                .hooks(memoryInjectionHook, profileInjectionHook, groupRosterHook, injectKbHook,
+                .hooks(groupContextMemoryHook, profileInjectionHook, groupRosterHook, injectKbHook,
                         systemMessageMergeHook)
                 .compileConfig(CompileConfig.builder()
                         .recursionLimit(recursionLimit)

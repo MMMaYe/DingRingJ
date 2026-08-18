@@ -1,5 +1,7 @@
 package com.dingring.app.orchestrator;
 
+import com.dingring.common.constant.CollaborationMarkers;
+
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -24,7 +26,7 @@ class StreamMarkerGuardTest {
     @DisplayName("单 chunk 内完整标记直接剥离")
     void completeMarkerInSingleChunkShouldBeStripped() {
         StreamMarkerGuard guard = new StreamMarkerGuard();
-        assertThat(guard.onChunk("可以定了" + ContextBuilder.CONCLUDE_MARKER + "谢谢"))
+        assertThat(guard.onChunk("可以定了" + CollaborationMarkers.CONCLUDE_MARKER + "谢谢"))
                 .isEqualTo("可以定了谢谢");
         assertThat(guard.flush()).isEmpty();
     }
@@ -43,7 +45,7 @@ class StreamMarkerGuardTest {
     void passMarkerCharByCharShouldEmitNothing() {
         StreamMarkerGuard guard = new StreamMarkerGuard();
         StringBuilder emitted = new StringBuilder();
-        for (char c : ContextBuilder.PASS_MARKER.toCharArray()) {
+        for (char c : CollaborationMarkers.PASS_MARKER.toCharArray()) {
             emitted.append(guard.onChunk(String.valueOf(c)));
         }
         emitted.append(guard.flush());

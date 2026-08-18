@@ -12,7 +12,7 @@ import org.springframework.stereotype.Component;
  * 用户画像查询工具（Phase D）。
  * <p>Agent 可主动调用此工具查询用户的表达习惯/情绪基调/思考方式等长期观察特征，
  * 替代 Phase C 由 ContextBuilder 静态拼接的方式。
- * <p>迁移自 {@link com.dingring.app.orchestrator.ContextBuilder#buildSystemPrompt} 的画像注入部分。
+ * <p>迁移自 ContextBuilder#buildSystemPrompt（已删，见 GroupContextMemoryServiceImpl） 的画像注入部分。
  */
 @Slf4j
 @Component

@@ -1,7 +1,6 @@
 package com.dingring.app.workflow.node;
 
 import com.alibaba.cloud.ai.graph.OverAllState;
-import com.dingring.app.orchestrator.ContextBuilder;
 import com.dingring.app.orchestrator.SpeakerScheduler;
 import com.dingring.app.orchestrator.Terminator;
 import com.dingring.app.service.MessageAssembler;
@@ -58,7 +57,6 @@ class DiscussNodeTest {
     private AgentRepository agentRepository;
     private MessageRepository messageRepository;
     private SpeakerScheduler speakerScheduler;
-    private ContextBuilder contextBuilder;
     private MessageAssembler messageAssembler;
     private LlmService llmService;
     private DomainEventPublisher eventPublisher;
@@ -72,14 +70,13 @@ class DiscussNodeTest {
         agentRepository = mock(AgentRepository.class);
         messageRepository = mock(MessageRepository.class);
         speakerScheduler = new SpeakerScheduler();
-        contextBuilder = mock(ContextBuilder.class);
         messageAssembler = mock(MessageAssembler.class);
         llmService = mock(LlmService.class);
         eventPublisher = mock(DomainEventPublisher.class);
         groupBroadcastService = mock(GroupBroadcastService.class);
         terminator = mock(Terminator.class);
         node = new DiscussNode(groupRepository, agentRepository, messageRepository, speakerScheduler,
-                contextBuilder, messageAssembler, llmService, eventPublisher,
+                messageAssembler, llmService, eventPublisher,
                 groupBroadcastService, terminator);
     }
 
@@ -106,9 +103,7 @@ class DiscussNodeTest {
         when(terminator.reachedMaxRounds(anyLong())).thenReturn(false);
         when(messageRepository.countByTopicIdAndSender(anyLong(), anyLong(), any())).thenReturn(0L);
         when(messageRepository.findLastByGroupId(1L)).thenReturn(Optional.empty());
-        when(contextBuilder.buildForDiscuss(any(Agent.class), anyLong(), anyLong(), any(), anyString()))
-                .thenReturn(new ContextBuilder.LlmContext("测试systemPrompt", List.of()));
-        // 默认所有 Agent 正常发言
+        // 默认所有 Agent 正常发言（systemPrompt 与讨论上下文由 GroupContextMemoryHook 组装，节点传空）
         when(llmService.chat(any(Agent.class), anyString(), anyList(),
                 eq(LlmService.ToolSet.DISCUSS), any(Map.class)))
                 .thenReturn(LlmService.AgentResult.of("讨论内容"));

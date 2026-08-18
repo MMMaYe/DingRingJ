@@ -2,11 +2,11 @@ package com.dingring.app.workflow.node;
 
 import com.alibaba.cloud.ai.graph.OverAllState;
 import com.alibaba.cloud.ai.graph.action.NodeAction;
-import com.dingring.app.orchestrator.ContextBuilder;
 import com.dingring.app.orchestrator.MessageContext;
 import com.dingring.app.orchestrator.SpeakerScheduler;
 import com.dingring.app.orchestrator.StreamMarkerGuard;
 import com.dingring.app.service.MessageAssembler;
+import com.dingring.common.constant.CollaborationMarkers;
 import com.dingring.common.constant.WsConstants;
 import com.dingring.common.exception.ErrorCode;
 import com.dingring.common.util.JsonHelper;
@@ -60,7 +60,6 @@ public class ChatNode implements NodeAction {
     private final AgentRepository agentRepository;
     private final MessageRepository messageRepository;
     private final SpeakerScheduler speakerScheduler;
-    private final ContextBuilder contextBuilder;
     private final MessageAssembler messageAssembler;
     private final LlmService llmService;
     private final DomainEventPublisher eventPublisher;
@@ -200,27 +199,25 @@ public class ChatNode implements NodeAction {
         pushTyping(groupId, agent, true);
         StreamEmitter emitter = streamingEnabled ? new StreamEmitter(groupId, agent, groupBroadcastService) : null;
         try {
-            // 构建闲聊上下文（topicId=null）
-            ContextBuilder.LlmContext llmCtx = contextBuilder.build(
-                    agent, groupId, null, messageAssembler::resolveSenderName);
-
-            // 构建 ReactAgent 上下文（群记忆/用户画像/知识由 Hook 动态注入）
+            // 构建 ReactAgent 上下文（systemPrompt 与群上下文记忆由 GroupContextMemoryHook 按意图组装，
+            // 画像/名单/知识由各自 Hook 动态注入）；当前输入作为兜底 USER 轮传入
             Map<String, Object> context = new HashMap<>();
             context.put("groupId", groupId);
             context.put("userId", 1L);  // 当前单用户系统默认 ID
             context.put("speakerAgentId", agent.getId());
-            // 场景意图（InjectKbHook 按意图门控：CHAT 跳过知识注入）
+            // 场景意图（InjectKbHook 按意图门控：CHAT 跳过知识注入；GroupContextMemoryHook 走闲聊分支）
             context.put(StateKeys.INTENT, "CHAT");
             // RAG 检索词：以用户输入为查询（InjectKbHook 读取）
             context.put("ragQuery", input);
+            List<LlmService.ChatTurn> fallbackTurns = List.of(LlmService.ChatTurn.user(input));
 
             // Agent 发言（失败重试 1 次）；流式模式下重试前废弃旧流、换新 streamId 重开
             LlmService.AgentResult result;
             try {
                 result = streamingEnabled
-                        ? llmService.chatStream(agent, llmCtx.systemPrompt(), llmCtx.turns(),
+                        ? llmService.chatStream(agent, "", fallbackTurns,
                                 LlmService.ToolSet.CHAT, context, emitter::onDelta)
-                        : llmService.chat(agent, llmCtx.systemPrompt(), llmCtx.turns(),
+                        : llmService.chat(agent, "", fallbackTurns,
                                 LlmService.ToolSet.CHAT, context);
             } catch (Exception first) {
                 LogHelper.printWarnLog(ChatNode.class, "ChatNode.speakOnce", "CHAT_NODE", "Agent首次失败重试",
@@ -229,9 +226,9 @@ public class ChatNode implements NodeAction {
                     emitter.reset();
                 }
                 result = streamingEnabled
-                        ? llmService.chatStream(agent, llmCtx.systemPrompt(), llmCtx.turns(),
+                        ? llmService.chatStream(agent, "", fallbackTurns,
                                 LlmService.ToolSet.CHAT, context, emitter::onDelta)
-                        : llmService.chat(agent, llmCtx.systemPrompt(), llmCtx.turns(),
+                        : llmService.chat(agent, "", fallbackTurns,
                                 LlmService.ToolSet.CHAT, context);
             }
             String content = result.content();
@@ -247,7 +244,7 @@ public class ChatNode implements NodeAction {
             }
 
             // 剥离协作标记（闲聊态不应有，防御性处理）
-            content = ContextBuilder.stripMarkers(content);
+            content = CollaborationMarkers.stripMarkers(content);
             if (content.isBlank()) {
                 if (emitter != null) {
                     emitter.abort();

@@ -1,7 +1,6 @@
 package com.dingring.app.workflow.node;
 
 import com.alibaba.cloud.ai.graph.OverAllState;
-import com.dingring.app.orchestrator.ContextBuilder;
 import com.dingring.app.orchestrator.SpeakerScheduler;
 import com.dingring.app.service.MessageAssembler;
 import com.dingring.common.constant.WsConstants;
@@ -57,7 +56,6 @@ class ChatNodeTest {
     private AgentRepository agentRepository;
     private MessageRepository messageRepository;
     private SpeakerScheduler speakerScheduler;
-    private ContextBuilder contextBuilder;
     private MessageAssembler messageAssembler;
     private LlmService llmService;
     private DomainEventPublisher eventPublisher;
@@ -70,13 +68,12 @@ class ChatNodeTest {
         agentRepository = mock(AgentRepository.class);
         messageRepository = mock(MessageRepository.class);
         speakerScheduler = new SpeakerScheduler();
-        contextBuilder = mock(ContextBuilder.class);
         messageAssembler = mock(MessageAssembler.class);
         llmService = mock(LlmService.class);
         eventPublisher = mock(DomainEventPublisher.class);
         groupBroadcastService = mock(GroupBroadcastService.class);
         node = new ChatNode(groupRepository, agentRepository, messageRepository, speakerScheduler,
-                contextBuilder, messageAssembler, llmService, eventPublisher, groupBroadcastService);
+                messageAssembler, llmService, eventPublisher, groupBroadcastService);
     }
 
     private Group groupWithAgentIds(Long groupId, List<Long> memberAgentIds) {
@@ -100,9 +97,7 @@ class ChatNodeTest {
         when(groupRepository.findById(1L)).thenReturn(Optional.of(groupWithAgentIds(1L, List.of(10L, 20L))));
         when(agentRepository.findByIds(List.of(10L, 20L))).thenReturn(List.of(agent(10L, "柯南"), agent(20L, "灰原")));
         when(messageRepository.findLastByGroupId(1L)).thenReturn(Optional.empty());
-        when(contextBuilder.build(any(Agent.class), anyLong(), eq(null), any()))
-                .thenReturn(new ContextBuilder.LlmContext("测试systemPrompt", List.of()));
-        // 默认所有 Agent 都正常回答
+        // 默认所有 Agent 都正常回答（systemPrompt 与上下文由 GroupContextMemoryHook 组装，节点传空）
         when(llmService.chat(any(Agent.class), anyString(), anyList(),
                 eq(LlmService.ToolSet.CHAT), any(Map.class)))
                 .thenReturn(LlmService.AgentResult.of("正常回答"));
