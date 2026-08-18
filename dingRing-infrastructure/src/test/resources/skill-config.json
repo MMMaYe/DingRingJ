@@ -1,19 +1,20 @@
 [
   {
-    "name": "test-seed-skill-a",
-    "description": "测试种子技能 A",
-    "toolNames": "searchKnowledge",
-    "systemPrompt": "测试用附加提示词 A",
+    "name": "web-search",
+    "description": "联网检索技能：搜索实时资讯与深读网页（webSearch/webFetch）",
+    "toolNames": "webSearch,webFetch",
+    "systemPrompt": "你可以调用联网搜索工具查询最新信息，并在摘要不足时读取网页原文。当问题涉及实时资讯、新闻、近期事件或你不确定的事实时，先搜索再回答，并注明信息来源。",
     "scope": "GLOBAL",
+    "agentId": null,
     "status": "ACTIVE"
   },
   {
-    "name": "test-seed-skill-b",
-    "description": "测试种子技能 B",
-    "toolNames": "queryUserProfile,queryTopicHistory",
-    "systemPrompt": "测试用附加提示词 B",
-    "scope": "AGENT",
-    "agentId": 2,
-    "status": "INACTIVE"
+    "name": "diagram",
+    "description": "画图技能：按需绘制 SVG 示意图，遵循 Excalidraw 手绘风格规范，图形不计入发言字数",
+    "toolNames": "",
+    "systemPrompt": "当用户要求画图/画示意图/画结构图/画流程图时，遵循以下要求：\n- 使用内联 SVG 输出图，整体贴合 Excalidraw 手绘风格（蜡笔质感笔触、手写字体、米色画布）\n- 图先出，图后用 1-2 句话点出关键要点；图形本身不计算在发言总字数内\n- 结构清晰：节点用中文标注，箭头/连线语义明确，核心概念可加粗或着色\n- 仅使用 HTML/SVG，不要引用外部图片资源",
+    "scope": "GLOBAL",
+    "agentId": null,
+    "status": "ACTIVE"
   }
 ]

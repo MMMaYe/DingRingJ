@@ -45,8 +45,8 @@ class SkillHotReloaderTest {
     @Test
     @DisplayName("同名技能已存在时跳过（幂等，不重复写入）")
     void shouldSkipExistingByName() {
-        when(skillRepository.findByName("test-seed-skill-a")).thenReturn(Optional.of(existingSkill("test-seed-skill-a")));
-        when(skillRepository.findByName("test-seed-skill-b")).thenReturn(Optional.of(existingSkill("test-seed-skill-b")));
+        when(skillRepository.findByName("web-search")).thenReturn(Optional.of(existingSkill("web-search")));
+        when(skillRepository.findByName("diagram")).thenReturn(Optional.of(existingSkill("diagram")));
 
         reloader.loadSeedConfig();
 
@@ -56,8 +56,8 @@ class SkillHotReloaderTest {
     @Test
     @DisplayName("reload 复用同一加载逻辑（Nacos 监听回调扩展点，幂等不重复写入）")
     void shouldReloadReuseSeedLogic() {
-        when(skillRepository.findByName("test-seed-skill-a")).thenReturn(Optional.of(existingSkill("test-seed-skill-a")));
-        when(skillRepository.findByName("test-seed-skill-b")).thenReturn(Optional.of(existingSkill("test-seed-skill-b")));
+        when(skillRepository.findByName("web-search")).thenReturn(Optional.of(existingSkill("web-search")));
+        when(skillRepository.findByName("diagram")).thenReturn(Optional.of(existingSkill("diagram")));
 
         reloader.reload("skill-config.json", "[]");
 

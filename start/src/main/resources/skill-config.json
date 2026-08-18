@@ -1,27 +1,9 @@
 [
   {
-    "name": "rag-search",
-    "description": "知识库检索技能：搜索内部知识库，讨论和任务执行时引用权威资料",
-    "toolNames": "searchKnowledge",
-    "systemPrompt": "你可以使用知识库检索工具搜索内部资料。回答与项目/业务相关的问题时，优先检索知识库引用权威内容，避免凭记忆作答。",
-    "scope": "GLOBAL",
-    "agentId": null,
-    "status": "ACTIVE"
-  },
-  {
-    "name": "user-intent",
-    "description": "用户理解技能：查询用户画像，了解表达习惯与思考方式",
-    "toolNames": "queryUserProfile",
-    "systemPrompt": "你可以查询用户画像来了解用户的表达习惯、情绪基调和思考方式，从而给出更贴合用户的回答。",
-    "scope": "GLOBAL",
-    "agentId": null,
-    "status": "ACTIVE"
-  },
-  {
-    "name": "history-reference",
-    "description": "历史结论参考技能：查询群内已结束讨论的结论，避免重复讨论",
-    "toolNames": "queryTopicHistory",
-    "systemPrompt": "你可以查询群内历史讨论结论。当话题与过往讨论相似时，先查历史结论，避免重复输出相同观点。",
+    "name": "web-search",
+    "description": "联网检索技能：搜索实时资讯与深读网页（webSearch/webFetch）",
+    "toolNames": "webSearch,webFetch",
+    "systemPrompt": "你可以调用联网搜索工具查询最新信息，并在摘要不足时读取网页原文。当问题涉及实时资讯、新闻、近期事件或你不确定的事实时，先搜索再回答，并注明信息来源。",
     "scope": "GLOBAL",
     "agentId": null,
     "status": "ACTIVE"
