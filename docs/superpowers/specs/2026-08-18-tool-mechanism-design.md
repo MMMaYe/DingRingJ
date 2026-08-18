@@ -1,7 +1,9 @@
 # Tool 机制改造技术方案（SAA 深度整合版）
 
+> **已废弃**：本方案的动态装配四层架构被简化方案取代（用户决策：走 SAA 原生 `methodTools()` 极简路线），见 `2026-08-18-web-search-tool-design.md`。保留本文档作为设计演进记录。
+
 - 日期：2026-08-18
-- 状态：待评审
+- 状态：已废弃（被简化方案取代）
 - 影响模块：dingRing-domain / dingRing-infrastructure / dingRing-app
 - 前置依赖：SAA 1.1.2.3（spring-ai-alibaba-agent-framework）、Caffeine（新增依赖）
 
