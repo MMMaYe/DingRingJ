@@ -3,15 +3,19 @@ package com.dingring.infrastructure.aop;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.serializer.SerializeConfig;
 import com.alibaba.fastjson.serializer.SerializerFeature;
+import com.alibaba.fastjson.serializer.ValueFilter;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.reflect.MethodSignature;
+import org.springframework.ai.tool.ToolCallback;
 import org.springframework.stereotype.Component;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.RecordComponent;
+import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashMap;
@@ -45,6 +49,56 @@ public class EventAspect {
 
     /** fastjson 序列化配置：enum 用 name()，关闭循环引用检测避免出现 $ref */
     private static final SerializeConfig SERIALIZE_CONFIG = new SerializeConfig();
+
+    /**
+     * 全局值过滤器：解决两类"整条日志退化为 unserializable 占位"的序列化故障，
+     * 经 {@code JSON.toJSONString(obj, config, filter, features)} 重载挂载（fastjson 1.2.83
+     * 的 SerializeConfig.addFilter 是类级 API，做不了全局）。
+     * <p>
+     * 背景（问题一：JDK 反射对象导致整体失败）：@Tool 工具方法经 Spring AI 包装为
+     * ToolCallback 后持有 java.lang.reflect.Method 引用；fastjson 1.2.83 深度序列化
+     * Method 时会反射进 sun.reflect.annotation.*（如 annotatedReceiverType），而
+     * Java 9+ 模块系统禁止无名模块访问 java.base 内部包，抛 JSONException →
+     * safeToJson 整体 catch 返回 {@code <unserializable:ArrayList>}——此前 LLM_REQUEST
+     * 日志里 request 全量丢失即此因（探针实证：cannot access
+     * sun.reflect.annotation... module java.base does not export）。
+     * 处理：Method/Field/Type 值占位不下降——JVM 反射元数据内部无观测价值，
+     * 换取其余字段全量输出。
+     * <p>
+     * 背景（问题二：ToolCallback 语义缺失）：工具对象直接序列化输出的是框架内脏
+     * （toolMethod/toolContextSource 等字段），且 ToolDefinition 是 record、fastjson 1.x
+     * 会输出 {}。观测上真正有价值的是"这次装配了哪些工具"。处理：手动映射为
+     * {name, description}——语义全量且绕开 record 序列化缺陷。
+     * <p>
+     * 为什么放 ValueFilter 而非 sanitizeForLog：filter 在序列化期对任意深度的嵌套值
+     * 生效（对象图深处的 Method/ToolCallback 同样命中），sanitizeForLog 的递归只需
+     * 处理 record/集合结构，两者职责分离。
+     */
+    private static final ValueFilter LOG_VALUE_FILTER = new ValueFilter() {
+        @Override
+        public Object process(Object object, String name, Object value) {
+            if (value instanceof Method || value instanceof Field || value instanceof Type) {
+                return "<" + value.getClass().getSimpleName() + ">";
+            }
+            if (value instanceof ToolCallback callback) {
+                Map<String, Object> tool = new LinkedHashMap<>();
+                if (callback.getToolDefinition() != null) {
+                    tool.put("name", callback.getToolDefinition().name());
+                    tool.put("description", callback.getToolDefinition().description());
+                }
+                return tool;
+            }
+            // ToolDefinition 独立出现（如 MethodToolCallback.toolDefinition 字段值）：
+            // 实现类 DefaultToolDefinition 是 record，fastjson 1.x 直接序列化输出 {}
+            if (value instanceof org.springframework.ai.tool.definition.ToolDefinition definition) {
+                Map<String, Object> tool = new LinkedHashMap<>();
+                tool.put("name", definition.name());
+                tool.put("description", definition.description());
+                return tool;
+            }
+            return value;
+        }
+    };
 
     @Around("@annotation(com.dingring.infrastructure.aop.Event)")
     public Object around(ProceedingJoinPoint joinPoint) throws Throwable {
@@ -177,6 +231,22 @@ public class EventAspect {
             }
             return copy;
         }
+        // ToolCallback：映射为 {name, description}。此处与 LOG_VALUE_FILTER 双保险——
+        // ValueFilter 只拦截 JavaBean 字段值/Map 值，集合元素（List<ToolCallback>，
+        // 如 ModelRequest.dynamicToolCallbacks）不经过 filter 直接序列化会整体失败，
+        // 而本方法的 Collection 分支会逐元素递归到此处
+        if (obj instanceof ToolCallback callback) {
+            Map<String, Object> tool = new LinkedHashMap<>();
+            if (callback.getToolDefinition() != null) {
+                tool.put("name", callback.getToolDefinition().name());
+                tool.put("description", callback.getToolDefinition().description());
+            }
+            return tool;
+        }
+        // JDK 反射元数据：占位（同上，覆盖 ValueFilter 够不到的集合元素路径）
+        if (obj instanceof Method || obj instanceof Field || obj instanceof Type) {
+            return "<" + obj.getClass().getSimpleName() + ">";
+        }
         // Java Record：反射拆包成 Map，保证 ChatTurn(role, content) 这类 record 可以完整输出
         if (obj.getClass().isRecord()) {
             return recordToMap(obj);
@@ -236,7 +306,7 @@ public class EventAspect {
     /** 序列化一个对象；任何异常都不会向上抛出，只会返回一个占位字符串 */
     private String safeToJson(Object obj) {
         try {
-            return JSON.toJSONString(obj, SERIALIZE_CONFIG,
+            return JSON.toJSONString(obj, SERIALIZE_CONFIG, LOG_VALUE_FILTER,
                     SerializerFeature.WriteEnumUsingToString,
                     SerializerFeature.DisableCircularReferenceDetect);
         } catch (Exception e) {
@@ -247,7 +317,7 @@ public class EventAspect {
     /** 仅用于"预览是否为 {}"，不做特殊特性，只求快速得出序列化结果字符串 */
     private String safeToJsonRaw(Object obj) {
         try {
-            return JSON.toJSONString(obj, SERIALIZE_CONFIG,
+            return JSON.toJSONString(obj, SERIALIZE_CONFIG, LOG_VALUE_FILTER,
                     SerializerFeature.WriteEnumUsingToString,
                     SerializerFeature.DisableCircularReferenceDetect);
         } catch (Exception ignore) {
