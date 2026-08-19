@@ -38,7 +38,7 @@ public class LogQueryService {
      * 事件列表查询：seq 增量 + 多条件过滤。
      */
     public QueryResult queryEvents(Long afterSeq, int limit, String level, String eventCode, String traceId, String keyword) {
-        if (limit <= 0) limit = 200;
+        if (limit <= 0) limit = 2000;
         collector.consumeNew();
 
         List<LogEventRecord> all = collector.snapshot();

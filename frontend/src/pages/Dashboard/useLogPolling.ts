@@ -39,10 +39,10 @@ export function useLogPolling(filters: {
   const fetchOnce = useCallback(async (reset: boolean) => {
     try {
       const params = reset
-        ? { limit: 200, ...filtersRef.current }
+        ? { limit: 2000, ...filtersRef.current }
         : {
             afterSeq: Math.max(seqRef.current, pendingSeqRef.current),
-            limit: 100,
+            limit: 2000,
             ...filtersRef.current,
           };
       const result: LogQueryResult = await LogApi.events(params);
