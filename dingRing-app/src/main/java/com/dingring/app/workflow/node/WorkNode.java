@@ -103,12 +103,13 @@ public class WorkNode implements NodeAction {
             return Map.of();
         }
 
-        // 选工作 Agent：优先被 @ 提及的 Agent（用户明确指派对象），否则群首成员
+        // 选工作 Agent：优先被 @ 提及的 Agent（用户明确指派对象），其次引用回复的目标 Agent，否则群首成员
         List<Long> mentionedAgentIds = state.value(StateKeys.MENTIONED_AGENT_IDS, List.<Long>of());
-        Agent workAgent = pickWorkAgent(members, mentionedAgentIds);
+        Long repliedToAgentId = state.<Long>value(StateKeys.REPLIED_TO_AGENT_ID).orElse(null);
+        Agent workAgent = pickWorkAgent(members, mentionedAgentIds, repliedToAgentId);
         LogHelper.printLog(WorkNode.class, "WorkNode.apply", "WORK_NODE",
-                "选定工作 Agent", "groupId={} workAgent={} mentioned={}",
-                groupId, workAgent.getName(), mentionedAgentIds);
+                "选定工作 Agent", "groupId={} workAgent={} mentioned={} repliedTo={}",
+                groupId, workAgent.getName(), mentionedAgentIds, repliedToAgentId);
 
         // Supervisor 模式需要至少 2 名成员（1 编排者 + 1 执行者），否则自动降级单 Agent
         if (supervisorEnabled && members.size() >= 2) {
@@ -124,16 +125,23 @@ public class WorkNode implements NodeAction {
     }
 
     /**
-     * 选择执行任务的 Agent：优先用户 @ 提及的群成员（首个命中，按提及顺序），
-     * 无提及或提及对象不在群内时回退群首成员。
+     * 选择执行任务的 Agent，优先级：@ 提及（用户显式指派，按提及顺序）> 引用回复目标
+     * （用户引用某 Agent 消息追问，语义上期望该 Agent 应答）> 群首成员。
+     * <p>引用目标必须校验在群内：引用的可能是用户消息或已退群 Agent，不在群内时静默回退。
      */
-    private Agent pickWorkAgent(List<Agent> members, List<Long> mentionedAgentIds) {
+    private Agent pickWorkAgent(List<Agent> members, List<Long> mentionedAgentIds, Long repliedToAgentId) {
         if (mentionedAgentIds != null && !mentionedAgentIds.isEmpty()) {
             for (Long id : mentionedAgentIds) {
                 Agent hit = members.stream().filter(m -> m.getId().equals(id)).findFirst().orElse(null);
                 if (hit != null) {
                     return hit;
                 }
+            }
+        }
+        if (repliedToAgentId != null) {
+            Agent replied = members.stream().filter(m -> m.getId().equals(repliedToAgentId)).findFirst().orElse(null);
+            if (replied != null) {
+                return replied;
             }
         }
         return members.get(0);

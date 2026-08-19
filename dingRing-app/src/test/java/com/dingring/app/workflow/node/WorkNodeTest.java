@@ -107,6 +107,14 @@ class WorkNodeTest {
         return new OverAllState(values);
     }
 
+    private OverAllState stateWithReplied(Long groupId, String input, Long repliedToAgentId) {
+        Map<String, Object> values = new HashMap<>();
+        values.put("groupId", groupId);
+        values.put("input", input);
+        values.put("repliedToAgentId", repliedToAgentId);
+        return new OverAllState(values);
+    }
+
     @Test
     @DisplayName("Supervisor 开关关闭时走单 Agent 模式（Phase D 原行为）")
     void shouldUseSingleAgentWhenSupervisorDisabled() {
@@ -255,5 +263,71 @@ class WorkNodeTest {
         verify(supervisorAgentFactory).buildSupervisor(agentCaptor.capture(), promptCaptor.capture(), anyList());
         assertThat(agentCaptor.getValue().getId()).isEqualTo(20L);
         assertThat(promptCaptor.getValue()).contains("点名了「灰原」");
+    }
+
+    @Test
+    @DisplayName("单 Agent 模式：纯引用回复（无@）时被引用的 Agent 优先执行")
+    void shouldPickRepliedAgentAsWorkAgent() {
+        Long groupId = 1L;
+        when(groupRepository.findById(groupId)).thenReturn(Optional.of(groupWithAgentIds(groupId, List.of(10L, 20L))));
+        when(agentRepository.findByIds(List.of(10L, 20L))).thenReturn(List.of(agent(10L, "柯南"), agent(20L, "灰原")));
+        when(llmService.chat(any(Agent.class), anyString(), anyList(),
+                any(LlmService.ToolSet.class), any(Map.class)))
+                .thenReturn(LlmService.AgentResult.of("被引用者结果"));
+
+        // 场景还原：用户引用灰原的消息追问（无@文本），期望灰原而非群首柯南执行
+        Map<String, Object> result = node.apply(stateWithReplied(groupId, "搜下什么是MACP", 20L));
+
+        assertThat(result).containsEntry("workResult", "被引用者结果");
+        ArgumentCaptor<Agent> agentCaptor = ArgumentCaptor.forClass(Agent.class);
+        verify(llmService).chat(agentCaptor.capture(), anyString(), anyList(),
+                org.mockito.ArgumentMatchers.eq(LlmService.ToolSet.WORK), any(Map.class));
+        assertThat(agentCaptor.getValue().getId()).isEqualTo(20L);
+        assertThat(agentCaptor.getValue().getName()).isEqualTo("灰原");
+    }
+
+    @Test
+    @DisplayName("单 Agent 模式：@ 提及优先于引用目标（显式点名最高）")
+    void shouldPreferMentionedOverRepliedAgent() {
+        Long groupId = 1L;
+        when(groupRepository.findById(groupId)).thenReturn(Optional.of(groupWithAgentIds(groupId, List.of(10L, 20L))));
+        when(agentRepository.findByIds(List.of(10L, 20L))).thenReturn(List.of(agent(10L, "柯南"), agent(20L, "灰原")));
+        when(llmService.chat(any(Agent.class), anyString(), anyList(),
+                any(LlmService.ToolSet.class), any(Map.class)))
+                .thenReturn(LlmService.AgentResult.of("被@者结果"));
+
+        // 同时有@柯南与引用灰原：显式点名柯南应胜出
+        Map<String, Object> values = new HashMap<>();
+        values.put("groupId", groupId);
+        values.put("input", "@柯南 搜下什么是MACP");
+        values.put("mentionedAgentIds", List.of(10L));
+        values.put("repliedToAgentId", 20L);
+        Map<String, Object> result = node.apply(new OverAllState(values));
+
+        assertThat(result).containsEntry("workResult", "被@者结果");
+        ArgumentCaptor<Agent> agentCaptor = ArgumentCaptor.forClass(Agent.class);
+        verify(llmService).chat(agentCaptor.capture(), anyString(), anyList(),
+                org.mockito.ArgumentMatchers.eq(LlmService.ToolSet.WORK), any(Map.class));
+        assertThat(agentCaptor.getValue().getId()).isEqualTo(10L);
+    }
+
+    @Test
+    @DisplayName("单 Agent 模式：引用目标不在群内时回退群首成员")
+    void shouldFallbackToFirstMemberWhenRepliedNotInGroup() {
+        Long groupId = 1L;
+        when(groupRepository.findById(groupId)).thenReturn(Optional.of(groupWithAgentIds(groupId, List.of(10L, 20L))));
+        when(agentRepository.findByIds(List.of(10L, 20L))).thenReturn(List.of(agent(10L, "柯南"), agent(20L, "灰原")));
+        when(llmService.chat(any(Agent.class), anyString(), anyList(),
+                any(LlmService.ToolSet.class), any(Map.class)))
+                .thenReturn(LlmService.AgentResult.of("群首结果"));
+
+        // 引用的是用户消息（repliedToAgentId=null）或已退群 Agent（99 不在群内）都应回退群首
+        Map<String, Object> result = node.apply(stateWithReplied(groupId, "搜下什么是MACP", 99L));
+
+        assertThat(result).containsEntry("workResult", "群首结果");
+        ArgumentCaptor<Agent> agentCaptor = ArgumentCaptor.forClass(Agent.class);
+        verify(llmService).chat(agentCaptor.capture(), anyString(), anyList(),
+                org.mockito.ArgumentMatchers.eq(LlmService.ToolSet.WORK), any(Map.class));
+        assertThat(agentCaptor.getValue().getId()).isEqualTo(10L);
     }
 }
