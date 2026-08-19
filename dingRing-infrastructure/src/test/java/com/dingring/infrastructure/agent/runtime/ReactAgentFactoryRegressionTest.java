@@ -16,6 +16,7 @@ import com.dingring.infrastructure.agent.hook.InjectKbHook;
 import com.dingring.infrastructure.agent.hook.GroupContextMemoryHook;
 import com.dingring.infrastructure.agent.hook.ProfileInjectionHook;
 import com.dingring.infrastructure.agent.hook.SystemMessageMergeHook;
+import com.dingring.infrastructure.agent.interceptor.ModelRequestLoggingInterceptor;
 import com.dingring.infrastructure.agent.tool.WebTools;
 import com.dingring.infrastructure.llm.SaaLlmFactory;
 import org.junit.jupiter.api.DisplayName;
@@ -70,6 +71,10 @@ class ReactAgentFactoryRegressionTest {
                 new GroupRosterHook(groupRepository, agentRepository),
                 new InjectKbHook(ragService, topicVectorService, topicRepository, groupRepository),
                 new SystemMessageMergeHook(),
+                // 真实实例而非 mock：拦截器是纯透传链节点，mock 默认返回 null 会打断责任链
+                // （AgentLlmNode 对 null ModelResponse 抛 NPE）；无 Spring 环境 logEnabled
+                // 保持字段默认 false，不产生日志噪音
+                new ModelRequestLoggingInterceptor(),
                 webTools));
         doReturn(chatModel).when(factory).buildChatModel(any(), any());
         return factory;

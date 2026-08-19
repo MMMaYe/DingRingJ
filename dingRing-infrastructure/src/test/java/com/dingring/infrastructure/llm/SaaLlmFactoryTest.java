@@ -7,6 +7,7 @@ import com.dingring.infrastructure.agent.hook.InjectKbHook;
 import com.dingring.infrastructure.agent.hook.GroupContextMemoryHook;
 import com.dingring.infrastructure.agent.hook.ProfileInjectionHook;
 import com.dingring.infrastructure.agent.hook.SystemMessageMergeHook;
+import com.dingring.infrastructure.agent.interceptor.ModelRequestLoggingInterceptor;
 import com.dingring.infrastructure.agent.tool.WebTools;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -118,6 +119,7 @@ class SaaLlmFactoryTest {
                 mock(GroupRosterHook.class),
                 mock(InjectKbHook.class),
                 mock(SystemMessageMergeHook.class),
+                mock(ModelRequestLoggingInterceptor.class),
                 mock(WebTools.class));
         ReflectionTestUtils.setField(factory, "connectTimeoutSeconds", 10L);
         ReflectionTestUtils.setField(factory, "readTimeoutSeconds", 120L);
