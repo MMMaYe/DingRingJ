@@ -10,6 +10,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 
 import java.time.Duration;
@@ -45,6 +46,8 @@ public class WebTools {
     static final int SEARCH_TOTAL_MAX_LEN = 2000;
     /** 提取：正文截断长度（字符）——深读场景比搜索摘要宽 */
     static final int FETCH_MAX_LEN = 3000;
+    /** IO 瞬时异常重试退避（毫秒）：TLS 握手被重置类故障秒级自愈，短退避足够 */
+    private static final long RETRY_BACKOFF_MS = 500;
 
     private final String apiKey;
     private final RestClient restClient;
@@ -64,17 +67,11 @@ public class WebTools {
         try {
             // include_answer=basic：Tavily 合成的参考答案置顶返回（免费 mini-RAG）；
             // search_depth=basic：1 credit/次低延迟（advanced 2 credits 且 ~4.5s，群聊等待感明显）
-            TavilySearchResponse resp = restClient.post()
-                    .uri(SEARCH_URL)
-                    .headers(this::applyAuth)
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(Map.of(
-                            "query", query,
-                            "max_results", MAX_RESULTS,
-                            "search_depth", "basic",
-                            "include_answer", "basic"))
-                    .retrieve()
-                    .body(TavilySearchResponse.class);
+            TavilySearchResponse resp = postWithRetry(SEARCH_URL, Map.of(
+                    "query", query,
+                    "max_results", MAX_RESULTS,
+                    "search_depth", "basic",
+                    "include_answer", "basic"), TavilySearchResponse.class);
             String formatted = formatSearch(resp == null ? null : resp.answer(),
                     resp == null ? null : resp.results());
             LogHelper.printLog(WebTools.class, "webSearch", "TOOL_WEB_SEARCH",
@@ -95,13 +92,8 @@ public class WebTools {
         try {
             // format=markdown：与 search 的 content 格式统一（保留标题/列表结构，模型消费体验一致）
             // schema 只暴露单 url：ReAct 逐步深挖模式，比批量 20 个更符合模型行为
-            TavilyExtractResponse resp = restClient.post()
-                    .uri(EXTRACT_URL)
-                    .headers(this::applyAuth)
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(Map.of("urls", List.of(url), "format", "markdown"))
-                    .retrieve()
-                    .body(TavilyExtractResponse.class);
+            TavilyExtractResponse resp = postWithRetry(EXTRACT_URL,
+                    Map.of("urls", List.of(url), "format", "markdown"), TavilyExtractResponse.class);
             String formatted = formatExtract(resp == null ? null : resp.results(),
                     resp == null ? null : resp.failedResults());
             LogHelper.printLog(WebTools.class, "webFetch", "TOOL_WEB_FETCH",
@@ -111,6 +103,42 @@ public class WebTools {
             LogHelper.printWarnLog(WebTools.class, "webFetch", "TOOL_WEB_FETCH",
                     "网页读取失败", "url={} 错误: {}", url, e.getMessage());
             return "网页读取暂不可用，请基于搜索摘要回答";
+        }
+    }
+
+    /**
+     * POST + 瞬时 IO 异常单次退避重试。
+     * <p>为什么只重试 IO 类异常：本机到 Tavily 的 TLS 握手偶发被重置（日志实证同实例
+     * 09:34 失败、09:43 成功），此类故障秒级自愈，一次重试能救回且代价可控；
+     * 4xx/5xx 是语义错误（Key 无效/限流），重试无意义直接抛出。
+     */
+    private <T> T postWithRetry(String uri, Map<String, Object> body, Class<T> type) {
+        try {
+            return doPost(uri, body, type);
+        } catch (ResourceAccessException io) {
+            LogHelper.printWarnLog(WebTools.class, "postWithRetry", "TOOL_WEB_RETRY",
+                    "IO瞬时异常重试", "uri={} 错误: {}", uri, io.getMessage());
+            sleepQuietly(RETRY_BACKOFF_MS);
+            return doPost(uri, body, type);
+        }
+    }
+
+    private <T> T doPost(String uri, Map<String, Object> body, Class<T> type) {
+        return restClient.post()
+                .uri(uri)
+                .headers(this::applyAuth)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(body)
+                .retrieve()
+                .body(type);
+    }
+
+    private static void sleepQuietly(long millis) {
+        try {
+            Thread.sleep(millis);
+        } catch (InterruptedException ie) {
+            // 保留中断标记，让上层调用者（如虚拟线程取消）能感知
+            Thread.currentThread().interrupt();
         }
     }
 
