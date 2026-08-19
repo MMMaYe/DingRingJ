@@ -15,6 +15,17 @@ frontend/dist/
 # ---- 本地工具运行态（不入库）----
 .claude/
 .superpowers/
+.codebuddy/
+.playwright-cli/
+
+# ---- 本地临时产物 / 调试留存（不入库，限定根目录避免误伤源码）----
+/dashboard
+/dashboard.png
+/detail-check
+/llm-snap
+/rag-files/
+/traces-tab
+/traces.png
 
 # ---- OS ----
 .DS_Store

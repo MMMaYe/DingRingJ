@@ -136,23 +136,30 @@ public class EventAspect {
             argsJson = safeToJson(printable);
         }
 
+        long startAt = System.currentTimeMillis();
         try {
             Object result = joinPoint.proceed();
+            long cost = System.currentTimeMillis() - startAt;
 
             // 入参和出参合并到同一条日志，避免分散在两行难以关联
+            // 日志格式加入 ☆ 锚点：[prefix] ☆ cost=Nms ☆ request=... ☆ result=...
+            // ☆ 在 LLM payload（prompt/JSON）中几乎不可能出现，作为字段边界锚点可被前端 LogEventParser 可靠切分
             if (event.logArgs() && event.logResult()) {
                 String resultJson = safeToJson(sanitizeForLog(result));
-                log.info("{} request={} result={}", logPrefix, argsJson, resultJson);
+                log.info("{} ☆ cost={}ms ☆ request={} ☆ result={}", logPrefix, cost, argsJson, resultJson);
             } else if (event.logArgs()) {
-                log.info("{} request={}", logPrefix, argsJson);
+                log.info("{} ☆ cost={}ms ☆ request={}", logPrefix, cost, argsJson);
             } else if (event.logResult()) {
                 String resultJson = safeToJson(sanitizeForLog(result));
-                log.info("{} result={}", logPrefix, resultJson);
+                log.info("{} ☆ cost={}ms ☆ result={}", logPrefix, cost, resultJson);
+            } else {
+                log.info("{} ☆ cost={}ms", logPrefix, cost);
             }
 
             return result;
         } catch (Throwable e) {
-            log.warn("{} error={}", logPrefix, e.getMessage());
+            long cost = System.currentTimeMillis() - startAt;
+            log.warn("{} ☆ cost={}ms ☆ error={}", logPrefix, cost, e.getMessage());
             throw e;
         }
     }

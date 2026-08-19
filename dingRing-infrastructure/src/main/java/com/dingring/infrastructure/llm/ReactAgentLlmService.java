@@ -65,12 +65,12 @@ public class ReactAgentLlmService implements LlmService {
             ReactAgent reactAgent = buildAgent(agent, systemPrompt, options);
             List<Message> aiMessages = toAiMessages(messages);
             LogHelper.printLog(ReactAgentLlmService.class, "ReactAgentLlmService.chat", "CHAT_PROMPT", "Prompt",
-                    "agent={} model={}\nsystemPrompt:\n{}\nturns({}轮):\n{}",
+                    "agent={} model={} ☆ systemPrompt:\n{}\nturns({}轮):\n{}",
                     agent.getName(), agent.getModelName(), systemPrompt,
                     aiMessages.size(), LogHelper.formatTurns(aiMessages));
             Map<String, Object> inputs = Map.of("messages", aiMessages);
             LogHelper.printLog(ReactAgentLlmService.class, "ReactAgentLlmService.chat", "CHAT_INPUTS", "输入",
-                    "reactAgent.call时的message={}", inputs);
+                    "☆ reactAgent.call时的message={}", inputs);
             AssistantMessage response = reactAgent.call(inputs);
             String text = response.getText();
             long cost = System.currentTimeMillis() - startAt;
@@ -90,7 +90,7 @@ public class ReactAgentLlmService implements LlmService {
                         "agent={} model={} 耗时={}ms", agent.getName(), agent.getModelName(), cost);
             } else {
                 LogHelper.printLog(ReactAgentLlmService.class, "ReactAgentLlmService.chat", "CHAT_RESPONSE", "响应",
-                        "agent={} model={} 耗时={}ms 长度={} 完整内容:\n{}",
+                        "agent={} model={} ☆ 耗时={}ms ☆ 长度={} ☆ 完整内容:\n{}",
                         agent.getName(), agent.getModelName(), cost, text.length(), text);
             }
             return text == null ? "" : text.trim();

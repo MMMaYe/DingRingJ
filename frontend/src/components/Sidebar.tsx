@@ -5,6 +5,9 @@ import Logo from './Logo';
 const IconChat = () => (
   <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M13.5 10.5a1.5 1.5 0 01-1.5 1.5H5L2.5 14V4a1.5 1.5 0 011.5-1.5h7a1.5 1.5 0 011.5 1.5v6.5z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/></svg>
 );
+const IconDashboard = () => (
+  <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="5" height="6" rx="1" stroke="currentColor" strokeWidth="1.2"/><rect x="9" y="2" width="5" height="3" rx="1" stroke="currentColor" strokeWidth="1.2"/><rect x="9" y="7" width="5" height="7" rx="1" stroke="currentColor" strokeWidth="1.2"/><rect x="2" y="10" width="5" height="4" rx="1" stroke="currentColor" strokeWidth="1.2"/></svg>
+);
 const IconScrollText = () => (
   <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 2.5H4.5A1.5 1.5 0 003 4v8a1.5 1.5 0 001.5 1.5h6A1.5 1.5 0 0012 12V4a1.5 1.5 0 011.5-1.5" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/><path d="M5.5 6h4M5.5 8.5h4M5.5 11h2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>
 );
@@ -66,6 +69,10 @@ export default function Sidebar({ children, footer, showGroupLabel, onSearch, se
       )}
 
       <nav className="sidebar__nav">
+        <NavLink to="/dashboard" className={({ isActive }) => `sidebar__nav-item${isActive ? ' sidebar__nav-item--active' : ''}`}>
+          <span className="sidebar__nav-icon"><IconDashboard /></span>
+          <span className="sidebar__nav-text">仪表盘</span>
+        </NavLink>
         <NavLink to="/" end className={({ isActive }) => `sidebar__nav-item${isActive ? ' sidebar__nav-item--active' : ''}`}>
           <span className="sidebar__nav-icon"><IconChat /></span>
           <span className="sidebar__nav-text">群聊</span>

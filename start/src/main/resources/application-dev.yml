@@ -6,3 +6,7 @@ dingring:
   logging:
     # 开发环境打印完整 LLM prompt 便于调试
     llm-prompt-enabled: true
+  debug:
+    # 日志观测仪表盘开关（仅 dev 开启，prod 关闭）
+    observability:
+      enabled: true

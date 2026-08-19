@@ -4,6 +4,7 @@ import com.alibaba.cloud.ai.graph.agent.interceptor.ModelCallHandler;
 import com.alibaba.cloud.ai.graph.agent.interceptor.ModelInterceptor;
 import com.alibaba.cloud.ai.graph.agent.interceptor.ModelRequest;
 import com.alibaba.cloud.ai.graph.agent.interceptor.ModelResponse;
+import com.dingring.common.util.JsonHelper;
 import com.dingring.common.util.LogHelper;
 import com.dingring.infrastructure.aop.Event;
 import org.springframework.ai.chat.messages.Message;
@@ -53,7 +54,10 @@ public class ModelRequestLoggingInterceptor extends ModelInterceptor {
     @Event(eventCode = "BEFORE_CALL_LOG", eventName = "LLM请求日志")
     public ModelResponse interceptModel(ModelRequest request, ModelCallHandler handler) {
         if (logEnabled) {
-            logRequest(request);
+            LogHelper.printLog(ModelRequestLoggingInterceptor.class,
+                    "ModelRequestLoggingInterceptor.interceptModel", "LLM_REQUEST",
+                    "LLM请求日志", "request={}", JsonHelper.toJson(request));
+//            logRequest(request);
         }
         // 纯观察用途：原样透传请求，不修改任何内容
         return handler.call(request);

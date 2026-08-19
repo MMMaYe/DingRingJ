@@ -151,9 +151,6 @@ public class DiscussionEngine {
      */
     @Event(eventCode = "RUN_LOOP", eventName = "主循环")
     private void runLoop(Long groupId, GroupState state) throws InterruptedException {
-        //TODO：先取时间戳作为标识
-        long startTime = System.currentTimeMillis();
-        LogHelper.putTrace(groupId,  startTime);
         try {
             while (true) {
                 Optional<Topic> active = topicRepository.findActiveByGroupId(groupId)
@@ -169,6 +166,11 @@ public class DiscussionEngine {
                 UserSignal signal = active.isPresent()
                         ? state.queue.poll(timeout, TimeUnit.MILLISECONDS)
                         : state.queue.poll();
+
+                // 每轮流程推进生成独立 traceId（粒度=一次 advanceFlow/advanceAuto），
+                // 修正原"runLoop 整个生命周期一个 traceId"的粒度错位（一个 trace 覆盖多条消息日志），
+                // 也修正跨线程断链（入口段 G?-T? 与引擎段通过 groupId+时间窗口弱关联）
+                LogHelper.putTrace(groupId, System.currentTimeMillis());
 
                 if (signal != null) {
                     // 用户消息重置自主推进计数（新一轮 burst）

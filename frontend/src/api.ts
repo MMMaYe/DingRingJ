@@ -92,3 +92,103 @@ export const KbApi = {
     return body.data as KbFileDTO;
   },
 };
+
+// ==================== 日志观测仪表盘 ====================
+
+/** 单条日志事件（与后端 LogEventRecord 对齐） */
+export interface LogEvent {
+  seq: number;
+  cursor: number;
+  timestamp: number;
+  level: 'INFO' | 'WARN' | 'ERROR' | string;
+  traceId: string;
+  groupId?: string;
+  thread: string;
+  logger: string;
+  source: string;
+  eventCode: string;
+  eventName: string;
+  costMs?: number | null;
+  summary: string;
+  message: string;
+  fields?: Record<string, unknown> | null;
+}
+
+/** 事件列表查询结果（latestSeq 为服务端已分配的最大 seq，前端增量回传） */
+export interface LogQueryResult {
+  events: LogEvent[];
+  latestSeq: number;
+  fileSize: number;
+}
+
+/** 顶部统计概览 */
+export interface LogStats {
+  total: number;
+  errorCount: number;
+  warnCount: number;
+  llmCallCount: number;
+  avgLatencyMs: number;
+  totalTokens: number;
+}
+
+/** Trace 摘要（列表项） */
+export interface TraceSummary {
+  traceId: string;
+  groupId: string;
+  title?: string;
+  eventCount: number;
+  errorCount: number;
+  llmCount: number;
+  startTimestamp: number;
+  endTimestamp: number;
+  maxCost?: number | null;
+}
+
+/** Trace 详情 */
+export interface TraceDetail {
+  events: LogEvent[];
+  relatedEntries: LogEvent[];
+  llmCalls: LlmCall[];
+}
+
+/** LLM 调用记录 */
+export interface LlmCall {
+  seq: number;
+  traceId: string;
+  agent: string;
+  model: string;
+  latencyMs: number;
+  promptTokens?: number | null;
+  completionTokens?: number | null;
+  totalTokens?: number | null;
+  timestamp: number;
+}
+
+export const LogApi = {
+  stats: () => API.get<LogStats>('/api/logs/stats'),
+  events: (params: {
+    afterSeq?: number;
+    limit?: number;
+    level?: string;
+    eventCode?: string;
+    traceId?: string;
+    keyword?: string;
+  }) => {
+    const q = new URLSearchParams();
+    if (params.afterSeq != null && params.afterSeq > 0) q.set('afterSeq', String(params.afterSeq));
+    if (params.limit != null) q.set('limit', String(params.limit));
+    if (params.level) q.set('level', params.level);
+    if (params.eventCode) q.set('eventCode', params.eventCode);
+    if (params.traceId) q.set('traceId', params.traceId);
+    if (params.keyword) q.set('keyword', params.keyword);
+    const qs = q.toString();
+    return API.get<LogQueryResult>(`/api/logs/events${qs ? `?${qs}` : ''}`);
+  },
+  eventBySeq: (seq: number, includeMessage = false) =>
+    API.get<LogEvent>(`/api/logs/events/${seq}?includeMessage=${includeMessage}`),
+  traces: (groupId?: string) =>
+    API.get<TraceSummary[]>(`/api/logs/traces${groupId ? `?groupId=${groupId}` : ''}`),
+  traceDetail: (traceId: string) =>
+    API.get<TraceDetail>(`/api/logs/traces/${encodeURIComponent(traceId)}`),
+  llmCalls: () => API.get<LlmCall[]>('/api/logs/llm-calls'),
+};
