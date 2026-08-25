@@ -3,6 +3,7 @@ package com.dingring.infrastructure.llm;
 import com.alibaba.cloud.ai.graph.agent.ReactAgent;
 import com.dingring.common.exception.BizException;
 import com.dingring.common.exception.ErrorCode;
+import com.dingring.common.util.JsonHelper;
 import com.dingring.common.util.LogHelper;
 import com.dingring.domain.agent.Agent;
 import com.dingring.domain.service.LlmService;
@@ -107,24 +108,31 @@ public class ReactAgentLlmService implements LlmService {
     }
 
     @Override
-    @Event(eventCode = "AGENT_SPEAK", eventName = "Agent同事发言")
+//    @Event(eventCode = "AGENT_SPEAK", eventName = "Agent同事发言")
     public AgentResult chat(Agent agent, String systemPrompt, List<ChatTurn> messages,
                             ToolSet toolSet, Map<String, Object> context) {
-        long startAt = System.currentTimeMillis();
         try {
             ReactAgent reactAgent = toolSet == ToolSet.WORK
                     ? llmFactory.buildWorkAgent(agent)
                     : llmFactory.buildDiscussAgent(agent, toolSet);
             Map<String, Object> inputs = buildAgentInputs(systemPrompt, messages, context);
-            LogHelper.printLog(ReactAgentLlmService.class, "ReactAgentLlmService.chatAgent", "AGENT_SPEAK",
-                    "Agent发言开始", "agent={} toolSet={} 消息数={} context={}",
-                    agent.getName(), toolSet, messages.size(), context == null ? List.of() : context.keySet());
+
+            LogHelper.printLog(ReactAgentLlmService.class, "ReactAgentLlmService.chatAgent", "AGENT_SPEAK_INPUTS",
+                    "Agent开始发言",
+                    "agent={} toolSet={} 给LLM的消息={} 原始context={}",
+                    agent.getName(), toolSet, JsonHelper.mapToJsonStr(inputs), JsonHelper.mapToJsonStr(context));
+
             AssistantMessage response = reactAgent.call(inputs);
+
             String content = response.getText() == null ? "" : response.getText();
+
+            //打印content
+            LogHelper.printLog(ReactAgentLlmService.class,
+                    "ReactAgentLlmService.chatAgent",
+                    "AGENT_SPEAK_CLOSED", "Agent发言完成", "content={}", content);
+
             boolean hasToolCalls = response.getToolCalls() != null && !response.getToolCalls().isEmpty();
-            LogHelper.printLog(ReactAgentLlmService.class, "ReactAgentLlmService.chatAgent", "AGENT_SPEAK",
-                    "Agent发言完成", "agent={} 内容长度={} hasToolCalls={} 耗时={}ms",
-                    agent.getName(), content.length(), hasToolCalls, System.currentTimeMillis() - startAt);
+
             return new AgentResult(content, hasToolCalls, List.of());
         } catch (BizException e) {
             throw e;

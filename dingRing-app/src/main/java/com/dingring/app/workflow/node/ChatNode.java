@@ -76,24 +76,18 @@ public class ChatNode implements NodeAction {
      * @return 状态更新：chatBuffer（更新后）、needProfileExtract（是否需触发画像提炼）
      */
     @Override
-    @Event(eventCode = "CHAT_NODE", eventName = "闲聊应答节点")
+//    @Event(eventCode = "CHAT_NODE", eventName = "闲聊应答节点")
     public Map<String, Object> apply(OverAllState state) {
+        LogHelper.printLog(ChatNode.class, "ChatNode.apply",
+                "CHAT_NODE",
+                "开始执行闲聊节点","state={}",JsonHelper.overAllStateToJsonStr(state));
+
         Long groupId = state.<Long>value(StateKeys.GROUP_ID).orElse(null);
         String input = state.value(StateKeys.INPUT, "");
         List<Long> mentionedAgentIds = state.value(StateKeys.MENTIONED_AGENT_IDS, List.<Long>of());
         Long repliedToAgentId = state.<Long>value(StateKeys.REPLIED_TO_AGENT_ID).orElse(null);
         int chatBuffer = state.value(StateKeys.CHAT_BUFFER, 0);
         int profileThreshold = state.value("profileExtractThreshold", 15);
-
-        // 用 HashMap 而非 Map.of：groupId 可能为 null（防御性日志不应在入口先抛 NPE）
-        Map<String, Object> logMap = new HashMap<>();
-        logMap.put("groupId", groupId);
-        logMap.put("inputLen", input == null ? 0 : input.length());
-        logMap.put("mentionedCount", mentionedAgentIds.size());
-        logMap.put("chatBuffer", chatBuffer);
-        logMap.put("profileThreshold", profileThreshold);
-        LogHelper.printLog(ChatNode.class, "ChatNode.apply", "CHAT_NODE", "闲聊应答开始",
-                "request={}", JsonHelper.mapToJsonStr(logMap));
 
         if (groupId == null) {
             throw new IllegalStateException("ChatNode 缺少必要参数 groupId");
@@ -121,7 +115,7 @@ public class ChatNode implements NodeAction {
                         .map(s -> s.agent().getName() + "(" + s.score() + "," + s.reason() + ")").toList());
 
         // 按评分降序级联发言：被 @ 者通常优先，但失败/空内容时顺延下一位，不垄断、不整条报错
-        SpeakResult speakResult = speakOnceCascading(ranked, members, groupId, input, mentionedAgentIds, repliedToAgentId);
+        SpeakResult speakResult = speakOnceCascading(ranked, groupId, input);
         if (!speakResult.success) {
             // 发言失败：所有 Agent 都失败，广播错误
             groupBroadcastService.broadcast(groupId, WsConstants.ERROR, Map.of(
@@ -170,15 +164,14 @@ public class ChatNode implements NodeAction {
      * 按评分降序级联发言：首位（通常为被 @ 者）失败/空内容时顺延下一位，
      * 被 @ 者不垄断发言；全部候选都失败才返回失败。
      */
-    private SpeakResult speakOnceCascading(List<SpeakerScheduler.ScoredAgent> ranked, List<Agent> members, Long groupId,
-                                           String input, List<Long> mentionedAgentIds, Long repliedToAgentId) {
+    private SpeakResult speakOnceCascading(List<SpeakerScheduler.ScoredAgent> ranked, Long groupId, String input) {
         for (int i = 0; i < ranked.size(); i++) {
             SpeakerScheduler.ScoredAgent scored = ranked.get(i);
             Agent agent = scored.agent();
             LogHelper.printLog(ChatNode.class, "ChatNode.speakOnceCascading", "CHAT_NODE", "候选发言 降级链位置",
                     "index={}/{} agent={} score={} reason={}",
                     i + 1, ranked.size(), agent.getName(), scored.score(), scored.reason());
-            SpeakResult result = speakOnce(agent, members, groupId, input, mentionedAgentIds, repliedToAgentId);
+            SpeakResult result = speakOnce(agent, groupId, input);
             if (result.success) {
                 return result;
             }
@@ -192,8 +185,7 @@ public class ChatNode implements NodeAction {
      *
      * @return 发言结果（success=true 表示发言成功）
      */
-    private SpeakResult speakOnce(Agent agent, List<Agent> members, Long groupId,
-                                   String input, List<Long> mentionedAgentIds, Long repliedToAgentId) {
+    private SpeakResult speakOnce(Agent agent, Long groupId, String input) {
 //        eventPublisher.publish(new AgentSelected(groupId, null,
 //                agent.getId(), agent.getName(), "CHAT", 0));
         pushTyping(groupId, agent, true);

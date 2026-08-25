@@ -149,8 +149,12 @@ public class DiscussionEngine {
      *   <li>CONCLUDE：流程内已收束，退出循环</li>
      * </ul>
      */
-    @Event(eventCode = "RUN_LOOP", eventName = "主循环")
+//    @Event(eventCode = "RUN_LOOP", eventName = "主循环")
     private void runLoop(Long groupId, GroupState state) throws InterruptedException {
+
+        LogHelper.printLog(DiscussionEngine.class, "DiscussionEngine.runLoop",
+                "RUN_LOOP", "主循环开始", "groupId={}, GroupState={}", groupId, JsonHelper.toJsonPretty(state));
+
         try {
             while (true) {
                 Optional<Topic> active = topicRepository.findActiveByGroupId(groupId)
@@ -200,7 +204,8 @@ public class DiscussionEngine {
                     continue;
                 }
 
-                // 无信号：讨论态 CONVERGE/DIVERGE 自主推进（pace 窗口内用户可随时插话）
+                // 无用户信号：讨论态 CONVERGE/DIVERGE 自主推进（pace 窗口内用户可随时插话）
+                //无活跃Topic
                 if (active.isEmpty()) {
                     // 闲聊态：退出等唤醒
                     return;
@@ -238,8 +243,11 @@ public class DiscussionEngine {
     /* ==================== 流程调用 ==================== */
 
     /** 用户消息驱动流程：构建 inputs（含运行时状态）→ advance → 返回结果 */
-    @Event(eventCode = "ADVANCE_FLOW", eventName = "流程推进")
+//    @Event(eventCode = "ADVANCE_FLOW", eventName = "流程推进")
     private DiscussionFlowResult advanceFlow(Long groupId, UserSignal signal, GroupState state) {
+        LogHelper.printLog(DiscussionEngine.class, "DiscussionEngine.advanceFlow",
+                "ADVANCE_FLOW", "开始构建流程入参数",
+                "groupId={}, signal={}, state={}", groupId, signal, state);
         Map<String, Object> inputs = new HashMap<>();
         inputs.put(StateKeys.GROUP_ID, groupId);
         inputs.put(StateKeys.INPUT, signal.content());
@@ -254,7 +262,7 @@ public class DiscussionEngine {
         boolean hasMention = signal.mentionedAgentIds() != null && !signal.mentionedAgentIds().isEmpty();
         inputs.put(StateKeys.MENTION_HANDLED, hasMention ? Boolean.FALSE : state.mentionHandled);
         LogHelper.printLog(DiscussionEngine.class, "DiscussionEngine.advanceFlow",
-                "ADVANCE_FLOW_INPUTS", "构建inputs内容", "inputs", inputs);
+                "ADVANCE_FLOW_INPUTS", "构建inputs内容", "inputs={}", JsonHelper.mapToJsonStr(inputs));
         return flowService.advance(rules, inputs);
     }
 
@@ -268,6 +276,10 @@ public class DiscussionEngine {
         inputs.put(StateKeys.PASSED_AGENT_IDS, state.passedAgentIds);
         inputs.put(StateKeys.DIVERGE_ROUNDS, state.divergeRounds);
         inputs.put(StateKeys.MENTION_HANDLED, state.mentionHandled);
+        LogHelper.printLog(DiscussionEngine.class,
+                "DiscussionEngine.advanceAuto",
+                "AUTO_FLOW_WITHOUT_USER_MESSAGE",
+                "无用户消息触发flow","inputs={}", JsonHelper.mapToJsonStr(inputs));
         return flowService.advance(rules, inputs);
     }
 

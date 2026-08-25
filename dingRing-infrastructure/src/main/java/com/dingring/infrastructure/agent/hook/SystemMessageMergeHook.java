@@ -6,6 +6,7 @@ import com.alibaba.cloud.ai.graph.agent.hook.HookPosition;
 import com.alibaba.cloud.ai.graph.agent.hook.HookPositions;
 import com.alibaba.cloud.ai.graph.agent.hook.ModelHook;
 import com.alibaba.cloud.ai.graph.state.ReplaceAllWith;
+import com.dingring.common.util.JsonHelper;
 import com.dingring.common.util.LogHelper;
 import com.dingring.infrastructure.aop.Event;
 import org.springframework.ai.chat.messages.Message;
@@ -43,8 +44,10 @@ public class SystemMessageMergeHook extends ModelHook {
     }
 
     @Override
-    @Event(eventCode = "BEFORE_CALL", eventName = "HOOK的合并内容")
     public CompletableFuture<Map<String, Object>> beforeModel(OverAllState state, RunnableConfig config) {
+        LogHelper.printLog(SystemMessageMergeHook.class, "SystemMessageMergeHook.beforeModel",
+                "HOOK_MERGE_SYSTEM", "合并 SystemMessage",
+                "OverAllState={}", JsonHelper.overAllStateToJsonStr(state));
         List<Message> messages = state.value(MESSAGES_KEY, List.of());
         if (messages == null || messages.isEmpty()) {
             return CompletableFuture.completedFuture(Map.of());
@@ -55,12 +58,14 @@ public class SystemMessageMergeHook extends ModelHook {
         if (merged == null) {
             return CompletableFuture.completedFuture(Map.of());
         }
+        LogHelper.printLog(SystemMessageMergeHook.class, "SystemMessageMergeHook.beforeModel",
+                "HOOK_MERGE_SYSTEM", "合并 SystemMessage",
+                "合并后messages={}", merged);
 
         // ReplaceAllWith 覆盖 messages 的 AppendStrategy：整体替换而非追加
         return CompletableFuture.completedFuture(Map.of(MESSAGES_KEY, ReplaceAllWith.of(merged)));
     }
 
-    @Event(eventCode = "BEFORE_MODEL", eventName = "合并SystemMessage")
     private List<Message> mergeMessage(OverAllState state, List<Message> messages) {
         // 基础系统提示词（Agent 人设 + 协作协议），统一 LlmService 的带工具 chat 方法写入 state
         String basePrompt = state.value(BASE_SYSTEM_PROMPT_KEY, "");

@@ -30,6 +30,7 @@ import com.dingring.domain.workflow.StateKeys;
 import com.dingring.infrastructure.aop.Event;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -74,7 +75,7 @@ public class DiscussNode implements NodeAction {
     private final Terminator terminator;
 
     /** 流式输出开关（与 ChatNode / DiscussionEngine 保持一致） */
-    @org.springframework.beans.factory.annotation.Value("${dingring.streaming.enabled:false}")
+    @Value("${dingring.streaming.enabled}")
     private boolean streamingEnabled;
 
     /** 发言结果枚举（内部用，决定 discussMode 写入） */
@@ -87,8 +88,11 @@ public class DiscussNode implements NodeAction {
      * @return 状态更新：discussMode + triggeredBy + passedAgentIds/divergeRounds/speakerAgentId/concluderAgentId/concluded
      */
     @Override
-    @Event(eventCode = "DISCUSS_NODE", eventName = "讨论推进节点")
+//    @Event(eventCode = "DISCUSS_NODE", eventName = "讨论推进节点")
     public Map<String, Object> apply(OverAllState state) {
+        LogHelper.printLog(DiscussNode.class, "DiscussNode.apply", "DISCUSS_NODE", "开始执行讨论节点",
+                "state={}", JsonHelper.overAllStateToJsonStr(state));
+
         Long groupId = state.<Long>value(StateKeys.GROUP_ID).orElse(null);
         Long topicId = state.<Long>value(StateKeys.TOPIC_ID).orElse(null);
         List<Long> passedAgentIds = state.value(StateKeys.PASSED_AGENT_IDS, List.<Long>of());
@@ -101,19 +105,6 @@ public class DiscussNode implements NodeAction {
         String userHistoryHint = state.value(StateKeys.USER_HISTORY_HINT, "");
         // 话题标题（图状态不自动进入 ReactAgent inputs，需透传至 speakOnce 的 context）
         String topicTitle = state.value(StateKeys.TOPIC_TITLE, "");
-
-        // 用 HashMap 而非 Map.of：topicId/groupId 可能为 null（如未建题被误路由时），
-        // Map.of 遇到 null 值会抛 NPE，反而遮蔽下方 groupId/topicId 的防御校验
-        Map<String, Object> logMap = new HashMap<>();
-        logMap.put("groupId", groupId);
-        logMap.put("topicId", topicId);
-        logMap.put("passedAgentIds", passedAgentIds);
-        logMap.put("divergeRounds", divergeRounds);
-        logMap.put("maxDivergeRounds", maxDivergeRounds);
-        logMap.put("mentionedAgentIds", mentionedAgentIds);
-        logMap.put("mentionHandled", mentionHandled);
-        LogHelper.printLog(DiscussNode.class, "DiscussNode.apply", "DISCUSS_NODE", "讨论推进开始",
-                "request={}", JsonHelper.mapToJsonStr(logMap));
 
         if (groupId == null || topicId == null) {
             throw new IllegalStateException("DiscussNode 缺少必要参数 groupId/topicId");

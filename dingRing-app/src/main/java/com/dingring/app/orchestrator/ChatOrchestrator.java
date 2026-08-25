@@ -56,9 +56,13 @@ public class ChatOrchestrator {
      *
      * @return 入库后的消息 DTO
      */
-    @Event(eventCode = "ON_USER_MESSAGE", eventName = "开始执行onUserMessage")
+//    @Event(eventCode = "ON_USER_MESSAGE", eventName = "开始执行onUserMessage")
     public MessageDTO onUserMessage(Long groupId, Long userId, String content, Long replyToMessageId) {
         LogHelper.putTrace(groupId, null);
+
+        LogHelper.printLog(ChatOrchestrator.class, "ChatOrchestrator.onUserMessage", "ON_USER_MESSAGE",
+                "开始执行onUserMessage",
+                "groupId={} userId={} content={} replyToMessageId={}", groupId, userId, content, replyToMessageId);
 
         try {
             Group group = groupRepository.findById(groupId)

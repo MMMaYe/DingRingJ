@@ -40,8 +40,10 @@ public class ProfileEventHandler {
 
     @EventListener
     public void onTopicClosed(TopicClosed event) {
-        Thread.ofVirtual().name("profile-topic-" + event.getTopicId())
-                .start(() -> extract(event));
+
+        //TODO：先把提炼关掉，提炼部分后续再优化，应该要有类似Harmes Agent的思路
+//        Thread.ofVirtual().name("profile-topic-" + event.getTopicId())
+//                .start(() -> extract(event));
     }
 
     private void extract(TopicClosed event) {

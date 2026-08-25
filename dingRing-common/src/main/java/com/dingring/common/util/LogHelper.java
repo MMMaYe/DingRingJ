@@ -52,6 +52,20 @@ public final class LogHelper {
     }
 
     /**
+     * 通用日志打印（INFO 级别，无详情参数）。
+     *
+     * @param clazz     日志所属类
+     * @param methodName 类名.方法名，如 "DiscussionEngine.runLoop"
+     * @param eventCode 事件码，大写蛇形，如 "LOOP_START"
+     * @param eventName 事件名称，中文人读，如 "循环启动"
+     */
+    public static void printLog(Class<?> clazz, String methodName, String eventCode,
+                                String eventName) {
+        Logger log = LoggerFactory.getLogger(clazz);
+        doLog(log, "INFO", methodName, eventCode, eventName, null, null);
+    }
+
+    /**
      * 通用日志打印（WARN 级别，无异常）。
      *
      * @param clazz     日志所属类
@@ -186,6 +200,9 @@ public final class LogHelper {
     }
 
     private static String formatSlf4j(String msg, Object... args) {
+        if (msg == null || msg.isEmpty()) {
+            return "";
+        }
         if (args == null || args.length == 0) {
             return msg;
         }

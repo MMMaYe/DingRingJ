@@ -74,13 +74,10 @@ public class ConclusionService {
      * @param triggeredBy      USER / AGENT / MAX_ROUNDS / CONVERGED / FAILED / TIMEOUT
      * @param concluderAgentId 指定总结 Agent ID（null = 调度评分最高者兜底）
      */
-    @Event(eventCode = "TRIGGER_CONCLUDE", eventName = "触发收束（同步流转+异步生成）")
+//    @Event(eventCode = "TRIGGER_CONCLUDE", eventName = "触发收束（同步流转+异步生成）")
     public void triggerAsync(Long topicId, Long groupId, String triggeredBy, Long concluderAgentId) {
         Topic topic = topicRepository.findById(topicId)
                 .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "主题不存在: " + topicId));
-        LogHelper.printLog(ConclusionService.class, "ConclusionService.triggerAsync",
-                "TRIGGER_CONCLUDE", "触发收束", "topicId={} groupId={} triggeredBy={} concluderAgentId={}",
-                topicId, groupId, triggeredBy, concluderAgentId);
 
         if (topic.getStatus() == TopicStatus.CLOSED) {
             LogHelper.printLog(ConclusionService.class, "ConclusionService.triggerAsync",
@@ -95,6 +92,9 @@ public class ConclusionService {
             }
             pushTopicStatus(topic, "IN_PROGRESS");
         }
+
+        LogHelper.printLog(ConclusionService.class, "ConclusionService.triggerAsync",
+                "TRIGGER_CONCLUDE","提交结论收束（沉淀）任务");
         conclusionExecutor.execute(() -> guardedGenerate(topicId, groupId, triggeredBy, concluderAgentId));
     }
 

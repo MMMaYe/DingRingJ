@@ -47,7 +47,8 @@ public class LogFileCollector {
     private static final Logger log = LoggerFactory.getLogger(LogFileCollector.class);
 
     /** 默认日志文件路径（相对工作目录） */
-    private static final String DEFAULT_LOG_PATH = "logs/dingring.log";
+//    private static final String DEFAULT_LOG_PATH = "logs/dingring.log";
+    private static final String DEFAULT_LOG_PATH = "logs/dingring.2026-08-20.0.log";
 
     /** 缓存容量 */
     private static final int CACHE_CAPACITY = 10000;

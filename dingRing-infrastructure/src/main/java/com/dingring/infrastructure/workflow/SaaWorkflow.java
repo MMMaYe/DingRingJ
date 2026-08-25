@@ -8,6 +8,7 @@ import com.alibaba.cloud.ai.graph.exception.GraphStateException;
 import com.alibaba.cloud.ai.graph.state.strategy.ReplaceStrategy;
 import com.alibaba.cloud.ai.graph.state.strategy.AppendStrategy;
 import com.dingring.common.constant.WsConstants;
+import com.dingring.common.util.JsonHelper;
 import com.dingring.common.util.LogHelper;
 import com.dingring.domain.service.FlowService;
 import com.dingring.domain.service.GroupBroadcastService;
@@ -212,7 +213,6 @@ public class SaaWorkflow implements FlowService {
     }
 
     @Override
-    @Event(eventCode = "SaaWorkflow.advance", eventName = "推进群聊至下一节点")
        public DiscussionFlowResult advance(DiscussionRules rules, Map<String, Object> inputs) {
         // 合并 DiscussionRules 参数到 inputs，让各 NodeAction 从 OverAllState 读取配置
         Map<String, Object> allInputs = new HashMap<>(inputs);
@@ -226,8 +226,8 @@ public class SaaWorkflow implements FlowService {
 
         LogHelper.printLog(SaaWorkflow.class,
                 "SaaWorkflow.advance",
-                "GRAPH_START",
-                "图执行开始", "allInputs", allInputs );
+                "BUIlD_GRAPH_PRAM",
+                "构建图执行参数", "图执行参数allInputs={}", JsonHelper.mapToJsonStr(allInputs));
 
         // groupId 恒在 inputs 中，用于 FLOW_EVENT 定向广播
         Long groupId = inputs.get(StateKeys.GROUP_ID) instanceof Number n ? n.longValue() : null;
@@ -235,6 +235,8 @@ public class SaaWorkflow implements FlowService {
         try {
             // 用 stream() 节点事件流替代 invoke()：每个节点执行完产生一个 NodeOutput，
             // 借此把"图走到哪一步"实时广播到前端（FLOW_EVENT），其余语义与 invoke 完全一致
+            LogHelper.printLog(SaaWorkflow.class,"SaaWorkflow.advance",
+                    "EXECUTE_GRAPH", "开始执行图");
             List<NodeOutput> outputs = compiledGraph.stream(allInputs, RunnableConfig.builder().build())
                     .doOnNext(nodeOutput -> broadcastFlowEvent(groupId, nodeOutput, lastNodeTs))
                     .collectList()
@@ -243,13 +245,21 @@ public class SaaWorkflow implements FlowService {
                 log.warn("SaaWorkflow.advance 返回空状态");
                 return new DiscussionFlowResult(false, null, Map.of());
             }
+
+            outputs.forEach(nodeOutput -> {
+                LogHelper.printLog(SaaWorkflow.class, "SaaWorkflow.advance",
+                        "EXECUTE_GRAPH_NODE", "执行图节点顺序",
+                        "outputs={}", nodeOutput.node());
+            });
+
+
             // 最终状态取 END 节点（流中最后一个）的 state，与 invoke 返回值等价
             OverAllState state = outputs.get(outputs.size() - 1).state();
             boolean concluded = state.value(StateKeys.CONCLUDED, false);
             String discussMode = state.value(StateKeys.DISCUSS_MODE, "");
             Map<String, Object> stateData = state.data();
-            log.info("SaaWorkflow.advance 完成, concluded={}, discussMode={}, stateKeys={}",
-                    concluded, discussMode, stateData.keySet());
+            LogHelper.printLog(SaaWorkflow.class, "SaaWorkflow.advance", "EXECUTE_GRAPH_SUCCESS", "执行图成功",
+                    "concluded={}, discussMode={}, stateData={}", concluded, discussMode, JsonHelper.mapToJsonStr(stateData));
             return new DiscussionFlowResult(concluded, discussMode, stateData);
         } catch (Exception e) {
             broadcastFlowError(groupId, e);

@@ -5,7 +5,10 @@ import com.alibaba.fastjson.JSONObject;
 import com.alibaba.fastjson.TypeReference;
 import com.alibaba.fastjson.serializer.SerializerFeature;
 
+import java.lang.reflect.Method;
 import java.lang.reflect.Type;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -104,6 +107,87 @@ public final class JsonHelper {
             return JSON.toJSONString(map);
         } catch (Exception e) {
             LogHelper.printErrorLog(JsonHelper.class, "JsonHelper.mapToJson", "MAP_SERIALIZE_FAIL", "Map序列化失败", "size={} error={}", e, map.size(), e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * 将 {@code com.alibaba.cloud.ai.graph.OverAllState} 的数据视图序列化为 JSON 字符串。
+     * <p>仅序列化 {@code data()} 返回的键值数据，不包含 keyStrategies/store 等运行时组件；
+     * 值无法被 fastjson 处理时降级为 toString，保证日志可打印（state 中可能含 Message 等复杂对象）。
+     * <p>通过反射读取（与 {@link LogHelper#formatTurns} 同策略），避免 common 模块硬依赖
+     * spring-ai-alibaba-graph-core。
+     *
+     * @param state OverAllState 实例（编译期无该类型，故声明为 Object）
+     * @return JSON 字符串，如 {@code {"groupId":1,"intent":"CHAT"}}；state 为 null 或提取失败时返回 null，数据为空时返回 "{}"
+     */
+    public static String overAllStateToJsonStr(Object state) {
+        if (state == null) {
+            return null;
+        }
+        Map<String, Object> data = extractStateData(state);
+        if (data == null) {
+            return null;
+        }
+        if (data.isEmpty()) {
+            return "{}";
+        }
+        JSONObject result = new JSONObject(true);
+        for (Map.Entry<String, Object> entry : data.entrySet()) {
+            result.put(entry.getKey(), toSafeJsonValue(entry.getValue()));
+        }
+        try {
+            return JSON.toJSONString(result, SerializerFeature.WriteMapNullValue);
+        } catch (Exception e) {
+            LogHelper.printErrorLog(JsonHelper.class, "JsonHelper.overAllStateToJsonStr", "STATE_SERIALIZE_FAIL",
+                    "OverAllState序列化失败", "error={}", e, e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * 将 {@code com.alibaba.cloud.ai.graph.agent.interceptor.ModelRequest} 序列化为 JSON 字符串。
+     * <p>输出结构（观测导向，非对象原样字段）：模型参数从 {@code getOptions()} 展开，
+     * messages 提取为 {@code [{role, text}]}，tools/dynamicToolCallbacks 提取为
+     * {@code [{name, description}]}，systemMessage 输出全文。
+     * <p>为什么不能直接 {@link #toJson}：ToolCallback 持有 {@code java.lang.reflect.Method}，
+     * fastjson 深度序列化会触发 Java 9+ 模块访问限制导致整体失败；ToolDefinition 是
+     * record，fastjson 1.x 输出 {}。故本方法逐字段安全提取。
+     * <p>通过反射读取（与 {@link #overAllStateToJsonStr(Object)} 同策略），避免 common
+     * 模块硬依赖 spring-ai-alibaba-graph-core。
+     *
+     * @param modelRequest ModelRequest 实例（编译期无该类型，故声明为 Object）
+     * @return JSON 字符串；modelRequest 为 null、无 ModelRequest 特征方法或异常时返回 null
+     */
+    public static String modelRequestToJsonStr(Object modelRequest) {
+        if (modelRequest == null) {
+            return null;
+        }
+        // 特征校验：既无 getMessages 也无 getOptions，可判定传入了错误类型，给出诊断而非输出全 null 的无信息量结果
+        if (!hasMethod(modelRequest, "getMessages") && !hasMethod(modelRequest, "getOptions")) {
+            LogHelper.printErrorLog(JsonHelper.class, "JsonHelper.modelRequestToJsonStr", "NOT_MODEL_REQUEST",
+                    "对象无getMessages/getOptions方法，疑似非ModelRequest", "type={}", modelRequest.getClass().getName());
+            return null;
+        }
+        try {
+            Map<String, Object> result = new LinkedHashMap<>(8);
+            // 模型参数：options 展开为顶层字段
+            Object options = invokeNoArg(modelRequest, "getOptions");
+            result.put("model", invokeNoArg(options, "getModel"));
+            result.put("temperature", invokeNoArg(options, "getTemperature"));
+            result.put("maxTokens", invokeNoArg(options, "getMaxTokens"));
+            // systemMessage 全文（DingRing 讨论场景刻意为 null，打印 null 有观测价值）
+            Object systemMessage = invokeNoArg(modelRequest, "getSystemMessage");
+            result.put("systemMessage", systemMessage == null ? null : invokeNoArg(systemMessage, "getText"));
+            // messages：[{role, text}]
+            result.put("messages", toMessageInfoList(invokeNoArg(modelRequest, "getMessages")));
+            // tools / dynamicToolCallbacks：[{name, description}]
+            result.put("tools", toToolInfoList(invokeNoArg(modelRequest, "getTools")));
+            result.put("dynamicTools", toToolInfoList(invokeNoArg(modelRequest, "getDynamicToolCallbacks")));
+            return JSON.toJSONString(result, SerializerFeature.WriteMapNullValue);
+        } catch (Exception e) {
+            LogHelper.printErrorLog(JsonHelper.class, "JsonHelper.modelRequestToJsonStr", "MODEL_REQUEST_SERIALIZE_FAIL",
+                    "ModelRequest序列化失败", "type={} error={}", e, modelRequest.getClass().getName(), e.getMessage());
             return null;
         }
     }
@@ -258,6 +342,150 @@ public final class JsonHelper {
             return null;
         }
         return JSON.parseObject(json);
+    }
+
+    // ======================== 内部方法 ========================
+
+    /**
+     * 反射调用 OverAllState.data() 获取数据视图。
+     *
+     * @param state OverAllState 实例
+     * @return 数据 Map；state 无 data() 方法、返回值非 Map 或调用异常时返回 null
+     */
+    @SuppressWarnings("unchecked")
+    private static Map<String, Object> extractStateData(Object state) {
+        try {
+            Method dataMethod = state.getClass().getMethod("data");
+            dataMethod.setAccessible(true);
+            Object data = dataMethod.invoke(state);
+            if (data instanceof Map) {
+                return (Map<String, Object>) data;
+            }
+            LogHelper.printErrorLog(JsonHelper.class, "JsonHelper.overAllStateToJsonStr", "STATE_DATA_INVALID",
+                    "data()返回值非Map", "type={}", data.getClass().getName());
+            return null;
+        } catch (Exception e) {
+            LogHelper.printErrorLog(JsonHelper.class, "JsonHelper.overAllStateToJsonStr", "STATE_DATA_EXTRACT_FAIL",
+                    "反射读取OverAllState.data失败", "type={} error={}", e, state.getClass().getName(), e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * 将值转换为可安全序列化的对象：基本类型原样返回，
+     * 复杂类型先经 fastjson 转换（保留结构）；fastjson 抛异常或转不出任何字段
+     * （如无 getter 的 POJO）时降级为 toString，保证日志信息量。
+     */
+    private static Object toSafeJsonValue(Object value) {
+        if (value == null || value instanceof String || value instanceof Number
+                || value instanceof Boolean || value instanceof Character) {
+            return value;
+        }
+        try {
+            Object converted = JSON.toJSON(value);
+            // 非 Map 对象被转成空 JSONObject：说明 fastjson 读不到任何字段，toString 更有信息量
+            if (converted instanceof JSONObject && ((JSONObject) converted).isEmpty() && !(value instanceof Map)) {
+                return String.valueOf(value);
+            }
+            return converted;
+        } catch (Exception e) {
+            return String.valueOf(value);
+        }
+    }
+
+    /** 判断对象所属类是否声明了指定 public 无参方法 */
+    private static boolean hasMethod(Object target, String methodName) {
+        try {
+            return target.getClass().getMethod(methodName) != null;
+        } catch (NoSuchMethodException e) {
+            return false;
+        }
+    }
+
+    /**
+     * 反射调用无参方法。任何失败（方法不存在/访问受限/调用异常）均静默返回 null，
+     * 由调用方决定 null 语义（字段缺失输出 JSON null，不打错误日志避免噪音）。
+     */
+    private static Object invokeNoArg(Object target, String methodName) {
+        if (target == null) {
+            return null;
+        }
+        try {
+            Method method = target.getClass().getMethod(methodName);
+            method.setAccessible(true);
+            return method.invoke(target);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /**
+     * 将 Message 列表转换为 {@code [{role, text}]} 结构。
+     * <p>role 优先反射 {@code getMessageType()}（Spring AI Message），
+     * text 反射 {@code getText()}；均失败时降级 toString。
+     *
+     * @param messages getMessages() 的返回值（应为 Collection）
+     * @return 列表；入参非 Collection（含 null）时返回 null
+     */
+    private static List<Object> toMessageInfoList(Object messages) {
+        if (!(messages instanceof Collection)) {
+            return null;
+        }
+        List<Object> list = new ArrayList<>(((Collection<?>) messages).size());
+        for (Object msg : (Collection<?>) messages) {
+            Map<String, Object> info = new LinkedHashMap<>(4);
+            Object role = invokeNoArg(msg, "getMessageType");
+            info.put("role", role == null ? (msg == null ? "NULL" : msg.getClass().getSimpleName()) : role.toString());
+            Object text = invokeNoArg(msg, "getText");
+            info.put("text", text == null ? String.valueOf(msg) : text.toString());
+            list.add(info);
+        }
+        return list;
+    }
+
+    /**
+     * 将工具列表（ToolCallback 或 ToolDefinition 的 Collection）转换为 {@code [{name, description}]}。
+     *
+     * @param tools getTools()/getDynamicToolCallbacks() 的返回值
+     * @return 列表；入参非 Collection（含 null）时返回 null
+     */
+    private static List<Object> toToolInfoList(Object tools) {
+        if (!(tools instanceof Collection)) {
+            return null;
+        }
+        List<Object> list = new ArrayList<>(((Collection<?>) tools).size());
+        for (Object tool : (Collection<?>) tools) {
+            list.add(toolInfo(tool));
+        }
+        return list;
+    }
+
+    /**
+     * 提取单个工具的观测信息：优先经 {@code getToolDefinition()}（ToolCallback），
+     * 其次视元素自身为 ToolDefinition（record accessor：{@code name()}/{@code description()}）；
+     * 两者都失败时降级 toString（兼容纯工具名 String 列表）。
+     */
+    private static Object toolInfo(Object tool) {
+        if (tool == null) {
+            return null;
+        }
+        Object definition = invokeNoArg(tool, "getToolDefinition");
+        if (definition == null) {
+            definition = tool;
+        }
+        Object name = invokeNoArg(definition, "name");
+        Object description = invokeNoArg(definition, "description");
+        if (name == null && description == null) {
+            return String.valueOf(tool);
+        }
+        Map<String, Object> info = new LinkedHashMap<>(4);
+        if (name != null) {
+            info.put("name", name.toString());
+        }
+        if (description != null) {
+            info.put("description", description.toString());
+        }
+        return info;
     }
 
 }

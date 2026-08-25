@@ -1,6 +1,7 @@
 package com.dingring.infrastructure.persistence.config;
 
 import org.springframework.boot.autoconfigure.jdbc.DataSourceProperties;
+import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
@@ -28,6 +29,12 @@ public class PrimaryDataSourceConfig {
      */
     @Bean
     @Primary
+    // 关键：自定义 DataSource Bean 会触发原生 Hikari 自动配置上的 @ConditionalOnMissingBean(DataSource.class)，
+    // 导致 Spring Boot 原生 Hikari 自动配置（带 @ConfigurationProperties("spring.datasource.hikari")）整体回退。
+    // 不加此注解，application.yml 里 hikari.* 的 max-lifetime/keepalive-time/connection-test-query/pool-name
+    // 全部不绑定，用默认值（maxLifetime=30min, keepalive=0），公网 NAT 几分钟断连后借出即死连接，
+    // 表现为日志 "HikariPool-1 - Failed to validate connection ... connection closed"。
+    @ConfigurationProperties(prefix = "spring.datasource.hikari")
     public DataSource primaryDataSource(DataSourceProperties properties) {
         return properties.initializeDataSourceBuilder().build();
     }

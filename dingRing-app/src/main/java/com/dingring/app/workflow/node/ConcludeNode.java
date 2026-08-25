@@ -8,6 +8,7 @@ import com.dingring.common.util.LogHelper;
 import com.dingring.domain.workflow.StateKeys;
 import com.dingring.infrastructure.aop.Event;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.java.Log;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -30,22 +31,17 @@ public class ConcludeNode implements NodeAction {
     private final ConclusionService conclusionService;
 
     @Override
-    @Event(eventCode = "CONCLUDE_NODE", eventName = "收束节点")
+//    @Event(eventCode = "CONCLUDE_NODE", eventName = "收束节点")
     public Map<String, Object> apply(OverAllState state) {
+
+        LogHelper.printLog(ConcludeNode.class, "ConcludeNode.apply",
+                "CONCLUDE_NODE", "开始执行收束节点",
+                "state={}", JsonHelper.overAllStateToJsonStr(state));
+
         Long topicId = state.<Long>value(StateKeys.TOPIC_ID).orElse(null);
         Long groupId = state.<Long>value(StateKeys.GROUP_ID).orElse(null);
         String triggeredBy = state.value(StateKeys.TRIGGERED_BY, "USER");
         Long designatedConcluderId = state.<Long>value(StateKeys.CONCLUDER_AGENT_ID).orElse(null);
-
-        // 用 HashMap 而非 Map.of：topicId 可能为 null（无活跃主题被误路由进收束），
-        // Map.of 会在日志处先抛 NPE，掩盖下方真正的防御校验（缺少必要参数 topicId）
-        Map<String, Object> logMap = new HashMap<>();
-        logMap.put("topicId", topicId);
-        logMap.put("groupId", groupId);
-        logMap.put("triggeredBy", triggeredBy);
-        logMap.put("designatedConcluderId", designatedConcluderId);
-        LogHelper.printLog(ConcludeNode.class, "ConcludeNode.apply", "CONCLUDE_NODE", "收束触发",
-                "request={}", JsonHelper.mapToJsonStr(logMap));
 
         if (topicId == null) {
             throw new IllegalStateException("ConcludeNode 缺少必要参数 topicId");

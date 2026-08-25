@@ -30,25 +30,36 @@ spring:
       password: ${NACOS_PASSWORD:nacos}
   # MySQL 生产库（公网地址，必须配置连接保活/探活防止 NAT/防火墙静默断连）
   datasource:
-    url: jdbc:mysql://101.33.227.80:3306/ring_chat?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=false
+    # URL 参数说明（公网 PMTUD 黑洞专属优化）：
+    # - sslMode=REQUIRED：用 SSL 传输（MySQL 9.x caching_sha2_password 推荐），替代 useSSL=false+allowPublicKeyRetrieval
+    # - socketTimeout=10000&connectTimeout=5000：公网路径防火墙屏蔽 ICMP 导致 PMTUD 黑洞，
+    #   caching_sha2_password 认证大包偶发被丢弃，JDBC 建连会卡 16~386s。
+    #   socketTimeout 让卡住的建连 10s 快速失败，HikariCP 自动重试（路径 MSS 协商后即快）
+    # - serverTimezone=Asia/Shanghai：会话时区
+    # - 已移除 useUnicode=true&characterEncoding=utf8：Connector/J 8.0.13 起废弃，9.x 默认 utf8mb4
+    url: jdbc:mysql://101.33.227.80:3306/ring_chat?serverTimezone=Asia/Shanghai&sslMode=REQUIRED&socketTimeout=10000&connectTimeout=5000
     driver-class-name: com.mysql.cj.jdbc.Driver
     username: root
     password: "MySQL@123456"
-    # HikariCP 连接池（公网数据库专属配置，核心是：短寿命 + 借前探活 + 空闲保活 + 泄露检测）
+    # HikariCP 连接池（公网数据库专属配置，核心是：启动不卡 + 借前探活 + 空闲保活 + 泄露检测）
     hikari:
       # 连接池容量（默认10，峰值并发写多可以调大；单群串行引擎 + 多HTTP接口，20足够）
       maximum-pool-size: 20
       # 最小空闲连接（默认=max，这里设 5，避免冷启动时 HTTP 请求排队等建连）
       minimum-idle: 5
-      # 拿不到连接多久报错（默认30s太长，8s快速失败，前端友好）
-      connection-timeout: 8000
+      # 拿不到连接多久报错：公网 PMTUD 黑洞偶发卡建连 16~34s，给 30s 等路径 MSS 协商后重试成功
+      connection-timeout: 30000
+      # 启动时不做建连检查（-1 跳过 checkFailFast），避免 PMTUD 卡顿阻止应用启动；
+      # HikariCP 后台 housekeeper 线程异步建连，socketTimeout=10s 触发快速失败重试
+      initialization-fail-timeout: -1
       # 连接最大存活时间（核心！默认30min太长；公网 NAT/防火墙一般 3-5min 就悄悄掐连接，
       # 所以设为 2min，HikariCP 会在连接满 2min 时主动报废换新，从根源避免"借到死连接"）
-      max-lifetime: 60000
-      # 空闲超过 1min 的连接回收（避免长期占着茅坑不拉屎）
+      # 注意：必须 > keepalive-time 和 idle-timeout，否则两者会被 HikariCP 自动禁用
+      max-lifetime: 120000
+      # 空闲超过 1min 的连接回收（避免长期占着茅坑不拉屎；必须 < max-lifetime）
       idle-timeout: 60000
-      # 空闲连接保活心跳（每 1min 发一次 SELECT 1，防止 NAT 会话表老化被清）
-      keepalive-time: 60000
+      # 空闲连接保活心跳（每 30s 发一次 SELECT 1，防止 NAT 会话表老化被清；必须 < max-lifetime）
+      keepalive-time: 30000
       # 借出连接前的探活 SQL（关键！确保不会把已经死了的连接给业务代码用；
       # 没有这行，Hikari 以为连接活着，代码一用就爆 "No operations allowed after connection closed"）
       connection-test-query: SELECT 1

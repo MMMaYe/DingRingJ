@@ -47,7 +47,6 @@ public class PreprocessNode implements NodeAction {
      * @return 状态更新：topicId/topicTitle（无活跃话题时为 null/空）
      */
     @Override
-    @Event(eventCode = "PREPROCESS", eventName = "预处理节点")
     public Map<String, Object> apply(OverAllState state) {
         Long groupId = state.<Long>value(StateKeys.GROUP_ID).orElse(null);
         String input = state.value(StateKeys.INPUT, "");
@@ -73,9 +72,9 @@ public class PreprocessNode implements NodeAction {
                     "群不存在", "groupId={}", groupId);
             throw new IllegalStateException("群不存在: " + groupId);
         }
-        LogHelper.printLog(PreprocessNode.class, "PreprocessNode.apply", "PREPROCESS",
-                "群信息加载成功", "groupId={} 群名={} 成员数={}",
-                groupId, groupOpt.get().getName(), groupOpt.get().memberAgentIds() == null ? 0 : groupOpt.get().memberAgentIds().size());
+//        LogHelper.printLog(PreprocessNode.class, "PreprocessNode.apply", "PREPROCESS",
+//                "群信息加载成功", "groupId={} 群名={} 成员数={}",
+//                groupId, groupOpt.get().getName(), groupOpt.get().memberAgentIds() == null ? 0 : groupOpt.get().memberAgentIds().size());
 
         // 加载活跃话题（每群最多一个活跃话题）
         Optional<Topic> activeTopic = topicRepository.findActiveByGroupId(groupId)

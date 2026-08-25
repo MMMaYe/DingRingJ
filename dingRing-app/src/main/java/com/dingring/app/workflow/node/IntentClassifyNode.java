@@ -89,7 +89,8 @@ public class IntentClassifyNode implements NodeAction {
 
         // 路由修正：有活跃话题时，强制重映射为 DISCUSS
         // 原因：ChatNode 是闲聊节点不携带话题上下文，IN_PROGRESS 期间的消息应进入讨论节点推进深度
-        if ((route.intent() == MessageRouter.Intent.CHAT || route.intent() == MessageRouter.Intent.WORK) && activeTopicTitle != null) {
+        //TODO：后续如果意图识识别结果的topicTitle有只，那就记录下（Redis记录），因为在活跃主题下诞生的主题，应当是有关联的——用于后续建设知识图谱
+        if ((activeTopicTitle != null)) {
             LogHelper.printLog(IntentClassifyNode.class, "IntentClassifyNode.apply", "INTENT_CLASSIFY",
                     "活跃话题期间CHAT重映射为DISCUSS",
                     "activeTopic={} originalIntent={}", activeTopicTitle, route.intent());
