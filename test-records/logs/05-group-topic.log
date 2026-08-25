@@ -1,4 +1,0 @@
-[2026-07-27 22:52:56] POST /api/groups 创建群（成员=老王[1]，专家=苏教授[4]）
-{"success":true,"errorCode":null,"message":"操作成功","data":{"id":4,"name":"联调测试群-0727","ownerId":1,"members":[{"id":1,"type":"USER","role":"OWNER","name":"冲吧！中年������️","avatar":null},{"id":1,"type":"AGENT","role":"MEMBER","name":"老王","avatar":null},{"id":4,"type":"AGENT","role":"EXPERT","name":"苏教授","avatar":null}],"activeTopic":null,"createTime":"2026-07-27T22:52:57"}}
-
-{"success":true,"errorCode":null,"message":"操作成功","data":{"id":2,"title":"MySQL 索引失效的常见场景","status":"IN_PROGRESS","messageCount":0,"createTime":"2026-07-27T22:53:08.017919"}}

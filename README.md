@@ -37,7 +37,7 @@
 
 ## 架构
 
-DDD 六模块分层（事件风暴 → 限界上下文 → 战术设计的完整落地，过程见 [event_storming.md](event_storming.md)）：
+DDD 六模块分层（事件风暴 → 限界上下文 → 战术设计的完整落地，过程见 [event_storming.md](docs/event_storming.md)）：
 
 ```
 dingring
@@ -142,8 +142,8 @@ mvn package -DskipTests  # 打包可执行 fat jar（start/target/*.jar）
 ## 文档
 
 - [docs/wiki](docs/wiki/README.md) —— 项目总览、架构与模块、REST API、WebSocket 协议、数据模型、LLM 集成与记忆等系列文档
-- [event_storming.md](event_storming.md) —— DDD 事件风暴完整产出
-- [multi-agent-chat-tech-design-java-v1.md](multi-agent-chat-tech-design-java-v1.md) —— 多 Agent 群聊技术设计（Java 版）
+- [event_storming.md](docs/event_storming.md) —— DDD 事件风暴完整产出
+- [multi-agent-chat-tech-design-java-v1.md](docs/multi-agent-chat-tech-design-java-v1.md) —— 多 Agent 群聊技术设计（Java 版）
 - [docs/p2-kb-rag-implementation-design.md](docs/p2-kb-rag-implementation-design.md) —— RAG 知识库实施设计
 - [docs/group-context-memory-hook-design.md](docs/group-context-memory-hook-design.md) —— 群上下文记忆 Hook 设计
 - [提示词最佳实践.md](提示词最佳实践.md) —— Agent 人设与提示词设计

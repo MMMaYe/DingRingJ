@@ -1,5 +1,0 @@
-[修复前] api_key 列定义:
-  api_key -> varchar(255)
-[OK] ALTER TABLE agent MODIFY api_key VARCHAR(1024) 执行成功
-[修复后] api_key 列定义:
-  api_key -> varchar(1024)
