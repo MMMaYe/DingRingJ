@@ -1,5 +1,7 @@
 # DingRingJ
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 多 Agent AI 群聊学习系统（Java 实现）—— 一个群聊，N 个 AI「同事」，围绕主题激烈讨论，收束时由专家汇总结论并沉淀为知识卡片。
 
 ![chatPage](聊天交互页.png)
@@ -8,20 +10,20 @@
 
 一个人学习缺少技术讨论的对撞感，单一 Agent 问答又很枯燥。DingRing 想还原「和同事在群聊里聊技术」的氛围：群里 N 个人中只有你一个真人，其余是不同人设、不同模型的 Agent 同事（DeepSeek / Kimi / Claude / Qwen……）。
 
-它更像一个「一人学堂」：这些 Agent 同事不会嫌弃问题蠢，也不会没有耐心的对你吼「这个问题之前不是说过了么？」——大家一起思考、一起讨论、一起解决问题，最终形成 **讨论 → 沉淀 → 复习 → 再讨论** 的学习闭环。
+同时，它更像一个「一人学堂」：这些 Agent 同事不会嫌弃问题蠢，也不会没有耐心的对你吼「这个问题之前不是说过了么？」——大家一起思考、一起讨论、一起解决问题，最终形成 **讨论 → 沉淀 → 复习 → 再讨论** 的学习闭环。
 
 ![kbCardPage](知识卡片页面.png)
 
 ## 核心特性
 
-- **多 Agent 群聊**：每个 Agent 独立配置花名、头像、人设 Prompt、LLM 供应商（OpenAI 协议）、apiKey、模型名
+- **多 Agent 群聊**：每个 Agent 独立配置花名、头像、人设 Prompt、LLM 供应商、apiKey、模型名
 - **意图路由驱动的自主讨论**：用户发消息后由 LLM 判定闲聊（CHAT）/ 讨论（DISCUSS）/ 收束（CONCLUDE），从「用户消息驱动应答」升级为「主题驱动的自主讨论循环」
-- **追溯式自动建题**：判定为讨论时自动回填近期闲聊创建主题，一个群同一时刻最多一个活跃主题
+- **自动建题**：判定为讨论时自动创建主题，一个群同一时刻最多一个活跃主题
 - **发言调度**：默认评分选人（SpeakerScheduler）+ `[[PASS]]` 让麦 / `[[CONCLUDE]]` 提议收束协作协议；可选 Moderator 主持人模式（LLM 决策选人/引导/收束，失败自动回退评分调度）
 - **流式发言**：Agent 发言通过 WebSocket 逐块推送（MESSAGE_DELTA / COMPLETE / ABORT），还原「正在输入」的群聊体感
-- **STAR 结论 + 知识卡片**：讨论收束时由总结 Agent 生成 STAR 框架结论，异步提取 Q&A 知识卡片供复习，后台任务对账兜底
+- **知识卡片**：讨论收束时由总结 Agent 生成主题沉淀产物，再由产物衍生卡片，异步提取 Q&A 知识卡片供复习，后台任务对账兜底
 - **画像与群记忆**：持续从用户发言提炼用户画像，从历史结论积累群上下文记忆，意图感知地注入后续讨论
-- **RAG 知识库**：文件上传 → 固定尺寸切块（512 + 64 overlap）→ SiliconFlow Qwen3-Embedding 向量化 → PostgreSQL/pgvector 检索 → LLM 重排
+- **RAG 知识库**：文件上传（暂强要求md文件） → 固定尺寸切块（512 + 64 overlap）→ Qwen3-Embedding 向量化 → PostgreSQL/pgvector 检索 → LLM 重排
 - **Tool / Skill 机制**：基于 Spring AI Alibaba `methodTools` 的 WebTools（Tavily webSearch + webFetch，keyless/Bearer 自适应，含退避重试）；技能种子配置驱动
 - **全链路日志观测**：`@Event` 打点 + AOP 全量化日志（LLM 入参/工具调用/意图路由），文件增量采集进仪表盘，三视图（LLM 调用 / Traces / 观测日志）可视化
 
@@ -37,7 +39,7 @@
 
 ## 架构
 
-DDD 六模块分层（事件风暴 → 限界上下文 → 战术设计的完整落地，过程见 [event_storming.md](docs/event_storming.md)）：
+DDD领域驱动设计 + 落地COLA分层理念（过程见 [event_storming.md](docs/event_storming.md)）：
 
 ```
 dingring
@@ -45,7 +47,7 @@ dingring
 ├── dingRing-app             # 应用层：讨论引擎编排、Workflow 节点、AppService、事件处理、后台任务
 ├── dingRing-domain          # 领域层：实体/聚合、端口（Repository、LlmService…）、领域事件
 ├── dingRing-infrastructure  # 基础设施层：MyBatis、LLM 接入、记忆/画像、RAG、Tool、Skill、WebSocket、AOP 观测
-├── dingRing-common          # 通用层
+├── dingRing-common          # 通用层（业务异常类、通用工具类）
 └── start                    # 启动模块：DingRingApplication、配置、前端静态资源
 ```
 
@@ -94,8 +96,8 @@ graph TD
 ### 环境要求
 
 - JDK 21+、Node 18+、Maven 3.9+
-- MySQL 8+（库 `ring_chat`，表结构与种子数据通过 SQL 手动管理）
-- PostgreSQL + pgvector（库 `ring_rag`，RAG 可通过开关关闭）
+- MySQL 8+：建库 `ring_chat` 后执行 [start/src/main/resources/schema.sql](start/src/main/resources/schema.sql) 初始化全部 11 张表（含索引），需要演示数据再执行 [data.sql](start/src/main/resources/data.sql)（单用户 + 老王/小林/阿源/苏教授 4 个 Agent）
+- PostgreSQL + pgvector（库 `ring_rag`，向量表由应用启动时自动创建；RAG 可通过开关关闭）
 
 ### 后端
 
@@ -154,3 +156,7 @@ mvn package -DskipTests  # 打包可执行 fat jar（start/target/*.jar）
 - 浏览器插件：一键把网页转 Markdown 塞进 RAG 知识库
 - Agent 同事自我迭代（System Prompt 自优化）
 - 桥接 Qoder / Trae 等 IDE 的 memory 文件，打通个人工作空间
+
+## License
+
+[MIT](LICENSE)

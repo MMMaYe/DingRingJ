@@ -1,6 +1,7 @@
 -- =====================================================================
--- DingRing AI 群聊学习系统 DDL（H2 MODE=MySQL / MySQL 8 兼容）
--- 注意：生产环境表结构通过 MySQL MCP 手动管理，此文件仅作为 H2 演示模式的参考。
+-- DingRing AI 群聊学习系统 DDL（H2 MODE=MySQL / MySQL 8 兼容，可直接在 MySQL 8 执行初始化）
+-- 注意：生产环境表结构通过 MySQL MCP 手动管理，此文件作为新环境初始化与 H2 演示模式的参考。
+-- 索引统一用建表语句内联 INDEX 写法（MySQL/H2 双兼容）；MySQL 8 不支持 CREATE INDEX IF NOT EXISTS。
 -- =====================================================================
 
 -- 用户表（单用户模式，种子数据固定 id=1）
@@ -54,10 +55,9 @@ CREATE TABLE IF NOT EXISTS topic (
     feature       TEXT         NULL COMMENT '扩展字段(JSON)',
     create_time   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
-    CONSTRAINT uk_topic_group_title UNIQUE (chat_group_id, title)
+    CONSTRAINT uk_topic_group_title UNIQUE (chat_group_id, title),
+    INDEX idx_topic_group_status (chat_group_id, status)
 );
-
-CREATE INDEX IF NOT EXISTS idx_topic_group_status ON topic (chat_group_id, status);
 
 -- 消息表（用户/Agent/系统消息统一存储）
 CREATE TABLE IF NOT EXISTS message (
@@ -73,11 +73,10 @@ CREATE TABLE IF NOT EXISTS message (
     -- 由 GroupMessage#getTag()/getViewpoint() 便捷读写；查询观点列表见 MessageMapper.findViewpointsByTopicId（LIKE 匹配）
     feature             TEXT        NULL COMMENT '扩展字段(JSON)：tag/viewpoint 标签亦存于此',
     create_time         DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    update_time         DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间'
+    update_time         DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
+    INDEX idx_message_group (chat_group_id, id),
+    INDEX idx_message_topic (topic_id, id)
 );
-
-CREATE INDEX IF NOT EXISTS idx_message_group ON message (chat_group_id, id);
-CREATE INDEX IF NOT EXISTS idx_message_topic ON message (topic_id, id);
 
 -- 知识卡片表（结论异步提取的 Q&A）
 CREATE TABLE IF NOT EXISTS knowledge_card (
@@ -88,11 +87,38 @@ CREATE TABLE IF NOT EXISTS knowledge_card (
     category    VARCHAR(64)  NULL COMMENT '分类',
     feature     TEXT         NULL COMMENT '扩展字段(JSON)',
     create_time DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    update_time DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间'
+    update_time DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
+    INDEX idx_card_topic (topic_id),
+    INDEX idx_card_category (category)
 );
 
-CREATE INDEX IF NOT EXISTS idx_card_topic ON knowledge_card (topic_id);
-CREATE INDEX IF NOT EXISTS idx_card_category ON knowledge_card (category);
+-- 知识库表（群与库的关联由 chat_group.knowledge_base_config 表达；文件切片内容存 PostgreSQL 向量库）
+CREATE TABLE IF NOT EXISTS knowledge_base (
+    id          BIGINT       PRIMARY KEY AUTO_INCREMENT COMMENT '主键',
+    name        VARCHAR(128) NOT NULL COMMENT '库名',
+    description VARCHAR(200) NULL COMMENT '用途说明',
+    status      VARCHAR(16)  NOT NULL DEFAULT 'ACTIVE' COMMENT '状态: ACTIVE/PROCESSING/FAILED',
+    feature     TEXT         NULL COMMENT '扩展字段(JSON)',
+    create_time DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    update_time DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
+    CONSTRAINT uk_kb_name UNIQUE (name)
+);
+
+-- 知识库文件表（只存元信息，切片内容存 PostgreSQL kb_store 向量表）
+CREATE TABLE IF NOT EXISTS kb_file (
+    id                BIGINT       PRIMARY KEY AUTO_INCREMENT COMMENT '主键',
+    knowledge_base_id BIGINT       NOT NULL COMMENT '所属知识库 ID',
+    name              VARCHAR(255) NOT NULL COMMENT '文件名',
+    path              VARCHAR(512) NOT NULL COMMENT '本地存储路径',
+    file_type         VARCHAR(16)  NULL COMMENT '文件类型: PDF/MARKDOWN/TXT',
+    file_size         BIGINT       NULL COMMENT '文件大小(字节)',
+    status            VARCHAR(16)  NOT NULL DEFAULT 'UPLOADED' COMMENT '状态: UPLOADED/CHUNKED/EMBEDDED/READY/FAILED',
+    chunk_count       INT          NULL COMMENT '切片数',
+    error_msg         TEXT         NULL COMMENT '失败原因(status=FAILED 时)',
+    create_time       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    update_time       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
+    INDEX idx_kb_id (knowledge_base_id)
+);
 
 -- 用户画像表（跨群全局画像，版本化写回：每次提炼后标记旧记录为失效，插入新记录，保留历史轨迹）
 CREATE TABLE IF NOT EXISTS user_profile (
@@ -103,7 +129,7 @@ CREATE TABLE IF NOT EXISTS user_profile (
     status       TINYINT(1) NOT NULL DEFAULT 1 COMMENT '1=有效, 0=失效（历史版本）',
     create_time  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
-    INDEX idx_profile_user (user_id)
+    INDEX idx_user_status (user_id, status)
 );
 
 -- 话题级用户画像表（每次 TopicClosed 追加一条记录，多条记录=用户在该话题的进步轨迹）
@@ -128,14 +154,13 @@ CREATE TABLE IF NOT EXISTS skill (
     id            BIGINT       PRIMARY KEY AUTO_INCREMENT COMMENT '主键',
     name          VARCHAR(64)  NOT NULL COMMENT '技能名称(唯一标识)',
     description   VARCHAR(255) NULL COMMENT '技能描述(注入提示词)',
-    tool_names    VARCHAR(255) NULL COMMENT '工具集标识(逗号分隔)',
+    tool_names    VARCHAR(512) NULL COMMENT '工具集标识(逗号分隔)',
     system_prompt TEXT         NULL COMMENT '附加系统提示词',
-    scope         VARCHAR(32)  NOT NULL DEFAULT 'GLOBAL' COMMENT '作用域: GLOBAL/AGENT',
+    scope         VARCHAR(16)  NOT NULL DEFAULT 'GLOBAL' COMMENT '作用域: GLOBAL/AGENT',
     agent_id      BIGINT       NULL COMMENT 'scope=AGENT 时绑定 Agent ID',
-    status        VARCHAR(32)  NOT NULL DEFAULT 'ACTIVE' COMMENT '状态: ACTIVE/INACTIVE',
+    status        VARCHAR(16)  NOT NULL DEFAULT 'ACTIVE' COMMENT '状态: ACTIVE/INACTIVE',
     create_time   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
-    CONSTRAINT uk_skill_name UNIQUE (name)
+    CONSTRAINT uk_name UNIQUE (name),
+    INDEX idx_agent (agent_id)
 );
-
-CREATE INDEX IF NOT EXISTS idx_skill_agent ON skill (agent_id);
