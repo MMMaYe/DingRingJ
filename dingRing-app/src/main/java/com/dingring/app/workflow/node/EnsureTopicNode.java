@@ -74,23 +74,18 @@ public class EnsureTopicNode implements NodeAction {
      * @return 状态更新：ensureSuccess + topicId/topicTitle（建题成功）/ lowDiscussStreak（更新值）
      */
     @Override
-    @Event(eventCode = "ENSURE_TOPIC", eventName = "建题节点")
+//    @Event(eventCode = "ENSURE_TOPIC", eventName = "建题节点")
     public Map<String, Object> apply(OverAllState state) {
+
+        LogHelper.printLog(EnsureTopicNode.class, "EnsureTopicNode.apply",
+                "ENSURE_TOPIC", "开始执行建题节点",
+                "state={}", JsonHelper.toJson(state));
+
         Long groupId = state.<Long>value(StateKeys.GROUP_ID).orElse(null);
         String topicTitle = state.<String>value(StateKeys.TOPIC_TITLE).orElse(null);
         String confidenceStr = state.value(StateKeys.CONFIDENCE, "LOW");
         int lowDiscussStreak = state.value(StateKeys.LOW_DISCUSS_STREAK, 0);
         int backfillLimit = state.value("backfillLimit", 15);
-
-        // 用 HashMap 而非 Map.of：groupId/topicTitle 可能为 null（防御性日志不应在入口先抛 NPE）
-        Map<String, Object> logMap = new HashMap<>();
-        logMap.put("groupId", groupId);
-        logMap.put("topicTitle", topicTitle);
-        logMap.put("confidence", confidenceStr);
-        logMap.put("lowDiscussStreak", lowDiscussStreak);
-        logMap.put("backfillLimit", backfillLimit);
-        LogHelper.printLog(EnsureTopicNode.class, "EnsureTopicNode.apply", "ENSURE_TOPIC", "建题判定开始",
-                "request={}", JsonHelper.mapToJsonStr(logMap));
 
         if (groupId == null) {
             throw new IllegalStateException("EnsureTopicNode 缺少必要参数 groupId");

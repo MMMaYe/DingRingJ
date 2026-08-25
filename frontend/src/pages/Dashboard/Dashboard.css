@@ -60,12 +60,173 @@
 .dashboard .dashboard__filter-input:focus { border-color: var(--border-brand); }
 .dashboard .dashboard__filter-input--wide { flex: 1; min-width: 200px; }
 
-/* ---------- 统计概览条（容器；卡片用全局 .stat-card） ---------- */
-.dashboard .dashboard__stats {
+/* ---------- 页头收起：收起后只剩一条紧凑横条 ---------- */
+.dashboard .page__head { transition: padding 0.25s cubic-bezier(0.16, 1, 0.3, 1); }
+.dashboard .page__head--collapsed { padding: 0; }
+
+.dashboard .page__head-collapsible {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  grid-template-rows: 1fr;
+  transition: grid-template-rows 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.dashboard .page__head--collapsed .page__head-collapsible { grid-template-rows: 0fr; }
+
+.dashboard .page__head-collapsible-inner { min-height: 0; overflow: hidden; }
+
+/* 展开态页头里的收起按钮：仅一个旋转箭头图标 */
+.dashboard .dashboard__collapse-btn { padding: 7px 10px; }
+
+/* 收起态紧凑条：标题 + 实时状态 + 筛选摘要 + 暂停/恢复 */
+.dashboard .page__head-compact {
+  display: none;
+  align-items: center;
+  gap: 14px;
+  height: 44px;
+  padding: 0 32px;
+}
+
+.dashboard .page__head--collapsed .page__head-compact {
+  display: flex;
+  animation: dashboard-compact-in 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes dashboard-compact-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.dashboard .page__head-compact-expand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 4px 6px;
+  margin-left: -6px;
+  color: var(--text-default);
+}
+
+.dashboard .page__head-compact-expand:hover { background: var(--bg-base-secondary); border-radius: 8px; }
+
+.dashboard .page__head-compact-title {
+  font-family: "New York", "Songti SC", "STSong", Georgia, serif;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--text-default-hover);
+}
+
+.dashboard .page__head-compact-eyebrow {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-brand);
+}
+
+.dashboard .page__head-compact-filters {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 11px;
+  color: var(--text-brand);
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+.dashboard .page__head-compact-filters:hover { background: var(--bg-base-secondary); }
+
+.dashboard .page__head-compact-pause { margin-left: auto; flex-shrink: 0; }
+
+/* ---------- 统计概览条：可收起（卡片用全局 .stat-card） ---------- */
+.dashboard .dashboard__stats {
+  display: flex;
+  flex-direction: column;
   border-bottom: 1px solid var(--border-neutral-l1);
   flex-shrink: 0;
+}
+
+/* 收起/展开头行：label + 收起态紧凑数字 + 旋转箭头 */
+.dashboard .dashboard__stats-head {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 0 32px;
+  height: 34px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  color: var(--text-secondary);
+  transition: background 0.15s;
+}
+
+.dashboard .dashboard__stats-head:hover { background: var(--bg-base-secondary); }
+
+.dashboard .dashboard__stats-head-label {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+.dashboard .dashboard__stats-head-summary {
+  display: flex;
+  gap: 18px;
+  align-items: baseline;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.dashboard .dashboard__stats--collapsed .dashboard__stats-head-summary { opacity: 1; }
+
+.dashboard .dashboard__stats-summary-item {
+  display: inline-flex;
+  gap: 6px;
+  align-items: baseline;
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
+.dashboard .dashboard__stats-summary-value {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 12px;
+  color: var(--text-default-hover);
+  font-variant-numeric: tabular-nums;
+}
+
+.dashboard .dashboard__stats-summary-item--error .dashboard__stats-summary-value { color: var(--status-error-default); }
+.dashboard .dashboard__stats-summary-item--warn .dashboard__stats-summary-value { color: var(--status-warning-default); }
+
+.dashboard .dashboard__stats-chevron {
+  margin-left: auto;
+  flex-shrink: 0;
+  color: var(--text-tertiary);
+  font-size: 14px;
+  transition: transform 0.15s;
+}
+
+.dashboard .dashboard__stats-chevron--open {
+  transform: rotate(90deg);
+  color: var(--text-brand);
+}
+
+/* 卡片面板：grid-template-rows 0fr/1fr 实现高度过渡 */
+.dashboard .dashboard__stats-panels {
+  display: grid;
+  grid-template-rows: 1fr;
+  transition: grid-template-rows 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.dashboard .dashboard__stats--collapsed .dashboard__stats-panels { grid-template-rows: 0fr; }
+
+.dashboard .dashboard__stats-panels-inner {
+  min-height: 0;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
 }
 
 .dashboard .stat-card { animation: none; }

@@ -53,7 +53,32 @@ input, textarea, select { font-family: inherit; color: var(--text-default); }
 .sidebar__search-input::placeholder { color: var(--text-tertiary); }
 .sidebar__search-input:focus { border-color: var(--border-brand); }
 
-.sidebar__nav { padding: 0 8px; display: flex; flex-direction: column; gap: 2px; margin-bottom: 4px; }
+/* ---- 导航区折叠开关 ---- */
+.sidebar__nav-toggle {
+  display: flex; align-items: center; justify-content: space-between;
+  width: calc(100% - 16px); margin: 4px 8px 2px;
+  padding: 6px 8px; border: none; border-radius: 6px;
+  background: transparent; color: var(--text-tertiary);
+  font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase;
+  transition: background .12s, color .12s;
+}
+.sidebar__nav-toggle:hover { background: var(--bg-overlay-l1); color: var(--text-secondary); }
+.sidebar__nav-toggle-icon {
+  display: flex; align-items: center;
+  transition: transform .22s ease;
+}
+/* 收起时箭头指向右侧 */
+.sidebar__nav-toggle.is-collapsed .sidebar__nav-toggle-icon { transform: rotate(-90deg); }
+
+.sidebar__nav {
+  padding: 0 8px; display: flex; flex-direction: column; gap: 2px; margin-bottom: 4px;
+  max-height: 400px; overflow: hidden;
+  transition: max-height .22s ease, opacity .18s ease, margin-bottom .22s ease;
+}
+/* 收起态：高度压到 0 并裁剪，保留过渡动画 */
+.sidebar__nav.is-collapsed {
+  max-height: 0; opacity: 0; margin-bottom: 0; pointer-events: none;
+}
 .sidebar__nav-item {
   display: flex; align-items: center; gap: 8px;
   padding: 8px; border-radius: 6px;

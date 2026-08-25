@@ -1,5 +1,17 @@
+import { useCallback, useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import Logo from './Logo';
+
+/** 导航区收起状态的持久化 key */
+const NAV_COLLAPSED_KEY = 'dingring-sidebar-nav-collapsed';
+
+function readNavCollapsed(): boolean {
+  try {
+    return localStorage.getItem(NAV_COLLAPSED_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
 
 /* ---- Inline SVG Icons (from design spec) ---- */
 const IconChat = () => (
@@ -29,6 +41,10 @@ const IconSearch = () => (
 const IconPlus = () => (
   <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 2.5v9M2.5 7h9" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>
 );
+/** 折叠箭头：展开时朝下，收起时由 CSS 旋转为朝右 */
+const IconChevron = () => (
+  <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2.5 4.5L6 8l3.5-3.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>
+);
 
 interface SidebarProps {
   children?: React.ReactNode;
@@ -44,6 +60,19 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ children, footer, showGroupLabel, onSearch, searchPlaceholder = '搜索群组...', cardBadge, className }: SidebarProps) {
+  /** 导航区是否收起（跨页面、跨刷新保持） */
+  const [navCollapsed, setNavCollapsed] = useState(readNavCollapsed);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(NAV_COLLAPSED_KEY, navCollapsed ? '1' : '0');
+    } catch {
+      /* 忽略隐私模式等写入失败 */
+    }
+  }, [navCollapsed]);
+
+  const toggleNav = useCallback(() => setNavCollapsed(c => !c), []);
+
   return (
     <aside className={`sidebar${className ? ` ${className}` : ''}`}>
       <div className="sidebar__header">
@@ -68,7 +97,18 @@ export default function Sidebar({ children, footer, showGroupLabel, onSearch, se
         </div>
       )}
 
-      <nav className="sidebar__nav">
+      <button
+        className={`sidebar__nav-toggle${navCollapsed ? ' is-collapsed' : ''}`}
+        onClick={toggleNav}
+        aria-expanded={!navCollapsed}
+        aria-controls="sidebar-nav"
+        title={navCollapsed ? '展开导航' : '收起导航'}
+      >
+        <span className="sidebar__nav-toggle-text">导航</span>
+        <span className="sidebar__nav-toggle-icon"><IconChevron /></span>
+      </button>
+
+      <nav id="sidebar-nav" className={`sidebar__nav${navCollapsed ? ' is-collapsed' : ''}`}>
         <NavLink to="/dashboard" className={({ isActive }) => `sidebar__nav-item${isActive ? ' sidebar__nav-item--active' : ''}`}>
           <span className="sidebar__nav-icon"><IconDashboard /></span>
           <span className="sidebar__nav-text">仪表盘</span>

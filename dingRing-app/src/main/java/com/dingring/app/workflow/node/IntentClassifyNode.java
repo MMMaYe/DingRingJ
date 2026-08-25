@@ -49,8 +49,13 @@ public class IntentClassifyNode implements NodeAction {
      * @return 状态更新：intent（CHAT/DISCUSS/CONCLUDE）、topicTitle（DISCUSS 时为拟定标题，其他为空）
      */
     @Override
-    @Event(eventCode = "INTENT_CLASSIFY", eventName = "意图分类节点")
+//    @Event(eventCode = "INTENT_CLASSIFY", eventName = "意图分类节点")
     public Map<String, Object> apply(OverAllState state) {
+
+        LogHelper.printLog(IntentClassifyNode.class, "IntentClassifyNode.apply",
+                "INTENT_CLASSIFY", "意图分类节点开始执行",
+                "state={}", JsonHelper.overAllStateToJsonStr(state));
+
         Long groupId = state.<Long>value(StateKeys.GROUP_ID).orElse(null);
         String input = state.value(StateKeys.INPUT, "");
         String activeTopicTitle = state.<String>value(StateKeys.TOPIC_TITLE).orElse(null);
@@ -62,14 +67,6 @@ public class IntentClassifyNode implements NodeAction {
                     "意图已预设跳过LLM", "intent={}", presetIntent);
             return Map.of();
         }
-
-        // 用 HashMap 而非 Map.of：groupId 可能为 null（防御性日志不应在入口先抛 NPE）
-        Map<String, Object> logMap = new HashMap<>();
-        logMap.put("groupId", groupId);
-        logMap.put("inputLen", input == null ? 0 : input.length());
-        logMap.put("hasActiveTopic", activeTopicTitle != null);
-        LogHelper.printLog(IntentClassifyNode.class, "IntentClassifyNode.apply", "INTENT_CLASSIFY", "意图分类开始",
-                "request={}", JsonHelper.mapToJsonStr(logMap));
 
         if (groupId == null || input == null || input.isBlank()) {
             // 防御性兜底：空输入按 CHAT 处理
