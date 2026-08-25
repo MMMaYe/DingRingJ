@@ -159,7 +159,7 @@ public class ConclusionService {
                 "isTyping", true));
         try {
             // 构建 ReactAgent 上下文（systemPrompt 与收束上下文--观点清单/全量原文窗口--
-            // 由 GroupContextMemoryHook 按意图组装）；话题标题作为兜底 USER 轮传入
+            // 由 GroupContextMemoryHook 按意图组装）；显式蒸馏指令作为兜底 USER 轮传入
             Map<String, Object> context = new HashMap<>();
             context.put("groupId", topic.getChatGroupId());
             context.put("topicId", topic.getId());
@@ -171,26 +171,13 @@ public class ConclusionService {
             context.put("ragQuery", topic.getTitle());
             // 话题标题（InjectKbHook topic 源检索相似历史话题用；conclude 模板参数）
             context.put(StateKeys.TOPIC_TITLE, topic.getTitle());
-            List<LlmService.ChatTurn> fallbackTurns =
-                    List.of(LlmService.ChatTurn.user(topic.getTitle()));
-            LlmService.AgentResult agentResult;
-            try {
-                agentResult = llmService.chat(concluder, "", fallbackTurns,
-                        LlmService.ToolSet.CONCLUDE, context);
-            } catch (Exception first) {
-                LogHelper.printWarnLog(ConclusionService.class, "ConclusionService.generate",
-                        "GENERATE_CONCLUSION", "LLM首次失败重试", "agent={} 失败原因: {}",
-                        concluder.getName(), first.getMessage());
-                agentResult = llmService.chat(concluder, "", fallbackTurns,
-                        LlmService.ToolSet.CONCLUDE, context);
-            }
-            String conclusion = agentResult.content();
-            if (conclusion == null || conclusion.isBlank()) {
-                LogHelper.printWarnLog(ConclusionService.class, "ConclusionService.generate",
-                        "GENERATE_CONCLUSION", "总结 Agent 返回空结论", "topicId={} agent={}",
-                        topicId, concluder.getName());
-                throw new BizException(ErrorCode.TOPIC_CONCLUSION_FAILED, "总结 Agent 返回空结论");
-            }
+            // 兜底 USER 轮传显式蒸馏指令而非裸标题：蒸馏要求全在 system prompt 中，
+            // flash 级模型对最后一轮 user 消息的服从性远高于 system 埋的长指令，
+            // 裸标题会诱导出「给大家总结一下本次讨论内容。」这类只有开场白的劣质输出
+            List<LlmService.ChatTurn> fallbackTurns = List.of(LlmService.ChatTurn.user(
+                    "请开始对主题「" + topic.getTitle() + "」进行知识蒸馏，"
+                            + "严格按系统提示中的输出格式（Markdown 分节）输出结论。"));
+            String conclusion = callForConclusion(concluder, fallbackTurns, context);
             // 结论中不应残留协作标记
             conclusion = CollaborationMarkers.stripMarkers(conclusion);
 
@@ -241,6 +228,58 @@ public class ConclusionService {
                     "agentName", concluder.getName(),
                     "isTyping", false));
         }
+    }
+
+    /** 劣质结论的最小可接受长度：与 {@link #isDegenerateConclusion} 配合 */
+    private static final int MIN_CONCLUSION_LEN = 50;
+
+    /**
+     * 调用 LLM 生成结论：异常与劣质输出（过短且无分节结构，如 flash 模型只回一句开场白即 STOP）
+     * 均重试一次；两次均劣质时取较长的一次并告警，不回滚--
+     * TIMEOUT 触发路径下回滚会回到 IN_PROGRESS，可能被看门狗再次触发收束形成循环。
+     * 两次均为空/异常则抛出，由调用方走既有失败回滚路径。
+     */
+    private String callForConclusion(Agent concluder, List<LlmService.ChatTurn> fallbackTurns,
+                                     Map<String, Object> context) {
+        String best = "";
+        for (int attempt = 1; attempt <= 2; attempt++) {
+            try {
+                String content = llmService.chat(concluder, "", fallbackTurns,
+                        LlmService.ToolSet.CONCLUDE, context).content();
+                if (content == null) {
+                    content = "";
+                }
+                if (!isDegenerateConclusion(content)) {
+                    return content;
+                }
+                LogHelper.printWarnLog(ConclusionService.class, "ConclusionService.callForConclusion",
+                        "GENERATE_CONCLUSION", attempt == 1 ? "结论质量不达标，重试" : "结论质量仍不达标，取较长结果",
+                        "length={} content={}", content.length(), content);
+                if (content.length() > best.length()) {
+                    best = content;
+                }
+            } catch (Exception e) {
+                if (attempt == 2) {
+                    throw e;
+                }
+                LogHelper.printWarnLog(ConclusionService.class, "ConclusionService.callForConclusion",
+                        "GENERATE_CONCLUSION", "LLM调用失败，重试", "agent={} 失败原因: {}",
+                        concluder.getName(), e.getMessage());
+            }
+        }
+        if (best.isBlank()) {
+            throw new BizException(ErrorCode.TOPIC_CONCLUSION_FAILED, "总结 Agent 返回空结论");
+        }
+        return best;
+    }
+
+    /**
+     * 劣质结论判定：conclude 模板强制要求 Markdown 分节输出，
+     * 既无 ## 分节结构又低于最小长度的视为废结论。
+     */
+    private boolean isDegenerateConclusion(String content) {
+        String stripped = content == null ? "" : content.strip();
+        return stripped.length() < MIN_CONCLUSION_LEN && !stripped.contains("##");
     }
 
     /** 解析总结 Agent：指定优先；否则按调度评分选最高的成员 Agent */

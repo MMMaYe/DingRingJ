@@ -65,6 +65,14 @@ class ConclusionServiceTest {
     private static final long GROUP_ID = 2L;
     private static final long AGENT_ID = 5L;
 
+    /** 符合 conclude 模板要求（Markdown 分节）的合格结论 */
+    private static final String VALID_CONCLUSION =
+            "## 一句话结论\n虚拟线程适合 IO 密集型高并发场景，以极低线程成本换取吞吐。\n\n"
+                    + "## 决策与共识\n- [洞察] 虚拟线程创建成本远低于平台线程（据 阿源）";
+
+    /** 劣质结论样例：短且无分节结构（真实案例：flash 模型 8 token 开场白即 STOP） */
+    private static final String DEGENERATE_CONCLUSION = "给大家总结一下本次讨论内容。";
+
     @BeforeEach
     void setUp() {
         topicRepository = mock(TopicRepository.class);
@@ -114,7 +122,7 @@ class ConclusionServiceTest {
         when(speakerScheduler.rank(any(), any()))
                 .thenReturn(List.of(new SpeakerScheduler.ScoredAgent(agent(), 100, "FREE_SCHEDULE")));
         when(llmService.chat(any(), any(), any(), any(), any()))
-                .thenReturn(LlmService.AgentResult.of("结论内容"));
+                .thenReturn(LlmService.AgentResult.of(VALID_CONCLUSION));
         when(topicRepository.update(t)).thenReturn(true);
         when(messageRepository.countByTopicId(TOPIC_ID)).thenReturn(2L);
     }
@@ -183,7 +191,7 @@ class ConclusionServiceTest {
         service.generate(TOPIC_ID, GROUP_ID, "USER", null);
 
         assertThat(t.getStatus()).isEqualTo(TopicStatus.CLOSED);
-        assertThat(t.getConclusion()).isEqualTo("结论内容");
+        assertThat(t.getConclusion()).isEqualTo(VALID_CONCLUSION);
         verify(topicRepository).update(t);
         verify(groupBroadcastService).broadcast(eq(GROUP_ID), eq(WsConstants.TOPIC_CLOSED), any());
         verify(eventPublisher).publish(any(TopicClosed.class));
@@ -218,6 +226,43 @@ class ConclusionServiceTest {
 
         verify(llmService, never()).chat(any(), any(), any(), any(), any());
         verify(groupBroadcastService, never()).broadcast(eq(GROUP_ID), eq(WsConstants.TOPIC_CLOSED), any());
+    }
+
+    @Test
+    @DisplayName("劣质结论（短且无分节）：重试一次，重试合格则正常关闭")
+    void generateShouldRetryOnDegenerateConclusion() {
+        Topic t = topic(TopicStatus.CONCLUDING);
+        when(topicRepository.findById(TOPIC_ID)).thenReturn(Optional.of(t));
+        stubGenerateSuccess(t);
+        when(llmService.chat(any(), any(), any(), any(), any()))
+                .thenReturn(LlmService.AgentResult.of(DEGENERATE_CONCLUSION))
+                .thenReturn(LlmService.AgentResult.of(VALID_CONCLUSION));
+
+        service.generate(TOPIC_ID, GROUP_ID, "USER", null);
+
+        verify(llmService, times(2)).chat(any(), any(), any(), any(), any());
+        assertThat(t.getStatus()).isEqualTo(TopicStatus.CLOSED);
+        assertThat(t.getConclusion()).isEqualTo(VALID_CONCLUSION);
+        verify(groupBroadcastService).broadcast(eq(GROUP_ID), eq(WsConstants.TOPIC_CLOSED), any());
+    }
+
+    @Test
+    @DisplayName("两次均劣质：取较长的一次结果关闭，不回滚（避免 TIMEOUT 路径循环重触发）")
+    void generateShouldAcceptLongerDegenerateWhenRetryAlsoDegenerate() {
+        Topic t = topic(TopicStatus.CONCLUDING);
+        when(topicRepository.findById(TOPIC_ID)).thenReturn(Optional.of(t));
+        stubGenerateSuccess(t);
+        String longerDegenerate = "本次讨论围绕虚拟线程的适用场景与线程池选型展开，尚未形成最终结论。";
+        when(llmService.chat(any(), any(), any(), any(), any()))
+                .thenReturn(LlmService.AgentResult.of(DEGENERATE_CONCLUSION))
+                .thenReturn(LlmService.AgentResult.of(longerDegenerate));
+
+        service.generate(TOPIC_ID, GROUP_ID, "USER", null);
+
+        verify(llmService, times(2)).chat(any(), any(), any(), any(), any());
+        assertThat(t.getStatus()).isEqualTo(TopicStatus.CLOSED);
+        assertThat(t.getConclusion()).isEqualTo(longerDegenerate);
+        verify(groupBroadcastService, never()).broadcast(eq(GROUP_ID), eq(WsConstants.ERROR), any());
     }
 
     /* ==================== 并发守卫 ==================== */
