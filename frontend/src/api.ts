@@ -192,3 +192,33 @@ export const LogApi = {
     API.get<TraceDetail>(`/api/logs/traces/${encodeURIComponent(traceId)}`),
   llmCalls: () => API.get<LlmCall[]>('/api/logs/llm-calls'),
 };
+
+// ==================== 用户问卷（画像主数据） ====================
+
+/** 问卷选项 */
+export interface QuestionOption {
+  value: string;
+  label: string;
+}
+
+/** 问卷题目（与后端 QuestionnaireDTO.QuestionDTO 对齐） */
+export interface QuestionDef {
+  key: string;
+  label: string;
+  dimension: string;
+  type: 'SINGLE' | 'MULTI' | 'TEXT' | 'AREA_LEVELS';
+  required: boolean;
+  options: QuestionOption[];
+}
+
+/** 问卷 schema + 当前有效答案（GET /api/questionnaire） */
+export interface QuestionnaireDTO {
+  questions: QuestionDef[];
+  answers: Record<string, unknown>;
+}
+
+export const QuestionnaireApi = {
+  get: () => API.get<QuestionnaireDTO>('/api/questionnaire'),
+  submit: (answers: Record<string, unknown>) =>
+    API.post<void>('/api/questionnaire', { answers }),
+};

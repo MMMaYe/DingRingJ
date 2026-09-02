@@ -1,0 +1,125 @@
+/* Profile 问卷页样式（editorial 风格，复用全局 CSS 变量） */
+
+/* ---- 分步指示器 ---- */
+.profile-steps {
+  display: flex;
+  gap: 8px;
+  margin: 0 0 20px;
+  padding: 0;
+  list-style: none;
+}
+.profile-steps__item {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border: 1px solid var(--border-neutral-l1);
+  border-radius: 10px;
+  background: var(--bg-base-secondary);
+  color: var(--text-tertiary);
+  transition: border-color .15s, color .15s;
+}
+.profile-steps__item.is-active {
+  border-color: var(--border-brand);
+  color: var(--text-default);
+}
+.profile-steps__item.is-done { color: var(--text-secondary); }
+.profile-steps__index {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
+  background: var(--bg-overlay-l2);
+}
+.profile-steps__item.is-active .profile-steps__index {
+  background: var(--border-brand);
+  color: var(--bg-base-secondary);
+}
+.profile-steps__name { font-size: 13px; }
+
+/* ---- 题目区块 ---- */
+.profile-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 20px;
+  border: 1px solid var(--border-neutral-l1);
+  border-radius: 12px;
+  background: var(--bg-base-secondary);
+}
+.q-item__label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-default);
+  margin-bottom: 10px;
+}
+.q-item__optional {
+  margin-left: 4px;
+  font-weight: 400;
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
+/* ---- 选项 chips ---- */
+.q-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.q-chip {
+  padding: 6px 14px;
+  border: 1px solid var(--border-neutral-l2);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+  transition: border-color .15s, color .15s, background .15s;
+}
+.q-chip:hover { border-color: var(--border-brand); color: var(--text-default); }
+.q-chip.is-selected {
+  border-color: var(--border-brand);
+  background: var(--bg-overlay-l1);
+  color: var(--text-brand);
+  font-weight: 600;
+}
+.q-chip--sm { padding: 4px 10px; font-size: 12px; }
+
+/* ---- 文本输入 ---- */
+.q-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--border-neutral-l2);
+  border-radius: 8px;
+  background: var(--bg-base-tertiary);
+  color: var(--text-default);
+  font-size: 13px;
+}
+.q-input:focus { outline: none; border-color: var(--border-brand); }
+
+/* ---- 领域水平联动 ---- */
+.q-levels { display: flex; flex-direction: column; gap: 10px; }
+.q-level-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.q-level-name {
+  min-width: 96px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.q-level-empty {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  padding: 8px 0;
+}
+
+/* ---- 底部操作 ---- */
+.profile-actions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 20px;
+}

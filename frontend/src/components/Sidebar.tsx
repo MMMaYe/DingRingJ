@@ -35,6 +35,9 @@ const IconSparkles = () => (
 const IconTool = () => (
   <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M13.3 5.2a3.2 3.2 0 01-4.3 4.3L4 14.5A1.6 1.6 0 011.5 12l5-5a3.2 3.2 0 014.3-4.3l-2 2 1.5 1.5 2-2z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/></svg>
 );
+const IconUser = () => (
+  <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="5" r="2.8" stroke="currentColor" strokeWidth="1.2"/><path d="M2.8 13.5c.9-2.4 2.8-3.7 5.2-3.7s4.3 1.3 5.2 3.7" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>
+);
 const IconSearch = () => (
   <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="6" cy="6" r="4" stroke="currentColor" strokeWidth="1.2"/><path d="M9.5 9.5L12.5 12.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>
 );
@@ -137,6 +140,10 @@ export default function Sidebar({ children, footer, showGroupLabel, onSearch, se
         <NavLink to="/skills" className={({ isActive }) => `sidebar__nav-item${isActive ? ' sidebar__nav-item--active' : ''}`}>
           <span className="sidebar__nav-icon"><IconTool /></span>
           <span className="sidebar__nav-text">SKILL 管理</span>
+        </NavLink>
+        <NavLink to="/profile" className={({ isActive }) => `sidebar__nav-item${isActive ? ' sidebar__nav-item--active' : ''}`}>
+          <span className="sidebar__nav-icon"><IconUser /></span>
+          <span className="sidebar__nav-text">个人画像</span>
         </NavLink>
       </nav>
 

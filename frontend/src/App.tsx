@@ -11,6 +11,7 @@ const KBPage = lazy(() => import('./pages/KB'));
 const TopicsPage = lazy(() => import('./pages/Topics'));
 const SkillsPage = lazy(() => import('./pages/Skills'));
 const DashboardPage = lazy(() => import('./pages/Dashboard'));
+const ProfilePage = lazy(() => import('./pages/Profile'));
 
 /**
  * 页面切换过渡容器
@@ -36,6 +37,7 @@ function PageTransition() {
           <Route path="/skills" element={<SkillsPage />} />
           <Route path="/cards" element={<CardsPage />} />
           <Route path="/kb" element={<KBPage />} />
+          <Route path="/profile" element={<ProfilePage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Suspense>
