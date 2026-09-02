@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 用户问卷答案表 Mapper：版本化写回，重填时标记旧记录失效，插入新记录 -->
+<mapper namespace="com.dingring.infrastructure.persistence.mapper.UserQuestionnaireMapper">
+
+    <resultMap id="questionnaireMap" type="com.dingring.domain.user.UserQuestionnaire">
+        <id column="id" property="id"/>
+        <result column="answers" property="answers"
+                typeHandler="com.dingring.infrastructure.persistence.typehandler.JsonMapTypeHandler"/>
+    </resultMap>
+
+    <sql id="columns">
+        id, user_id, answers, version, status, create_time, update_time
+    </sql>
+
+    <select id="findValidByUserId" resultMap="questionnaireMap">
+        SELECT <include refid="columns"/>
+        FROM user_questionnaire
+        WHERE user_id = #{userId} AND status = 1
+    </select>
+
+    <select id="selectMaxVersion" resultType="java.lang.Integer">
+        SELECT MAX(version) FROM user_questionnaire WHERE user_id = #{userId}
+    </select>
+
+    <update id="expireByUserId">
+        UPDATE user_questionnaire
+        SET status = 0, update_time = NOW()
+        WHERE user_id = #{userId} AND status = 1
+    </update>
+
+    <insert id="insert" parameterType="com.dingring.domain.user.UserQuestionnaire"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO user_questionnaire (user_id, answers, version, status, create_time, update_time)
+        VALUES (#{userId},
+                #{answers, typeHandler=com.dingring.infrastructure.persistence.typehandler.JsonMapTypeHandler},
+                #{version}, #{status}, #{createTime}, #{updateTime})
+    </insert>
+
+</mapper>

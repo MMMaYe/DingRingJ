@@ -149,6 +149,18 @@ CREATE TABLE IF NOT EXISTS user_topic_profile (
     INDEX idx_upt_user_title (user_id, topic_title, create_time)
 );
 
+-- 用户问卷答案表（画像主数据事实源，版本化写回：重填时标记旧记录失效，插入新记录 version+1）
+CREATE TABLE IF NOT EXISTS user_questionnaire (
+    id          BIGINT   PRIMARY KEY AUTO_INCREMENT COMMENT '主键',
+    user_id     BIGINT   NOT NULL COMMENT '用户 ID',
+    answers     TEXT     NOT NULL COMMENT '问卷答案(JSON, 题目key→枚举编码)',
+    version     INT      NOT NULL DEFAULT 1 COMMENT '填写版本号(每次重填+1)',
+    status      TINYINT(1) NOT NULL DEFAULT 1 COMMENT '1=有效, 0=失效（历史版本）',
+    create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    update_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
+    INDEX idx_user_status (user_id, status)
+);
+
 -- SKILL 表（技能 = 工具组 + 附加系统提示词；种子数据启动时由 skill-config.json 幂等写入，uk_name 兜底）
 CREATE TABLE IF NOT EXISTS skill (
     id            BIGINT       PRIMARY KEY AUTO_INCREMENT COMMENT '主键',
