@@ -8,10 +8,16 @@ import com.dingring.common.util.JsonHelper;
 import com.dingring.common.util.LogHelper;
 import com.dingring.infrastructure.aop.Event;
 import org.springframework.ai.chat.messages.Message;
+import org.springframework.ai.chat.metadata.ChatResponseMetadata;
+import org.springframework.ai.chat.metadata.Usage;
+import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.model.tool.ToolCallingChatOptions;
+import org.springframework.ai.tool.ToolCallback;
+import org.springframework.ai.tool.definition.ToolDefinition;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
-import org.springframework.ai.tool.ToolCallback;
+
+import java.nio.charset.StandardCharsets;
 
 import java.util.List;
 
@@ -59,8 +65,102 @@ public class ModelRequestLoggingInterceptor extends ModelInterceptor {
                     "LLM请求日志", "request={}", JsonHelper.toJson(request));
 //            logRequest(request);
         }
-        // 纯观察用途：原样透传请求，不修改任何内容
-        return handler.call(request);
+        ContextSize contextSize = contextSizeOf(request);
+        ModelResponse response = handler.call(request);
+        if (logEnabled) {
+            logContextUsage(request, contextSize, response);
+        }
+        return response;
+    }
+
+    private void logContextUsage(ModelRequest request, ContextSize contextSize, ModelResponse response) {
+        Usage usage = usageOf(response);
+        LogHelper.printLog(ModelRequestLoggingInterceptor.class, "interceptModel", "LLM_CONTEXT_USAGE",
+                "LLM上下文统计",
+                "model={} messageCount={} toolCount={} systemChars={} messageChars={} toolChars={} "
+                        + "contextChars={} contextBytes={} contextTokens={} promptTokens={} completionTokens={} totalTokens={} tokenSource={}",
+                modelOf(request), contextSize.messageCount(), contextSize.toolCount(),
+                contextSize.systemChars(), contextSize.messageChars(), contextSize.toolChars(),
+                contextSize.contextChars(), contextSize.contextBytes(),
+                tokenOf(usage == null ? null : usage.getPromptTokens()),
+                tokenOf(usage == null ? null : usage.getPromptTokens()),
+                tokenOf(usage == null ? null : usage.getCompletionTokens()),
+                tokenOf(usage == null ? null : usage.getTotalTokens()),
+                usage == null ? "unavailable" : "provider");
+    }
+
+    private Usage usageOf(ModelResponse response) {
+        if (response == null) {
+            return null;
+        }
+        ChatResponse chatResponse = response.getChatResponse();
+        if (chatResponse == null) {
+            return null;
+        }
+        ChatResponseMetadata metadata = chatResponse.getMetadata();
+        return metadata == null ? null : metadata.getUsage();
+    }
+
+    private String tokenOf(Integer tokens) {
+        return tokens == null ? "-" : String.valueOf(tokens);
+    }
+
+    private ContextSize contextSizeOf(ModelRequest request) {
+        String systemText = request.getSystemMessage() == null ? "" : request.getSystemMessage().getText();
+        long messageChars = 0;
+        long messageBytes = 0;
+        List<Message> messages = request.getMessages();
+        int messageCount = messages == null ? 0 : messages.size();
+        if (messages != null) {
+            for (Message message : messages) {
+                String text = message == null || message.getText() == null ? "" : message.getText();
+                messageChars += text.length();
+                messageBytes += utf8Length(text);
+            }
+        }
+
+        long toolChars = 0;
+        long toolBytes = 0;
+        int toolCount = request.getTools() == null ? 0 : request.getTools().size();
+        if (request.getTools() != null) {
+            for (String tool : request.getTools()) {
+                toolChars += lengthOf(tool);
+                toolBytes += utf8Length(tool);
+            }
+        }
+        List<ToolCallback> callbacks = request.getDynamicToolCallbacks();
+        if (callbacks != null) {
+            toolCount += callbacks.size();
+            for (ToolCallback callback : callbacks) {
+                ToolDefinition definition = callback == null ? null : callback.getToolDefinition();
+                if (definition == null) {
+                    continue;
+                }
+                toolChars += lengthOf(definition.name()) + lengthOf(definition.description())
+                        + lengthOf(definition.inputSchema());
+                toolBytes += utf8Length(definition.name()) + utf8Length(definition.description())
+                        + utf8Length(definition.inputSchema());
+            }
+        }
+
+        long systemChars = systemText.length();
+        long systemBytes = utf8Length(systemText);
+        return new ContextSize(systemChars, messageChars, toolChars,
+                systemChars + messageChars + toolChars,
+                systemBytes + messageBytes + toolBytes, messageCount, toolCount);
+    }
+
+    private int lengthOf(String value) {
+        return value == null ? 0 : value.length();
+    }
+
+    private long utf8Length(String value) {
+        return value == null ? 0 : value.getBytes(StandardCharsets.UTF_8).length;
+    }
+
+    private record ContextSize(long systemChars, long messageChars, long toolChars,
+                               long contextChars, long contextBytes,
+                               int messageCount, int toolCount) {
     }
 
     /**

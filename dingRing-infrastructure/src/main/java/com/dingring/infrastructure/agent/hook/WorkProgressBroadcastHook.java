@@ -10,6 +10,7 @@ import com.dingring.common.util.LogHelper;
 import com.dingring.domain.service.GroupBroadcastService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import com.dingring.infrastructure.aop.Event;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -74,6 +75,7 @@ public class WorkProgressBroadcastHook extends ModelHook {
         }
 
         @Override
+        @Event(eventCode = "HOOK_WORK_PROGRESS", eventName = "广播子 Agent 执行进度")
         public ToolCallResponse interceptToolCall(ToolCallRequest request, ToolCallHandler handler) {
             Long groupId = resolveGroupId(request);
             if (groupId == null) {
