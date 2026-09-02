@@ -1,18 +1,52 @@
 # DingRingJ
 
+[![Java 21](https://img.shields.io/badge/Java-21-orange.svg)](https://www.oracle.com/java/technologies/javase/jdk21-archive-downloads.html)
+[![Spring Boot 3.5](https://img.shields.io/badge/Spring%20Boot-3.5-brightgreen.svg)](https://spring.io/projects/spring-boot)
+[![React 19](https://img.shields.io/badge/React-19-61dafb.svg)](https://react.dev/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-多 Agent AI 群聊学习系统（Java 实现）—— 一个群聊，N 个 AI「同事」，围绕主题激烈讨论，收束时由专家汇总结论并沉淀为知识卡片。
+> **DingRingJ 是一个面向学习与知识沉淀的多 Agent AI 群聊系统。**
+> 用户只需要进入一个群聊，就可以和多个拥有不同角色、模型与专长的 AI「同事」围绕主题讨论；讨论结束后，系统会自动总结结论并生成可复习的知识卡片。
 
-![chatPage](聊天交互页.png)
+## 项目描述
+
+DingRingJ 试图把「向 AI 提问」升级为「和一群 AI 同事一起思考」。系统中的每个 Agent 都可以独立配置名称、头像、人设、提示词以及 LLM 供应商和模型。用户发起一个问题后，系统会识别当前意图，在闲聊、主题讨论、任务协作和结论收束之间进行路由，并由调度器推动 Agent 自主接力发言。
+
+项目的核心价值是形成一个持续学习闭环：
+
+```text
+提出问题 → 多 Agent 讨论 → 专家总结 → 知识卡片 → 复习巩固 → 再次讨论
+```
+
+它适合用于：
+
+- 技术学习、方案评审与知识问答
+- 多角色协作式头脑风暴
+- 将讨论过程沉淀为可检索、可复习的个人知识库
+- 研究多 Agent 协作、LLM 工作流、记忆和 RAG 的工程实现
+
+![DingRingJ 群聊页面](聊天交互页.png)
+
+## 目录
+
+- [项目描述](#项目描述)
+- [为什么做](#为什么做)
+- [核心特性](#核心特性)
+- [技术栈](#技术栈)
+- [架构](#架构)
+- [快速开始](#快速开始)
+- [测试与构建](#测试与构建)
+- [文档](#文档)
+- [Roadmap](#roadmap)
+- [License](#license)
 
 ## 为什么做
 
 一个人学习缺少技术讨论的对撞感，单一 Agent 问答又很枯燥。DingRing 想还原「和同事在群聊里聊技术」的氛围：群里 N 个人中只有你一个真人，其余是不同人设、不同模型的 Agent 同事（DeepSeek / Kimi / Claude / Qwen……）。
 
-同时，它更像一个「一人学堂」：这些 Agent 同事不会嫌弃问题蠢，也不会没有耐心的对你吼「这个问题之前不是说过了么？」——大家一起思考、一起讨论、一起解决问题，最终形成 **讨论 → 沉淀 → 复习 → 再讨论** 的学习闭环。
+同时，它更像一个「一人学堂」：这些 Agent 同事不会嫌弃问题蠢，也不会没有耐心地吼「这个问题之前不是说过了么？」——大家一起思考、一起讨论、一起解决问题，最终形成 **讨论 → 沉淀 → 复习 → 再讨论** 的学习闭环。
 
-![kbCardPage](知识卡片页面.png)
+![DingRingJ 知识卡片页面](知识卡片页面.png)
 
 ## 核心特性
 
