@@ -36,7 +36,7 @@ DingRingJ 的用户画像体系目前完全依赖 LLM 从对话中**被动提炼
 
 ## 2. 问卷内容设计
 
-共 **12 题、6 维度**，约 3-5 分钟完成。填空题可选，选择题必有值。答案 key 使用英文枚举编码（如 `MID_ENGINEER`），与中文文案解耦，问卷文案改版不影响存量数据。
+共 **13 题、6 维度**，约 3-5 分钟完成。填空题可选，选择题必有值。答案 key 使用英文枚举编码（如 `MID`），与中文文案解耦，问卷文案改版不影响存量数据。
 
 ### 维度 1：背景与经验（3 题）
 
@@ -135,7 +135,7 @@ CREATE TABLE user_questionnaire (
 
 | 接口 | 方法 | 说明 |
 |---|---|---|
-| `/api/questionnaire` | GET | 返回题目 schema + 当前有效 answers（未填过返回空 answers 与全默认值） |
+| `/api/questionnaire` | GET | 返回题目 schema + 当前有效 answers（未填过返回空 answers，前端按 schema 默认值渲染） |
 | `/api/questionnaire` | POST | 提交 answers；单事务完成：校验 → `user_questionnaire` 存新版本（事实源）→ 拼接画像文本 → `user_profile` 存新版本（消费视图） |
 
 响应包裹沿用 `ApiResponse`；校验失败抛 `BizException`（新增 ErrorCode，400 类参数错误）。
