@@ -22,10 +22,12 @@ spring:
           username: postgres
           password: postgres123
           driver-class-name: org.postgresql.Driver
-  # Nacos 连接参数（本地开发可不配，PromptTemplateLoader 自动降级到本地 classpath 加载）
+  # Nacos 连接参数
+  # 默认指向云服务器 Nacos（已部署于 101.33.227.80:8848）；本地开发可通过
+  # 环境变量 NACOS_ADDR 覆盖为空或不填，PromptTemplateLoader 自动降级到本地 classpath 加载
   cloud:
     nacos:
-      server-addr: ${NACOS_ADDR:}
+      server-addr: ${NACOS_ADDR:101.33.227.80:8848}
       username: ${NACOS_USERNAME:nacos}
       password: ${NACOS_PASSWORD:nacos}
   # MySQL 生产库（公网地址，必须配置连接保活/探活防止 NAT/防火墙静默断连）
