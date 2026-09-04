@@ -10,7 +10,6 @@ import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * {@link MockLlmService} 单元测试。
@@ -96,18 +95,40 @@ class MockLlmServiceTest {
     }
 
     @Test
-    @DisplayName("带工具 chat 明确不支持")
-    void toolChatShouldBeUnsupported() {
-        assertThatThrownBy(() -> service.chat(agent("专家"), "讨论", List.of(),
-                LlmService.ToolSet.DISCUSS, Map.of()))
-                .isInstanceOf(UnsupportedOperationException.class);
+    @DisplayName("带工具 chat 返回完整 AgentResult")
+    void toolChatShouldReturnAgentResult() {
+        for (LlmService.ToolSet toolSet : List.of(
+                LlmService.ToolSet.CHAT,
+                LlmService.ToolSet.DISCUSS,
+                LlmService.ToolSet.WORK,
+                LlmService.ToolSet.CONCLUDE)) {
+            LlmService.AgentResult result = service.chat(agent("专家"), "讨论", List.of(
+                            ChatTurn.user("讨论内容")), toolSet, Map.of());
+
+            assertThat(result.content()).isNotBlank();
+            assertThat(result.hasToolCalls()).isFalse();
+        }
     }
 
     @Test
-    @DisplayName("带工具 chatStream 明确不支持")
-    void toolChatStreamShouldBeUnsupported() {
-        assertThatThrownBy(() -> service.chatStream(agent("专家"), "讨论", List.of(),
-                LlmService.ToolSet.DISCUSS, Map.of(), chunk -> {}))
-                .isInstanceOf(UnsupportedOperationException.class);
+    @DisplayName("带工具 chatStream 分块结果与最终结果一致")
+    void toolChatStreamShouldEmitChunksMatchingFinalResult() {
+        StringBuilder streamed = new StringBuilder();
+        LlmService.AgentResult result = service.chatStream(agent("专家"), "请按 STAR 框架总结", List.of(
+                        ChatTurn.user("讨论内容")),
+                LlmService.ToolSet.CONCLUDE, Map.of(), streamed::append);
+
+        assertThat(streamed).isNotEmpty();
+        assertThat(streamed.toString()).isEqualTo(result.content());
+        assertThat(result.content()).contains("STAR");
+    }
+
+    @Test
+    @DisplayName("带工具 chatStream 允许空回调")
+    void toolChatStreamShouldAllowNullCallback() {
+        LlmService.AgentResult result = service.chatStream(agent("专家"), "讨论", List.of(),
+                LlmService.ToolSet.WORK, Map.of(), null);
+
+        assertThat(result.content()).isNotBlank();
     }
 }

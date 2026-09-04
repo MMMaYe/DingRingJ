@@ -41,6 +41,29 @@ public class MockLlmService implements LlmService {
     @Override
     public String chatStream(Agent agent, String systemPrompt, List<ChatTurn> messages, Consumer<String> onDelta) {
         String reply = chat(agent, systemPrompt, messages);
+        emitChunks(reply, onDelta);
+        return reply;
+    }
+
+    @Override
+    public AgentResult chat(Agent agent, String systemPrompt, List<ChatTurn> messages,
+                            ToolSet toolSet, Map<String, Object> context) {
+        return AgentResult.of(chat(agent, systemPrompt, messages));
+    }
+
+    @Override
+    public AgentResult chatStream(Agent agent, String systemPrompt, List<ChatTurn> messages,
+                                  ToolSet toolSet, Map<String, Object> context,
+                                  Consumer<String> onDelta) {
+        String reply = chat(agent, systemPrompt, messages);
+        emitChunks(reply, onDelta);
+        return AgentResult.of(reply);
+    }
+
+    private void emitChunks(String reply, Consumer<String> onDelta) {
+        if (onDelta == null) {
+            return;
+        }
         for (String chunk : reply.split("(?<=[。！？；\n])")) {
             if (chunk.isEmpty()) {
                 continue;
@@ -53,20 +76,6 @@ public class MockLlmService implements LlmService {
                 break;
             }
         }
-        return reply;
-    }
-
-    @Override
-    public AgentResult chat(Agent agent, String systemPrompt, List<ChatTurn> messages,
-                            ToolSet toolSet, Map<String, Object> context) {
-        throw new UnsupportedOperationException("MockLlmService 仅支持无工具 chat");
-    }
-
-    @Override
-    public AgentResult chatStream(Agent agent, String systemPrompt, List<ChatTurn> messages,
-                                  ToolSet toolSet, Map<String, Object> context,
-                                  Consumer<String> onDelta) {
-        throw new UnsupportedOperationException("MockLlmService 仅支持无工具 chat");
     }
 
     private String mockReply(Agent agent, String lastUser) {

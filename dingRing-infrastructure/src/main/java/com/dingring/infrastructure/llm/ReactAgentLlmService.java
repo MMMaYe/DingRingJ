@@ -1,6 +1,9 @@
 package com.dingring.infrastructure.llm;
 
+import com.alibaba.cloud.ai.graph.NodeOutput;
+import com.alibaba.cloud.ai.graph.streaming.OutputType;
 import com.alibaba.cloud.ai.graph.agent.ReactAgent;
+import com.alibaba.cloud.ai.graph.streaming.StreamingOutput;
 import com.dingring.common.exception.BizException;
 import com.dingring.common.exception.ErrorCode;
 import com.dingring.common.util.JsonHelper;
@@ -33,8 +36,7 @@ import java.util.function.Consumer;
  * <p>参数覆盖（temperature/maxTokens/readTimeout/jsonMode）已由 {@link SaaLlmFactory#buildChatModel}
  * 装配进 model 的 defaultOptions；ReactAgent 未指定 chatOptions 时复用 model 默认 options，
  * 因此无需在 Agent 层重复处理。
- * <p>流式：SAA 1.1.2.3 的 ReactAgent 无公共流式入口，chatStream 统一回退非流式
- * （与无工具 chatStream 语义一致，整段回调 onDelta）。
+ * <p>流式：带工具 Agent 通过 SAA 1.1.2.3 的 {@code ReactAgent.stream(Map)} 消费图事件，转发模型增量并记录推理、工具及完成事件；无工具路径仍回退为一次性回调。
  */
 @Slf4j
 @Service
@@ -148,11 +150,116 @@ public class ReactAgentLlmService implements LlmService {
     @Event(eventCode = "AGENT_SPEAK", eventName = "流式Agent发言")
     public AgentResult chatStream(Agent agent, String systemPrompt, List<ChatTurn> messages,
                                   ToolSet toolSet, Map<String, Object> context, Consumer<String> onDelta) {
-        AgentResult result = chat(agent, systemPrompt, messages, toolSet, context);
-        if (onDelta != null && result.content() != null && !result.content().isEmpty()) {
-            onDelta.accept(result.content());
+        long startAt = System.currentTimeMillis();
+        try {
+            ReactAgent reactAgent = toolSet == ToolSet.WORK
+                    ? llmFactory.buildWorkAgent(agent)
+                    : llmFactory.buildDiscussAgent(agent, toolSet);
+            Map<String, Object> inputs = buildAgentInputs(systemPrompt, messages, context);
+
+            LogHelper.printLog(ReactAgentLlmService.class,
+                    "ReactAgentLlmService.chatStream", "AGENT_STREAM_INPUTS", "Agent流式调用开始",
+                    "agent={} model={} toolSet={} inputs={}", agent.getName(), agent.getModelName(),
+                    toolSet, JsonHelper.mapToJsonStr(inputs));
+
+            NodeOutput lastOutput = null;
+            for (NodeOutput output : reactAgent.stream(inputs).toIterable()) {
+                lastOutput = output;
+                logStreamOutput(agent, toolSet, output, onDelta);
+            }
+
+            AssistantMessage response = extractFinalAssistantMessage(lastOutput);
+            if (response == null) {
+                LogHelper.printWarnLog(ReactAgentLlmService.class,
+                        "ReactAgentLlmService.chatStream", "AGENT_STREAM_EMPTY", "Agent流式调用无最终响应",
+                        "agent={} model={} toolSet={} 耗时={}ms",
+                        agent.getName(), agent.getModelName(), toolSet,
+                        System.currentTimeMillis() - startAt);
+                return AgentResult.of("");
+            }
+
+            String content = response.getText() == null ? "" : response.getText();
+            boolean hasToolCalls = response.getToolCalls() != null && !response.getToolCalls().isEmpty();
+            LogHelper.printLog(ReactAgentLlmService.class,
+                    "ReactAgentLlmService.chatStream", "AGENT_STREAM_CLOSED", "Agent流式调用完成",
+                    "agent={} model={} toolSet={} 耗时={}ms 长度={} hasToolCalls={} 完整内容:\n{}",
+                    agent.getName(), agent.getModelName(), toolSet,
+                    System.currentTimeMillis() - startAt, content.length(), hasToolCalls, content);
+            return new AgentResult(content, hasToolCalls, List.of());
+        } catch (BizException e) {
+            throw e;
+        } catch (Exception e) {
+            LogHelper.printWarnLog(ReactAgentLlmService.class,
+                    "ReactAgentLlmService.chatStream", "AGENT_STREAM_ERROR", "Agent流式调用失败",
+                    "agent={} model={} toolSet={} 耗时={}ms error={}", e,
+                    agent.getName(), agent.getModelName(), toolSet,
+                    System.currentTimeMillis() - startAt, e.getMessage());
+            throw new BizException(ErrorCode.LLM_API_ERROR,
+                    "LLM 调用失败: " + agent.getName() + " - " + e.getMessage(), e);
         }
-        return result;
+    }
+
+    private void logStreamOutput(Agent agent, ToolSet toolSet, NodeOutput output, Consumer<String> onDelta) {
+        if (!(output instanceof StreamingOutput<?> streamingOutput)) {
+            LogHelper.printLog(ReactAgentLlmService.class,
+                    "ReactAgentLlmService.chatStream", "AGENT_STREAM_EVENT", "Agent流式事件",
+                    "agent={} toolSet={} node={} end={} outputType={}", agent.getName(), toolSet,
+                    output.node(), output.isEND(), "NODE_OUTPUT");
+            return;
+        }
+
+        OutputType outputType = streamingOutput.getOutputType();
+        Message message = streamingOutput.message();
+        if (message instanceof AssistantMessage assistantMessage) {
+            String reasoning = extractReasoning(assistantMessage);
+            if (reasoning != null && !reasoning.isBlank()) {
+                LogHelper.printLog(ReactAgentLlmService.class,
+                        "ReactAgentLlmService.chatStream", "AGENT_STREAM_REASONING", "Agent推理过程",
+                        "agent={} toolSet={} node={} outputType={} 推理内容:\n{}",
+                        agent.getName(), toolSet, output.node(), outputType, reasoning);
+            }
+
+            if (outputType == OutputType.AGENT_MODEL_STREAMING) {
+                String delta = assistantMessage.getText();
+                if (delta != null && !delta.isEmpty()) {
+                    LogHelper.printLog(ReactAgentLlmService.class,
+                            "ReactAgentLlmService.chatStream", "AGENT_STREAM_MODEL_DELTA", "Agent模型增量",
+                            "agent={} toolSet={} node={} 增量:\n{}",
+                            agent.getName(), toolSet, output.node(), delta);
+                    if (onDelta != null) {
+                        onDelta.accept(delta);
+                    }
+                }
+            }
+        } else if (outputType == OutputType.AGENT_TOOL_FINISHED) {
+            LogHelper.printLog(ReactAgentLlmService.class,
+                    "ReactAgentLlmService.chatStream", "AGENT_STREAM_TOOL_FINISHED", "Agent工具执行完成",
+                    "agent={} toolSet={} node={} 工具输出:\n{}",
+                    agent.getName(), toolSet, output.node(),
+                    message == null ? "" : message.getText());
+        } else {
+            LogHelper.printLog(ReactAgentLlmService.class,
+                    "ReactAgentLlmService.chatStream", "AGENT_STREAM_EVENT", "Agent流式事件",
+                    "agent={} toolSet={} node={} outputType={} message={}",
+                    agent.getName(), toolSet, output.node(), outputType,
+                    message == null ? "" : message.getText());
+        }
+    }
+
+    private AssistantMessage extractFinalAssistantMessage(NodeOutput lastOutput) {
+        if (lastOutput == null || lastOutput.state() == null) {
+            return null;
+        }
+        Object rawMessages = lastOutput.state().data().get("messages");
+        if (!(rawMessages instanceof List<?> messageList)) {
+            return null;
+        }
+        for (int i = messageList.size() - 1; i >= 0; i--) {
+            if (messageList.get(i) instanceof AssistantMessage assistantMessage) {
+                return assistantMessage;
+            }
+        }
+        return null;
     }
 
     @Event(eventCode = "AGENT_SPEAK_INPUTS", eventName = "构建Agent发言输入")
@@ -208,7 +315,7 @@ public class ReactAgentLlmService implements LlmService {
         if (message == null || message.getMetadata() == null || message.getMetadata().isEmpty()) {
             return null;
         }
-        for (String key : new String[]{"reasoning_content", "reasoning"}) {
+        for (String key : new String[]{"reasoningContent", "reasoning_content", "reasoning"}) {
             Object val = message.getMetadata().get(key);
             if (val instanceof String s && !s.isBlank()) {
                 return s;
