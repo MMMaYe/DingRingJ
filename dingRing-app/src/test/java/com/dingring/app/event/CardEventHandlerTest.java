@@ -10,6 +10,9 @@ import com.dingring.domain.event.KnowledgeCardGenerated;
 import com.dingring.domain.event.TopicClosed;
 import com.dingring.domain.service.DomainEventPublisher;
 import com.dingring.domain.service.LlmService;
+import com.dingring.domain.skill.Skill;
+import com.dingring.domain.skill.SkillLoaderService;
+import com.dingring.domain.skill.SkillScene;
 import com.dingring.infrastructure.prompt.PromptTemplateLoader;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -44,6 +47,7 @@ class CardEventHandlerTest {
     private GroupBroadcastService groupBroadcastService;
     private ObjectMapper objectMapper;
     private PromptTemplateLoader promptLoader;
+    private SkillLoaderService skillLoader;
     private CardEventHandler handler;
 
     @BeforeEach
@@ -55,9 +59,14 @@ class CardEventHandlerTest {
         groupBroadcastService = mock(GroupBroadcastService.class);
         objectMapper = new ObjectMapper();
         promptLoader = mock(PromptTemplateLoader.class);
+        skillLoader = mock(SkillLoaderService.class);
         handler = new CardEventHandler(agentRepository, cardRepository, llmService,
-                eventPublisher, groupBroadcastService, objectMapper, promptLoader);
+                eventPublisher, groupBroadcastService, objectMapper, promptLoader, skillLoader);
         when(promptLoader.render(eq("sediment"), any())).thenReturn("知识卡片提取模板");
+        // Mockito mock 接口时 default 方法同样被 mock（默认返回 null，会把 prompt 变 null），
+        // 故让 applySceneSkills 走真实 default 实现：loadSceneSkills 未打桩时 Mockito 默认返回空列表，
+        // default 方法原样返回 basePrompt——与生产端口的「无技能零行为变化」语义一致
+        org.mockito.Mockito.doCallRealMethod().when(skillLoader).applySceneSkills(any(), any());
     }
 
     private Agent agent(Long id, String name) {
@@ -282,6 +291,57 @@ class CardEventHandlerTest {
             assertThat(card.getQuestion()).isEqualTo("什么是 GC?");
             assertThat(card.getAnswer()).isEqualTo("垃圾回收");
             assertThat(card.getCategory()).isEqualTo("JVM");
+        }
+    }
+
+    @Nested
+    @DisplayName("card 场景技能注入")
+    class SceneSkillInjection {
+
+        @Test
+        @DisplayName("card 技能分节拼接在出厂模板之后，随 systemPrompt 传给 LLM")
+        void shouldAppendCardSceneSkillToSystemPrompt() {
+            Agent concluder = agent(99L, "总结者");
+            when(agentRepository.findById(99L)).thenReturn(Optional.of(concluder));
+            Skill skill = new Skill();
+            skill.setName("card-review-ready");
+            skill.setSystemPrompt("category 只能从白名单集合选一个");
+            // applySceneSkills 走真实 default 实现（见 setUp），这里只打桩数据源
+            when(skillLoader.loadSceneSkills(SkillScene.CARD)).thenReturn(List.of(skill));
+            when(llmService.chat(any(), anyString(), any(), any()))
+                    .thenReturn("[{\"question\":\"Q1\",\"answer\":\"A1\",\"category\":\"Java\"}]");
+            mockSaveBatchWithIdBackfill();
+
+            handler.onTopicClosed(topicClosedEvent(1L, 10L, 99L));
+
+            org.mockito.ArgumentCaptor<String> promptCaptor =
+                    org.mockito.ArgumentCaptor.forClass(String.class);
+            verify(llmService, timeout(2000)).chat(any(), promptCaptor.capture(), any(), any());
+            assertThat(promptCaptor.getValue())
+                    .contains("知识卡片提取模板")                          // 出厂模板基线仍在
+                    .contains("## 附加规范（SKILL: card-review-ready）")  // 技能分节头
+                    .contains("category 只能从白名单集合选一个");          // 技能正文
+            // 拼接时机断言：技能分节必须位于出厂模板之后
+            assertThat(promptCaptor.getValue().indexOf("## 附加规范"))
+                    .isGreaterThan(promptCaptor.getValue().indexOf("知识卡片提取模板"));
+        }
+
+        @Test
+        @DisplayName("无 card 技能时 systemPrompt 与模板渲染产物完全一致")
+        void noSkillShouldKeepTemplatePrompt() {
+            // loadSceneSkills 未打桩 → Mockito 默认返回空列表 → default 方法原样返回 basePrompt
+            Agent concluder = agent(99L, "总结者");
+            when(agentRepository.findById(99L)).thenReturn(Optional.of(concluder));
+            when(llmService.chat(any(), anyString(), any(), any()))
+                    .thenReturn("[{\"question\":\"Q1\",\"answer\":\"A1\",\"category\":\"Java\"}]");
+            mockSaveBatchWithIdBackfill();
+
+            handler.onTopicClosed(topicClosedEvent(1L, 10L, 99L));
+
+            org.mockito.ArgumentCaptor<String> promptCaptor =
+                    org.mockito.ArgumentCaptor.forClass(String.class);
+            verify(llmService, timeout(2000)).chat(any(), promptCaptor.capture(), any(), any());
+            assertThat(promptCaptor.getValue()).isEqualTo("知识卡片提取模板");
         }
     }
 }

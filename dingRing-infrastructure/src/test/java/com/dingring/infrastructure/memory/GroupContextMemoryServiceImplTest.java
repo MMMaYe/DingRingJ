@@ -7,6 +7,9 @@ import com.dingring.domain.group.MessageRepository;
 import com.dingring.domain.group.SenderType;
 import com.dingring.domain.service.GroupContextMemoryService.AgentPromptContext;
 import com.dingring.domain.service.LlmService.ChatTurn;
+import com.dingring.domain.skill.Skill;
+import com.dingring.domain.skill.SkillLoaderService;
+import com.dingring.domain.skill.SkillScene;
 import com.dingring.domain.user.User;
 import com.dingring.domain.user.UserRepository;
 import com.dingring.infrastructure.prompt.PromptTemplateLoader;
@@ -29,6 +32,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.when;
 
 /**
@@ -54,6 +58,8 @@ class GroupContextMemoryServiceImplTest {
     private UserRepository userRepository;
     @Mock
     private PromptTemplateLoader promptLoader;
+    @Mock
+    private SkillLoaderService skillLoader;
 
     @InjectMocks
     private GroupContextMemoryServiceImpl service;
@@ -70,6 +76,10 @@ class GroupContextMemoryServiceImplTest {
         when(promptLoader.render(eq("collaboration-protocol"), any())).thenReturn("协作协议 [[CONCLUDE]]/[[PASS]]");
         when(promptLoader.render(eq("conclude"), any()))
                 .thenAnswer(inv -> "知识蒸馏总结，主题：「" + ((Map<?, ?>) inv.getArgument(1)).get("topicTitle") + "」");
+        // Mockito mock 接口时 default 方法同样被 mock（默认返回 null，会把 prompt 变 null），
+        // 故让 applySceneSkills 走真实 default 实现：loadSceneSkills 未打桩时 Mockito 默认返回空列表，
+        // default 方法原样返回 basePrompt——与生产端口的「无技能零行为变化」语义一致
+        doCallRealMethod().when(skillLoader).applySceneSkills(any(), any());
     }
 
     private Agent agent(Long id, String name, String systemPrompt) {
@@ -285,6 +295,53 @@ class GroupContextMemoryServiceImplTest {
             AgentPromptContext ctx = service.buildConclusionContext(agent(99L, "总结者", null), 100L, "缓存方案");
 
             assertThat(ctx.turns()).extracting(ChatTurn::content).contains("小明: 请核对淘汰策略");
+        }
+
+        @Test
+        @DisplayName("conclude 场景技能分节拼接在全部组装（人设+模板+观点清单）之后")
+        void shouldAppendConcludeSceneSkillAfterFullAssembly() {
+            GroupMessage withSummary = agentMsg(1L, 20L, "长篇原文A");
+            withSummary.setViewpoint("摘要A");
+            when(messageRepository.findViewpointsByTopicId(100L, 20))
+                    .thenReturn(List.of(withSummary));
+            when(messageRepository.findRecentByTopicId(100L, 200)).thenReturn(List.of());
+            when(agentRepository.findById(20L)).thenReturn(Optional.of(agent(20L, "专家甲", null)));
+            Skill skill = new Skill();
+            skill.setName("conclude-article");
+            skill.setSystemPrompt("结论写成总结性文章");
+            // applySceneSkills 走真实 default 实现（见 setUp），这里只打桩数据源
+            when(skillLoader.loadSceneSkills(SkillScene.CONCLUDE)).thenReturn(List.of(skill));
+
+            AgentPromptContext ctx = service.buildConclusionContext(
+                    agent(99L, "总结者", "你是领域专家"), 100L, "Java 内存模型");
+
+            assertThat(ctx.systemPrompt())
+                    .contains("## 附加规范（SKILL: conclude-article）")
+                    .contains("结论写成总结性文章");
+            // 拼接时机断言：技能分节必须位于最后一段基线（观点清单）之后
+            assertThat(ctx.systemPrompt().indexOf("## 附加规范（SKILL: conclude-article）"))
+                    .isGreaterThan(ctx.systemPrompt().indexOf("讨论观点（含发言人归属，为主要输入）："));
+        }
+
+        @Test
+        @DisplayName("无 conclude 技能时产物与不接入技能时字节级一致")
+        void noSkillShouldKeepPromptUnchanged() {
+            // loadSceneSkills 未打桩 → Mockito 默认返回空列表 → default 方法原样返回 basePrompt
+            GroupMessage withSummary = agentMsg(1L, 20L, "长篇原文A");
+            withSummary.setViewpoint("摘要A");
+            when(messageRepository.findViewpointsByTopicId(100L, 20))
+                    .thenReturn(List.of(withSummary));
+            when(messageRepository.findRecentByTopicId(100L, 200)).thenReturn(List.of());
+            when(agentRepository.findById(20L)).thenReturn(Optional.of(agent(20L, "专家甲", null)));
+
+            AgentPromptContext ctx = service.buildConclusionContext(
+                    agent(99L, "总结者", "你是领域专家"), 100L, "Java 内存模型");
+
+            String expected = "你是领域专家\n\n"
+                    + "知识蒸馏总结，主题：「Java 内存模型」\n\n"
+                    + "讨论观点（含发言人归属，为主要输入）：\n"
+                    + "专家甲: 摘要A";
+            assertThat(ctx.systemPrompt()).isEqualTo(expected);
         }
 
         private com.dingring.domain.user.User newUser(String name) {

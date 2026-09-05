@@ -22,11 +22,14 @@ public class SaveSkillRequest {
     /** 附加系统提示词 */
     private String systemPrompt;
 
-    /** 作用域：GLOBAL / AGENT，缺省 GLOBAL */
+    /** 作用域：GLOBAL / AGENT / SCENE，缺省 GLOBAL */
     private String scope;
 
     /** scope=AGENT 时绑定 Agent ID */
     private Long agentId;
+
+    /** scope=SCENE 时绑定的沉淀场景键（必填，取值 conclude/card/topic-profile） */
+    private String sceneKey;
 
     /** 状态：ACTIVE / INACTIVE，缺省 ACTIVE */
     private String status;

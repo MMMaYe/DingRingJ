@@ -8,6 +8,8 @@ import com.dingring.domain.group.MessageRepository;
 import com.dingring.domain.group.SenderType;
 import com.dingring.domain.service.GroupContextMemoryService;
 import com.dingring.domain.service.LlmService.ChatTurn;
+import com.dingring.domain.skill.SkillLoaderService;
+import com.dingring.domain.skill.SkillScene;
 import com.dingring.domain.user.UserRepository;
 import com.dingring.infrastructure.aop.Event;
 import com.dingring.infrastructure.prompt.PromptTemplateLoader;
@@ -45,6 +47,7 @@ public class GroupContextMemoryServiceImpl implements GroupContextMemoryService 
     private final AgentRepository agentRepository;
     private final UserRepository userRepository;
     private final PromptTemplateLoader promptLoader;
+    private final SkillLoaderService skillLoader;
 
     /** 闲聊记忆条数（建议 5~10） */
     @Value("${dingring.memory.chat-recent-limit:10}")
@@ -146,7 +149,9 @@ public class GroupContextMemoryServiceImpl implements GroupContextMemoryService 
         // 原文窗口保留用于核对细节与出处（如发言中的 mermaid/svg 图表），不作为主要总结输入
         List<GroupMessage> all = messageRepository.findRecentByTopicId(topicId, contextWindow);
         List<ChatTurn> turns = toTurns(concluder, all, nameOf);
-        String systemPrompt = sp.toString();
+        // conclude 场景技能是运营增量规范，必须在出厂基线（人设+模板+观点清单）全部组装完成后追加；
+        // 结论最终经 SystemMessageMergeHook 合并为单条置顶 SystemMessage，技能分节随正文一起合并
+        String systemPrompt = skillLoader.applySceneSkills(SkillScene.CONCLUDE, sp.toString());
         LogHelper.printLog(GroupContextMemoryServiceImpl.class, "buildConclusionContext", "BUILD_CONCLUSION_CONTEXT",
                 "收束上下文构建完成", "topicId={} 观点条数={} 原文窗口条数={} systemPrompt长度={}",
                 topicId, viewpoints.size(), all.size(), systemPrompt.length());

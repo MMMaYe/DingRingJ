@@ -14,6 +14,8 @@ import com.dingring.domain.group.MessageRepository;
 import com.dingring.domain.group.MessageTag;
 import com.dingring.domain.group.SenderType;
 import com.dingring.domain.service.LlmService;
+import com.dingring.domain.skill.SkillLoaderService;
+import com.dingring.domain.skill.SkillScene;
 import com.dingring.domain.user.UserTopicProfile;
 import com.dingring.domain.user.UserTopicProfileRepository;
 import com.dingring.infrastructure.prompt.PromptTemplateLoader;
@@ -54,6 +56,8 @@ public class TopicProfileEventHandler {
     private final UserTopicProfileRepository profileRepository;
     private final LlmService llmService;
     private final PromptTemplateLoader promptLoader;
+    /** 沉淀场景技能加载：topic-profile 技能是运营增量规范，追加在出厂模板之后（依赖倒置，infrastructure 实现） */
+    private final SkillLoaderService skillLoader;
 
     @EventListener
     public void onTopicClosed(TopicClosed event) {
@@ -103,6 +107,8 @@ public class TopicProfileEventHandler {
             if (prompt == null || prompt.isBlank()) {
                 return;
             }
+            // 模板承载出厂基线规范，topic-profile 场景技能是运营增量约束——渲染完成后追加在其后，再交给 LLM
+            prompt = skillLoader.applySceneSkills(SkillScene.TOPIC_PROFILE, prompt);
             String raw = llmService.chat(extractor, prompt, List.of(),
                     new LlmService.CallOptions(0.0, 500, null, true, false));
 

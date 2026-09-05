@@ -161,18 +161,20 @@ CREATE TABLE IF NOT EXISTS user_questionnaire (
     INDEX idx_user_status (user_id, status)
 );
 
--- SKILL 表（技能 = 工具组 + 附加系统提示词；种子数据启动时由 skill-config.json 幂等写入，uk_name 兜底）
+-- SKILL 表（技能 = 工具组 + 附加系统提示词；技能经 REST CRUD 创建，scope=SCENE 绑定沉淀场景，uk_name 兜底）
 CREATE TABLE IF NOT EXISTS skill (
     id            BIGINT       PRIMARY KEY AUTO_INCREMENT COMMENT '主键',
     name          VARCHAR(64)  NOT NULL COMMENT '技能名称(唯一标识)',
     description   VARCHAR(255) NULL COMMENT '技能描述(注入提示词)',
     tool_names    VARCHAR(512) NULL COMMENT '工具集标识(逗号分隔)',
     system_prompt TEXT         NULL COMMENT '附加系统提示词',
-    scope         VARCHAR(16)  NOT NULL DEFAULT 'GLOBAL' COMMENT '作用域: GLOBAL/AGENT',
+    scope         VARCHAR(16)  NOT NULL DEFAULT 'GLOBAL' COMMENT '作用域: GLOBAL/AGENT/SCENE',
     agent_id      BIGINT       NULL COMMENT 'scope=AGENT 时绑定 Agent ID',
+    scene_key     VARCHAR(32)  NULL COMMENT 'scope=SCENE 时绑定沉淀场景: conclude/card/topic-profile',
     status        VARCHAR(16)  NOT NULL DEFAULT 'ACTIVE' COMMENT '状态: ACTIVE/INACTIVE',
     create_time   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
     CONSTRAINT uk_name UNIQUE (name),
-    INDEX idx_agent (agent_id)
+    INDEX idx_agent (agent_id),
+    INDEX idx_scene (scene_key)
 );

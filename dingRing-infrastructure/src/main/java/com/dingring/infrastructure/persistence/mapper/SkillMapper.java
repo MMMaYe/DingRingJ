@@ -24,6 +24,8 @@ public interface SkillMapper {
 
     List<Skill> findActiveGlobal();
 
+    List<Skill> findActiveBySceneKey(@Param("sceneKey") String sceneKey);
+
     int update(Skill skill);
 
     int deleteById(@Param("id") Long id);

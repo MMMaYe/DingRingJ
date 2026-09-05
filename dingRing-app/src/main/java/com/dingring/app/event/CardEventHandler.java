@@ -11,6 +11,8 @@ import com.dingring.domain.event.TopicClosed;
 import com.dingring.domain.service.DomainEventPublisher;
 import com.dingring.domain.service.GroupBroadcastService;
 import com.dingring.domain.service.LlmService;
+import com.dingring.domain.skill.SkillLoaderService;
+import com.dingring.domain.skill.SkillScene;
 import com.dingring.infrastructure.prompt.PromptTemplateLoader;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -41,6 +43,8 @@ public class CardEventHandler {
     private final ObjectMapper objectMapper;
     /** 提示词模板加载器：Nacos 优先，失效兜底 prompt-config.json（提示词单一来源） */
     private final PromptTemplateLoader promptLoader;
+    /** 沉淀场景技能加载：card 技能是运营增量规范，追加在出厂模板之后（依赖倒置，infrastructure 实现） */
+    private final SkillLoaderService skillLoader;
 
     @EventListener
     public void onTopicClosed(TopicClosed event) {
@@ -63,7 +67,10 @@ public class CardEventHandler {
         }
         for (int attempt = 1; attempt <= MAX_RETRY; attempt++) {
             try {
-                String raw = llmService.chat(concluder, promptLoader.render("sediment", Map.of()),
+                // 模板承载出厂基线规范，card 场景技能是运营增量约束——渲染完成后追加在其后，再交给 LLM
+                String systemPrompt = skillLoader.applySceneSkills(SkillScene.CARD,
+                        promptLoader.render("sediment", Map.of()));
+                String raw = llmService.chat(concluder, systemPrompt,
                         List.of(LlmService.ChatTurn.user("讨论主题：" + event.getTitle()
                                 + "\n\n讨论结论：\n" + event.getConclusion())),
                         new LlmService.CallOptions(0.0, 2048, null,

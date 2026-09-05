@@ -20,7 +20,8 @@ import java.util.List;
 
 /**
  * SKILL 管理 REST API（Phase F）。
- * <p>技能 = 工具组 + 附加系统提示词，可通过 CRUD 动态装配 Agent 能力（热更新走 SkillHotReloader）。
+ * <p>技能 = 工具组 + 附加系统提示词：GLOBAL/AGENT 作用域用于动态装配 Agent 能力，
+ * SCENE 作用域绑定沉淀生成场景（conclude/card/topic-profile）注入附加规范；CRUD 即时生效。
  */
 @RestController
 @RequestMapping("/api/skills")
@@ -48,9 +49,14 @@ public class SkillController {
         return ApiResponse.ok();
     }
 
-    /** 技能列表（含全局与绑定技能） */
+    /** 技能列表（含全局与绑定技能；可按 agentId 或沉淀场景 sceneKey 过滤，后者含 INACTIVE 便于启停管理） */
     @GetMapping
-    public ApiResponse<List<SkillDTO>> list(@RequestParam(value = "agentId", required = false) Long agentId) {
+    public ApiResponse<List<SkillDTO>> list(@RequestParam(value = "agentId", required = false) Long agentId,
+                                            @RequestParam(value = "sceneKey", required = false) String sceneKey) {
+        // sceneKey 与 agentId 是互斥的过滤维度，sceneKey 优先（管理面按场景查时不应混入 Agent 过滤）
+        if (sceneKey != null && !sceneKey.isBlank()) {
+            return ApiResponse.ok(skillAppService.listBySceneKey(sceneKey));
+        }
         if (agentId != null) {
             return ApiResponse.ok(skillAppService.listByAgent(agentId));
         }

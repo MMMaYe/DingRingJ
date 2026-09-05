@@ -9,6 +9,8 @@ import java.util.List;
  * SKILL（技能）实体。
  * <p>Phase F：技能 = 工具组 + 附加系统提示词，Agent 可挂载多个技能组合能力。
  * <p>与「Agent」的关联：技能可全局生效（scope=GLOBAL）或绑定特定 Agent（scope=AGENT）。
+ * <p>Phase G：新增沉淀场景绑定（scope=SCENE + sceneKey），用于约束 Topic 关闭后
+ * 结论/卡片/画像三个 LLM 生成点的质量与格式；SCENE 技能不参与 Agent 装配。
  */
 @Data
 public class Skill {
@@ -17,6 +19,8 @@ public class Skill {
     public static final String SCOPE_GLOBAL = "GLOBAL";
     /** 作用域：绑定 Agent（仅指定 Agent 可用） */
     public static final String SCOPE_AGENT = "AGENT";
+    /** 作用域：绑定沉淀场景（仅指定生成场景可用，不参与 Agent 装配） */
+    public static final String SCOPE_SCENE = "SCENE";
 
     /** 状态：启用 */
     public static final String STATUS_ACTIVE = "ACTIVE";
@@ -32,10 +36,12 @@ public class Skill {
     private String toolNames;
     /** 附加系统提示词（挂载到 Agent 的 systemPrompt 之后） */
     private String systemPrompt;
-    /** 作用域：GLOBAL / AGENT */
+    /** 作用域：GLOBAL / AGENT / SCENE */
     private String scope;
     /** scope=AGENT 时绑定 Agent ID */
     private Long agentId;
+    /** scope=SCENE 时绑定沉淀场景键（conclude/card/topic-profile，白名单见 {@link SkillScene}） */
+    private String sceneKey;
     /** 状态：ACTIVE / INACTIVE */
     private String status;
     private LocalDateTime createTime;

@@ -55,6 +55,11 @@ public class SkillRepositoryImpl implements SkillRepository {
     }
 
     @Override
+    public List<Skill> findActiveBySceneKey(String sceneKey) {
+        return skillMapper.findActiveBySceneKey(sceneKey);
+    }
+
+    @Override
     public boolean update(Skill skill) {
         skill.setUpdateTime(LocalDateTime.now());
         return skillMapper.update(skill) > 0;

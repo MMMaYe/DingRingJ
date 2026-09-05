@@ -5,7 +5,7 @@
 <mapper namespace="com.dingring.infrastructure.persistence.mapper.SkillMapper">
 
     <sql id="columns">
-        id, name, description, tool_names, system_prompt, scope, agent_id, status, create_time, update_time
+        id, name, description, tool_names, system_prompt, scope, agent_id, scene_key, status, create_time, update_time
     </sql>
 
     <select id="findById" resultType="com.dingring.domain.skill.Skill">
@@ -42,10 +42,18 @@
         ORDER BY update_time DESC
     </select>
 
+    <!-- 沉淀场景技能：scope=SCENE 且场景键匹配且启用；按 name 排序保证多技能拼接顺序稳定 -->
+    <select id="findActiveBySceneKey" resultType="com.dingring.domain.skill.Skill">
+        SELECT <include refid="columns"/>
+        FROM skill
+        WHERE scope = 'SCENE' AND scene_key = #{sceneKey} AND status = 'ACTIVE'
+        ORDER BY name
+    </select>
+
     <insert id="insert" parameterType="com.dingring.domain.skill.Skill"
             useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO skill (name, description, tool_names, system_prompt, scope, agent_id, status, create_time, update_time)
-        VALUES (#{name}, #{description}, #{toolNames}, #{systemPrompt}, #{scope}, #{agentId}, #{status},
+        INSERT INTO skill (name, description, tool_names, system_prompt, scope, agent_id, scene_key, status, create_time, update_time)
+        VALUES (#{name}, #{description}, #{toolNames}, #{systemPrompt}, #{scope}, #{agentId}, #{sceneKey}, #{status},
                 #{createTime}, #{updateTime})
     </insert>
 
@@ -57,6 +65,7 @@
             system_prompt = #{systemPrompt},
             scope         = #{scope},
             agent_id      = #{agentId},
+            scene_key     = #{sceneKey},
             status        = #{status},
             update_time   = #{updateTime}
         WHERE id = #{id}

@@ -24,6 +24,8 @@ public class SkillDTO {
     private String systemPrompt;
     private String scope;
     private Long agentId;
+    /** scope=SCENE 时绑定的沉淀场景键（conclude/card/topic-profile） */
+    private String sceneKey;
     private String status;
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
