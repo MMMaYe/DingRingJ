@@ -76,12 +76,16 @@ public class TopicAppService {
         return new PageResult<>(items, total, page, pageSize);
     }
 
-    /** 群消息分页（含闲聊，群聊主窗口用） */
+    /** 群消息分页（含闲聊，群聊主窗口用）。
+     *  page 为 1 基、从最早页开始计数；page<=0 时取【最新一页】，
+     *  用于打开群聊即见最新消息，向上滚动再按 page-1 往前翻更早历史。 */
     public PageResult<MessageDTO> groupMessages(Long groupId, int page, int pageSize) {
         long total = messageRepository.countByGroupId(groupId);
+        int lastPage = (int) Math.max(1, Math.ceil((double) total / pageSize));
+        int effectivePage = page < 1 ? lastPage : Math.min(page, lastPage);
         List<MessageDTO> items = messageAssembler.toBatchDtos(
-                messageRepository.findByGroupId(groupId, (page - 1) * pageSize, pageSize));
-        return new PageResult<>(items, total, page, pageSize);
+                messageRepository.findByGroupId(groupId, (effectivePage - 1) * pageSize, pageSize));
+        return new PageResult<>(items, total, effectivePage, pageSize);
     }
 
     /** 获取结论 */

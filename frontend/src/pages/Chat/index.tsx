@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo, type KeyboardEvent as ReactKeyboardEvent, type MouseEvent as ReactMouseEvent } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo, useLayoutEffect, type KeyboardEvent as ReactKeyboardEvent, type MouseEvent as ReactMouseEvent } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import Sidebar, { IconPlus } from '../../components/Sidebar';
 import Avatar from '../../components/Avatar';
@@ -79,6 +79,13 @@ export default function ChatPage() {
   const composingRef = useRef(false);
   // 是否贴底：仅贴底时新消息才自动滚动，避免翻历史被拽回
   const stickToBottomRef = useRef(true);
+
+  // ---- 群消息分页（向上滚动加载更早历史，置顶 prepend） ----
+  const [hasMore, setHasMore] = useState(false);          // 是否还有更早的页
+  const [loadingOlder, setLoadingOlder] = useState(false); // 顶部加载更早消息中
+  const currentPageRef = useRef(1);                        // 当前已加载的页（1 基，最早页=1）
+  const loadingOlderRef = useRef(false);                   // 防并发加载
+  const pendingPrependRef = useRef<{ prevHeight: number; prevTop: number } | null>(null); // 加载前快照，用于 prepend 后恢复滚动位置
 
   const groupId = group?.id ?? null;
   const wsCtx = useWebSocketContext();
@@ -216,10 +223,16 @@ export default function ChatPage() {
     let cancelled = false;
     setMsgLoading(true);
     setMessages([]);
+    setHasMore(false);
+    loadingOlderRef.current = false;
     (async () => {
       try {
-        const page = await API.get<PageResult<MessageDTO>>(`/api/groups/${groupId}/messages?page=1&pageSize=200`);
-        if (!cancelled) setMessages(page.items);
+        // page=0 让后端返回【最新一页】，打开群即见刚聊的内容
+        const page = await API.get<PageResult<MessageDTO>>(`/api/groups/${groupId}/messages?page=0&pageSize=200`);
+        if (cancelled) return;
+        setMessages(page.items);
+        currentPageRef.current = page.page;   // 后端回传命中的页号
+        setHasMore(page.page > 1);
       } catch (e: any) {
         if (!cancelled) toast(e.message, 'error');
       } finally {
@@ -228,6 +241,44 @@ export default function ChatPage() {
     })();
     return () => { cancelled = true; };
   }, [groupId]);
+
+  // ---- 向上滚动加载更早消息（取上一页，置顶 prepend，并恢复滚动位置） ----
+  const loadOlderMessages = useCallback(async () => {
+    if (!groupId || loadingOlderRef.current || currentPageRef.current <= 1) return;
+    const targetPage = currentPageRef.current - 1;
+    loadingOlderRef.current = true;
+    setLoadingOlder(true);
+    try {
+      const page = await API.get<PageResult<MessageDTO>>(`/api/groups/${groupId}/messages?page=${targetPage}&pageSize=200`);
+      const el = chatBodyRef.current;
+      const prevHeight = el ? el.scrollHeight : 0;
+      const prevTop = el ? el.scrollTop : 0;
+      pendingPrependRef.current = { prevHeight, prevTop };
+      setMessages(prev => {
+        const existing = new Set(prev.map(m => m.id));
+        const fresh = page.items.filter(m => !existing.has(m.id));
+        return [...fresh, ...prev];
+      });
+      currentPageRef.current = page.page;
+      setHasMore(page.page > 1);
+    } catch (e: any) {
+      toast(e.message, 'error');
+      pendingPrependRef.current = null;
+    } finally {
+      loadingOlderRef.current = false;
+      setLoadingOlder(false);
+    }
+  }, [groupId]);
+
+  // ---- 置顶 prepend 后恢复滚动位置（避免画面跳动） ----
+  useLayoutEffect(() => {
+    if (pendingPrependRef.current && chatBodyRef.current) {
+      const { prevHeight, prevTop } = pendingPrependRef.current;
+      const el = chatBodyRef.current;
+      el.scrollTop = el.scrollHeight - prevHeight + prevTop;
+      pendingPrependRef.current = null;
+    }
+  }, [messages]);
 
   // ---- 加载主题 ----
   useEffect(() => {
@@ -254,7 +305,9 @@ export default function ChatPage() {
     const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 60;
     stickToBottomRef.current = nearBottom;
     if (nearBottom) setUnseenCount(0);
-  }, []);
+    // 滚到顶部且无并发加载时，加载更早的历史消息
+    if (el.scrollTop < 60 && hasMore && !loadingOlderRef.current) loadOlderMessages();
+  }, [hasMore, loadOlderMessages]);
 
   const scrollToBottom = useCallback((smooth = true) => {
     const el = chatBodyRef.current;
@@ -722,6 +775,13 @@ export default function ChatPage() {
 
             <div className="chat-body-wrap">
               <div className="chat-body" ref={chatBodyRef} onScroll={handleBodyScroll} onClick={handleSvgClick} onKeyDown={handleSvgKeyDown}>
+                {/* 顶部加载更早消息的占位 */}
+                {loadingOlder && (
+                  <div className="msg-older-loading">
+                    <span className="msg-older-loading__spinner" />
+                    <span>加载更早的消息…</span>
+                  </div>
+                )}
                 {msgLoading ? (
                   /* 骨架屏：切群时占位，避免旧消息闪现与空白跳动 */
                   <>

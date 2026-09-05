@@ -183,6 +183,18 @@
   background: linear-gradient(90deg, transparent 0%, rgba(0, 0, 0, .04) 50%, transparent 100%);
 }
 
+/* 顶部加载更早消息 */
+.msg-older-loading {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 10px 0 6px; color: var(--text-muted); font-size: 12px; flex: none;
+}
+.msg-older-loading__spinner {
+  width: 14px; height: 14px; border-radius: 50%;
+  border: 2px solid var(--bg-overlay-l2); border-top-color: var(--accent, #4c8bf5);
+  animation: older-spin .7s linear infinite;
+}
+@keyframes older-spin { to { transform: rotate(360deg); } }
+
 .msg { display: flex; gap: 10px; max-width: 78%; }
 .msg--self { align-self: flex-end; flex-direction: row-reverse; }
 .msg__main { min-width: 0; }
