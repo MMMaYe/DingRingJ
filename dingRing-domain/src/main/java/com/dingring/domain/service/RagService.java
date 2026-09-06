@@ -20,4 +20,21 @@ public interface RagService {
      * @return 格式化的知识文本段，无结果返回空字符串
      */
     String retrieve(String query, List<Long> kbIds);
+
+    default RetrievalResult retrieveStructured(String query, List<Long> kbIds) {
+        return RetrievalResult.empty(query);
+    }
+
+    /**
+     * P3 多阶段检索（7.3）：dense + lexical → RRF 融合 → 邻居扩展 → rerank → MMR。
+     * <p>带 groupId 维度：Redis 目录缓存按群隔离（同群同 query 复用，跨群不串）。
+     *
+     * @param query   原始检索文本（规范化与改写在实现内完成）
+     * @param kbIds   允许检索的知识库 ID 列表
+     * @param groupId 群 ID（缓存隔离维度；可空表示无群上下文，跳过目录缓存）
+     * @return 结构化检索结果（含规范化后的 query 与候选列表）；无结果返回空候选
+     */
+    default RetrievalResult retrieveStructured(String query, List<Long> kbIds, Long groupId) {
+        return RetrievalResult.empty(query);
+    }
 }

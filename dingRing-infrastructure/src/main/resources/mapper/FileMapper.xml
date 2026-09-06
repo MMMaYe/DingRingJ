@@ -5,7 +5,8 @@
 <mapper namespace="com.dingring.infrastructure.persistence.mapper.FileMapper">
 
     <sql id="columns">
-        id, knowledge_base_id, name, path, file_type, file_size, status, chunk_count, error_msg, create_time, update_time
+        id, knowledge_base_id, name, path, file_type, file_size, status, chunk_count, error_msg,
+        doc_content_hash, current_version, active_run_id, cleaning_status, create_time, update_time
     </sql>
 
     <select id="findById" resultType="com.dingring.domain.knowledgebase.File">
@@ -21,10 +22,20 @@
         ORDER BY create_time DESC
     </select>
 
+    <!-- 对账任务用：孤儿向量检测需全量文件（含已删库残留文件的比对基准） -->
+    <select id="findAll" resultType="com.dingring.domain.knowledgebase.File">
+        SELECT <include refid="columns"/>
+        FROM kb_file
+    </select>
+
     <insert id="insert" parameterType="com.dingring.domain.knowledgebase.File"
             useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO kb_file (knowledge_base_id, name, path, file_type, file_size, status, chunk_count, error_msg, create_time, update_time)
-        VALUES (#{knowledgeBaseId}, #{name}, #{path}, #{fileType}, #{fileSize}, #{status}, #{chunkCount}, #{errorMsg}, #{createTime}, #{updateTime})
+        INSERT INTO kb_file
+        (knowledge_base_id, name, path, file_type, file_size, status, chunk_count, error_msg,
+         doc_content_hash, current_version, active_run_id, cleaning_status, create_time, update_time)
+        VALUES
+        (#{knowledgeBaseId}, #{name}, #{path}, #{fileType}, #{fileSize}, #{status}, #{chunkCount}, #{errorMsg},
+         #{docContentHash}, #{currentVersion}, #{activeRunId}, #{cleaningStatus}, #{createTime}, #{updateTime})
     </insert>
 
     <update id="update" parameterType="com.dingring.domain.knowledgebase.File">
@@ -37,6 +48,10 @@
             status            = #{status},
             chunk_count       = #{chunkCount},
             error_msg         = #{errorMsg},
+            doc_content_hash  = #{docContentHash},
+            current_version   = #{currentVersion},
+            active_run_id     = #{activeRunId},
+            cleaning_status   = #{cleaningStatus},
             update_time       = #{updateTime}
         WHERE id = #{id}
     </update>

@@ -30,6 +30,11 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-websocket</artifactId>
         </dependency>
+        <!-- P3 F4：MCP Server（Streamable HTTP /mcp），外部 Agent 清洗提交通道 -->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-starter-mcp-server-webmvc</artifactId>
+        </dependency>
         <!-- 测试：JUnit 5 + AssertJ + Mockito + MockMvc -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

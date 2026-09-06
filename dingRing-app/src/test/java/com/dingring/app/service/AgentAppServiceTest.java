@@ -90,8 +90,8 @@ class AgentAppServiceTest {
         }
 
         @Test
-        @DisplayName("apiKey 必填，直接覆盖为新 Key")
-        void apiKeyShouldAlwaysReplace() {
+        @DisplayName("留空 apiKey 时保留原 Key")
+        void blankApiKeyShouldPreserveExistingValue() {
             Agent existing = new Agent();
             existing.setId(1L);
             existing.setApiKey("sk-old");
@@ -100,13 +100,12 @@ class AgentAppServiceTest {
             SaveAgentRequest req = new SaveAgentRequest();
             req.setName("老王");
             req.setBaseUrl("https://api.x.com");
-            req.setApiKey("sk-new");
+            req.setApiKey("  ");
             req.setModelName("m");
 
             service.update(1L, req);
 
-            // apiKey 现在必填，直接覆盖原值
-            assertThat(existing.getApiKey()).isEqualTo("sk-new");
+            assertThat(existing.getApiKey()).isEqualTo("sk-old");
             verify(agentRepository).update(existing);
         }
     }
@@ -135,7 +134,7 @@ class AgentAppServiceTest {
     class FindById {
 
         @Test
-        @DisplayName("Agent 存在时返回 DTO（含 apiKey，编辑回填需要）")
+        @DisplayName("Agent 存在时返回不含 apiKey 的 DTO")
         void shouldReturnDtoWhenFound() {
             Agent existing = new Agent();
             existing.setId(1L);
@@ -153,8 +152,6 @@ class AgentAppServiceTest {
             assertThat(dto.getName()).isEqualTo("老王");
             assertThat(dto.getCallType()).isEqualTo("API");
             assertThat(dto.getSystemPrompt()).isEqualTo("你是架构师");
-            // 详情接口必须返回 apiKey，编辑回填需要
-            assertThat(dto.getApiKey()).isEqualTo("sk-secret");
         }
 
         @Test

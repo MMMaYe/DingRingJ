@@ -13,10 +13,7 @@ import java.util.Map;
  *   <li>{@link Create} —— 创建场景，Controller 用 @Validated(Create.class) 触发</li>
  *   <li>{@link Update} —— 修改场景，Controller 用 @Validated(Update.class) 触发</li>
  * </ul>
- * 当前所有必填字段在两组中校验规则一致（含 apiKey），未来若场景差异可按组分别配置。
- *
- * <p>合并理由：原 CreateAgentRequest 与 UpdateAgentRequest 9 个字段中仅 apiKey 校验不同，
- * 其余完全重复。合并后消除重复定义，未来新增字段只需改一处。
+ * 创建时必须提供 API Key；修改时留空表示保留现有密钥。
  */
 @Data
 public class SaveAgentRequest {
@@ -37,8 +34,8 @@ public class SaveAgentRequest {
     @NotBlank(message = "Base URL 不能为空", groups = {Create.class, Update.class})
     private String baseUrl;
 
-    /** API Key：创建和修改都必填（修改时也需重新输入，不保留原 Key 语义） */
-    @NotBlank(message = "API Key 不能为空", groups = {Create.class, Update.class})
+    /** API Key：创建必填；修改留空表示保留现有值。 */
+    @NotBlank(message = "API Key 不能为空", groups = Create.class)
     private String apiKey;
 
     @NotBlank(message = "模型名不能为空", groups = {Create.class, Update.class})

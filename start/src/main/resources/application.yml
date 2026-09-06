@@ -14,22 +14,49 @@ spring:
       prompt:
         template:
           enabled: true
+    # P3 F4：MCP Server（Streamable HTTP，/mcp 端点）——外部 Agent 清洗提交通道
+    # enabled 与 RAG 总开关联动：RAG 关闭时 MCP 端点/工具/鉴权过滤器全部不装配
+    # 鉴权 token 走 DINGRING_MCP_TOKEN 环境变量（3.4.3：不写入 git 与配置默认值）
+    mcp:
+      server:
+        enabled: ${dingring.rag.enabled:true}
+        name: dingring-kb
+        version: 1.0.0
+        type: SYNC
+        protocol: STREAMABLE
+        streamable-http:
+          mcp-endpoint: /mcp
     # Phase E：PostgreSQL 向量库（第二数据源，仅用于 PgVectorStore，不参与 MyBatis）
     vectorstore:
       pgvector:
         datasource:
-          url: jdbc:postgresql://101.33.227.80:5432/ring_rag
-          username: postgres
-          password: postgres123
+          url: ${RAG_DB_URL:jdbc:postgresql://localhost:5432/ring_rag}
+          username: ${RAG_DB_USERNAME:postgres}
+          password: ${RAG_DB_PASSWORD:}
           driver-class-name: org.postgresql.Driver
+  # P3 F5：Redis（检索两级缓存：目录 1 天 + chunk 全文 2 天）。
+  # 无 Redis 环境不启动 Redis 服务也不影响启动（连接是惰性的）；
+  # RedisRetrievalCache 全操作静默降级（检索直查 PG，kb_read_in_redis 回退 PG 直读）
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      # 快速失败：Redis 不可用时命令 2s 超时返回（不让检索线程挂在缓存上）
+      timeout: 2s
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
   # Nacos 连接参数
   # 默认指向云服务器 Nacos（已部署于 101.33.227.80:8848）；本地开发可通过
   # 环境变量 NACOS_ADDR 覆盖为空或不填，PromptTemplateLoader 自动降级到本地 classpath 加载
   cloud:
     nacos:
-      server-addr: ${NACOS_ADDR:101.33.227.80:8848}
-      username: ${NACOS_USERNAME:nacos}
-      password: ${NACOS_PASSWORD:nacos}
+      server-addr: ${NACOS_ADDR:localhost:8848}
+      username: ${NACOS_USERNAME:}
+      password: ${NACOS_PASSWORD:}
   # MySQL 生产库（公网地址，必须配置连接保活/探活防止 NAT/防火墙静默断连）
   datasource:
     # URL 参数说明（公网 PMTUD 黑洞专属优化）：
@@ -39,10 +66,10 @@ spring:
     #   socketTimeout 让卡住的建连 10s 快速失败，HikariCP 自动重试（路径 MSS 协商后即快）
     # - serverTimezone=Asia/Shanghai：会话时区
     # - 已移除 useUnicode=true&characterEncoding=utf8：Connector/J 8.0.13 起废弃，9.x 默认 utf8mb4
-    url: jdbc:mysql://101.33.227.80:3306/ring_chat?serverTimezone=Asia/Shanghai&sslMode=REQUIRED&socketTimeout=10000&connectTimeout=5000
+    url: ${MYSQL_URL:jdbc:mysql://localhost:3306/ring_chat?serverTimezone=Asia/Shanghai&sslMode=PREFERRED&socketTimeout=10000&connectTimeout=5000}
     driver-class-name: com.mysql.cj.jdbc.Driver
-    username: root
-    password: "MySQL@123456"
+    username: ${MYSQL_USERNAME:root}
+    password: ${MYSQL_PASSWORD:}
     # HikariCP 连接池（公网数据库专属配置，核心是：启动不卡 + 借前探活 + 空闲保活 + 泄露检测）
     hikari:
       # 连接池容量（默认10，峰值并发写多可以调大；单群串行引擎 + 多HTTP接口，20足够）
@@ -98,7 +125,7 @@ dingring:
   tool:
     web-search:
       # Tavily 联网搜索 API Key；留空走 keyless 免费模式（有速率限制）
-      api-key: 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
+      api-key: ${TAVILY_API_KEY:}
   rag:
     # Phase E：RAG 知识库总开关。false 时不加载向量库数据源/PgVectorStore/RAG Hook，
     # 群聊主流程不受影响（RAG 是增强不是依赖）
@@ -108,7 +135,7 @@ dingring:
       provider: siliconflow
       siliconflow:
         base-url: https://api.siliconflow.cn/v1/embeddings
-        api-key: sk-scjjoaifoftvpjisrxvndcfwyjcyltwqsmltjotlqdwczznl
+        api-key: ${SILICONFLOW_API_KEY:}
         model: Qwen/Qwen3-Embedding-0.6B
         dimensions: 1024
         batch-size: 16
@@ -117,11 +144,37 @@ dingring:
     chunk:
       fixed-size: 512
       overlap: 64
+    # P3 多阶段检索（7.3/7.4/7.7）：dense+lexical → RRF → rerank → MMR
+    retrieval:
+      dense-top-k: 30
+      lexical-top-k: 30
+      rrf-top-k: 40
+      rerank-top-k: 15
+      rrf-k: 60
+      mmr-lambda: 0.7
+      min-score: 0.25
+      neighbor-expansion: true
+      rewrite-agent-id: 6
+      catalog-ttl-seconds: 86400
+      chunk-ttl-seconds: 172800
+      catalog-max-tokens: 500
+      read-budget-tokens: 4096
+      # 无 Redis 环境置 false（检索直查 PG 不降级；kb_read_in_redis 工具回退 PG）
+      cache-enabled: true
+    # P3 F6-B 孤儿向量对账（9.2）：定时清理已删文件/知识库/话题的残留向量与失活版本，
+    # CLEANING_* 长期未完成仅告警不降级；间隔默认 1 小时，启动 2 分钟后首轮执行
+    reconciliation:
+      enabled: true
+      interval-ms: 3600000
+      initial-delay-ms: 120000
+      cleaning-warn-threshold-minutes: 120
     # 上传文件本地存储根目录
     storage:
       local-path: ./rag-files
-    # LLM 重排使用的轻量 Agent ID（默认 routeJudge，DeepSeek-V4-Flash）
+    # 重排器（7.4）：siliconflow=Qwen3-Reranker-4B 专用模型（P3 主链路）；
+    # llm=旧 LLM 打分（灰度回退）；agent-id 仅 llm 模式使用
     reranker:
+      provider: siliconflow
       agent-id: 6
   supervisor:
     # Phase F：WORK 任务 Supervisor 编排模式。true 时由编排 Agent 拆解任务并委派子 Agent；

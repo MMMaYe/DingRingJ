@@ -69,13 +69,19 @@ class ReactAgentFactoryRegressionTest {
                 new GroupContextMemoryHook(contextMemoryService, agentRepository),
                 new ProfileInjectionHook(profileService),
                 new GroupRosterHook(groupRepository, agentRepository),
-                new InjectKbHook(ragService, topicVectorService, topicRepository, groupRepository),
+                new InjectKbHook(ragService, topicVectorService, topicRepository, groupRepository,
+                        // F5 目录注入新依赖：本测试走 mock RagService，规范化器/计数器不会被真实调用
+                        mock(com.dingring.infrastructure.rag.retrieval.QueryNormalizer.class),
+                        mock(com.dingring.infrastructure.rag.splitter.TokenCounter.class),
+                        mock(com.dingring.infrastructure.rag.config.RagProperties.class)),
                 new SystemMessageMergeHook(),
                 // 真实实例而非 mock：拦截器是纯透传链节点，mock 默认返回 null 会打断责任链
                 // （AgentLlmNode 对 null ModelResponse 抛 NPE）；无 Spring 环境 logEnabled
                 // 保持字段默认 false，不产生日志噪音
                 new ModelRequestLoggingInterceptor(),
-                webTools));
+                webTools,
+                // F5 kb_read_in_redis 工具：RAG 工具为条件装配，测试环境注入空 Optional
+                java.util.Optional.empty()));
         doReturn(chatModel).when(factory).buildChatModel(any(), any());
         return factory;
     }

@@ -70,8 +70,7 @@ export default function AgentsPage() {
       setModelName(detail.modelName);
       setDescription(detail.description || '');
       setBaseUrl(detail.baseUrl);
-      // 详情接口返回 apiKey，回填避免用户每次重新输入
-      setApiKey(detail.apiKey || '');
+      setApiKey('');
       // 回填 callType，兼容旧数据可能为 null
       setCallType(detail.callType === 'CLI' ? 'CLI' : 'API');
       setSystemPrompt(detail.systemPrompt || '');
@@ -87,15 +86,14 @@ export default function AgentsPage() {
     if (!name.trim()) { toast('请输入花名', 'error'); return; }
     if (!baseUrl.trim()) { toast('请输入 Base URL', 'error'); return; }
     if (!modelName.trim()) { toast('请输入模型名', 'error'); return; }
-    // apiKey 创建和更新都必填
-    if (!apiKey.trim()) { toast('请输入 API Key', 'error'); return; }
+    if (editingId === null && !apiKey.trim()) { toast('请输入 API Key', 'error'); return; }
 
     // 统一请求体（与后端 SaveAgentRequest 对齐）
     const body = {
       name: name.trim(),
       description: description.trim(),
       baseUrl: baseUrl.trim(),
-      apiKey: apiKey.trim(),
+      apiKey: apiKey.trim() || undefined,
       modelName: modelName.trim(),
       callType,
       systemPrompt: systemPrompt.trim(),
@@ -283,8 +281,8 @@ export default function AgentsPage() {
               <input className="input" value={baseUrl} onChange={e => setBaseUrl(e.target.value)} placeholder="如：https://api.openai.com" />
             </div>
             <div className="form-row">
-              <label>API Key *</label>
-              <input className="input" type="password" value={apiKey} onChange={e => setApiKey(e.target.value)} placeholder="sk-…（创建和修改都需输入）" autoComplete="new-password" />
+              <label>API Key {editingId === null ? '*' : '（留空则保留）'}</label>
+              <input className="input" type="password" value={apiKey} onChange={e => setApiKey(e.target.value)} placeholder={editingId === null ? 'sk-…' : '留空则保留现有密钥'} autoComplete="new-password" />
             </div>
             <div className="form-row">
               <label>系统提示词（人设 Prompt）</label>

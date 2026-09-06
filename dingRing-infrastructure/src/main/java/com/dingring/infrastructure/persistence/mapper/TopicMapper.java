@@ -28,6 +28,9 @@ public interface TopicMapper {
 
     List<Topic> findAllClosed();
 
+    /** 全部话题 id（向量对账：与 topic_id_store 比对找孤儿） */
+    List<Long> findAllIds();
+
     int insert(Topic topic);
 
     /** 乐观锁更新：version 匹配才生效，成功后 version + 1 */

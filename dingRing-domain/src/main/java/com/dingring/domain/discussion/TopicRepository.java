@@ -29,6 +29,9 @@ public interface TopicRepository {
     /** 全部已关闭主题（主题沉淀区用，按关闭时间倒序） */
     List<Topic> findAllClosed();
 
+    /** 全部话题 id（向量对账用：与 topic_id_store 的 topicId 比对找孤儿） */
+    List<Long> findAllIds();
+
     Long save(Topic topic);
 
     /**

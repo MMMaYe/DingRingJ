@@ -2,6 +2,11 @@ package com.dingring.infrastructure.rag;
 
 import com.dingring.domain.service.Reranker;
 import com.dingring.domain.service.Reranker.ScoredDocument;
+import com.dingring.infrastructure.rag.cache.RedisRetrievalCache;
+import com.dingring.infrastructure.rag.config.RagProperties;
+import com.dingring.infrastructure.rag.retrieval.LexicalRetriever;
+import com.dingring.infrastructure.rag.retrieval.PgChunkReader;
+import com.dingring.infrastructure.rag.retrieval.RrfFuser;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -35,7 +40,11 @@ class SaaRagServiceTest {
     void setUp() {
         vectorStore = mock(VectorStore.class);
         reranker = mock(Reranker.class);
-        ragService = new SaaRagService(vectorStore, reranker);
+        // F5 多阶段检索新依赖：legacy retrieve 链路不经过它们，mock 注入即可
+        ragService = new SaaRagService(vectorStore, reranker,
+                mock(LexicalRetriever.class), mock(RrfFuser.class),
+                mock(PgChunkReader.class), mock(RedisRetrievalCache.class),
+                mock(RagProperties.class));
     }
 
     @Test

@@ -32,6 +32,15 @@
 /* 隐藏 file input：上传按钮点击转交 */
 .kb-upload-input { display: none; }
 
+/* 上传时清洗勾选（页头 CTA 旁）：复用全局文字色与交互弱化 */
+.kb-clean-toggle {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12px; color: var(--text-secondary); cursor: pointer;
+  user-select: none; white-space: nowrap;
+}
+.kb-clean-toggle input { cursor: pointer; accent-color: var(--accent-violet); }
+.kb-clean-toggle:hover { color: var(--text-primary); }
+
 /* 文件状态标签：失败态（success/amber 复用 global.css 既有 tag--success/tag--amber） */
 .tag--error { background: var(--status-error-surface-l1); color: var(--status-error-hover); }
 

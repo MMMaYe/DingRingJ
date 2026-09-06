@@ -52,6 +52,10 @@ export interface KbFileDTO {
   fileType: string;
   fileSize: number;
   status: 'UPLOADED' | 'CHUNKED' | 'EMBEDDED' | 'READY' | 'FAILED';
+  /** 清洗结果：SKIPPED（未启用）/CLEANED（已完成）/FAILED（取消或失败）/null（进行中或未开始） */
+  cleaningStatus: string | null;
+  /** 活跃摄入 run 状态：CLEANING_WAITING（待清洗）/CLEANING_RUNNING（清洗中）等，无活跃 run 为 null */
+  runStatus: string | null;
   chunkCount: number | null;
   errorMsg: string | null;
   createTime: string;
@@ -76,11 +80,12 @@ export const KbApi = {
   /**
    * multipart 上传不走统一 request 封装：FormData 禁止手动设置 Content-Type，
    * 需让浏览器自动携带 multipart boundary。
+   * clean=true（默认）启用 LLM 清洗；false 跳过直接摄入。
    */
-  uploadFile: async (id: number, file: File): Promise<KbFileDTO> => {
+  uploadFile: async (id: number, file: File, clean = true): Promise<KbFileDTO> => {
     const form = new FormData();
     form.append('file', file);
-    const resp = await fetch(`/api/kb/${id}/files`, { method: 'POST', body: form });
+    const resp = await fetch(`/api/kb/${id}/files?clean=${clean}`, { method: 'POST', body: form });
     // 非 JSON 响应（如网关 500 的 HTML 页）时 json() 抛英文 SyntaxError，转译为友好提示
     let body: { success?: boolean; message?: string; data?: KbFileDTO } | null = null;
     try {
@@ -91,6 +96,12 @@ export const KbApi = {
     if (!body?.success) throw new Error(body?.message || '上传失败');
     return body.data as KbFileDTO;
   },
+  /** 取消清洗任务（仅 CLEANING_WAITING/CLEANING_RUNNING/FAILED 状态可取消） */
+  cancelCleaning: (id: number, fileId: number) =>
+    API.post<void>(`/api/kb/${id}/files/${fileId}/cleaning/cancel`),
+  /** 手动重试失败的摄入任务（拉起新 run，幂等） */
+  retryIngestion: (id: number, fileId: number) =>
+    API.post<KbFileDTO>(`/api/kb/${id}/files/${fileId}/retry`),
 };
 
 // ==================== 日志观测仪表盘 ====================

@@ -7,6 +7,16 @@ import './style.css';
 
 /** 处理中状态：存在任一即触发 3s 轮询，全部终态（READY/FAILED）后停止 */
 const PROCESSING: string[] = ['UPLOADED', 'CHUNKED', 'EMBEDDED'];
+/** 清洗进行中状态（run 维度）：同样触发轮询直至终态 */
+const CLEANING_IN_FLIGHT: string[] = ['CLEANING_WAITING', 'CLEANING_RUNNING'];
+
+/** 清洗徽章：进行中显示 run 状态，完成显示 cleaningStatus 终态 */
+function cleaningTag(doc: KbFileDTO): { label: string; cls: string } | null {
+  if (doc.runStatus === 'CLEANING_WAITING') return { label: '待清洗', cls: 'tag tag--violet' };
+  if (doc.runStatus === 'CLEANING_RUNNING') return { label: '清洗中', cls: 'tag tag--amber' };
+  if (doc.cleaningStatus === 'CLEANED') return { label: '已清洗', cls: 'tag tag--success' };
+  return null;
+}
 
 function statusLabel(s: KbFileDTO['status']): string {
   switch (s) {
@@ -47,6 +57,8 @@ export default function KBPage() {
   const [newName, setNewName] = useState('');
   const [newDesc, setNewDesc] = useState('');
   const [loading, setLoading] = useState(true);
+  /** 上传时是否启用 LLM 清洗（默认开启；关闭则原文直接切片向量化） */
+  const [cleanUpload, setCleanUpload] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const reloadKbs = useCallback(async () => {
@@ -77,8 +89,9 @@ export default function KBPage() {
     else setFiles([]);
   }, [selectedId, reloadFiles]);
 
-  /** 处理进度轮询：有处理中文件每 3s 刷新，全部终态停止 */
-  const hasProcessing = files.some(f => PROCESSING.includes(f.status));
+  /** 处理进度轮询：处理中/清洗中文件每 3s 刷新，全部终态停止 */
+  const hasProcessing = files.some(f =>
+    PROCESSING.includes(f.status) || (f.runStatus != null && CLEANING_IN_FLIGHT.includes(f.runStatus)));
   useEffect(() => {
     if (selectedId == null || !hasProcessing) return;
     const t = setInterval(() => void reloadFiles(selectedId), 3000);
@@ -121,14 +134,39 @@ export default function KBPage() {
     if (!/\.(md|markdown)$/i.test(f.name)) { toast('当前仅支持 .md 文件', 'error'); resetInput(); return; }
     setUploading(true);
     try {
-      await KbApi.uploadFile(selectedId, f);
-      toast(`「${f.name}」已上传，正在切片与向量化`, 'success');
+      await KbApi.uploadFile(selectedId, f, cleanUpload);
+      toast(cleanUpload
+        ? `「${f.name}」已上传，清洗后自动切片与向量化`
+        : `「${f.name}」已上传，正在切片与向量化`, 'success');
       await reloadFiles(selectedId);
     } catch (e) {
       toast((e as Error).message, 'error');
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const handleCancelCleaning = async (f: KbFileDTO) => {
+    if (selectedId == null) return;
+    if (!window.confirm(`取消「${f.name}」的清洗任务？该文件将标记为失败，可稍后重试。`)) return;
+    try {
+      await KbApi.cancelCleaning(selectedId, f.id);
+      toast('清洗任务已取消', 'success');
+      await reloadFiles(selectedId);
+    } catch (e) {
+      toast((e as Error).message, 'error');
+    }
+  };
+
+  const handleRetry = async (f: KbFileDTO) => {
+    if (selectedId == null) return;
+    try {
+      await KbApi.retryIngestion(selectedId, f.id);
+      toast(`「${f.name}」已重新开始处理`, 'success');
+      await reloadFiles(selectedId);
+    } catch (e) {
+      toast((e as Error).message, 'error');
     }
   };
 
@@ -194,6 +232,14 @@ export default function KBPage() {
                   disabled={uploading || selectedId == null}
                   onChange={e => { const f = e.target.files?.[0]; if (f) void handleUpload(f); }}
                 />
+                <label className="kb-clean-toggle" title="上传后先由 LLM 清洗（去噪/结构规范化），再切片向量化">
+                  <input
+                    type="checkbox"
+                    checked={cleanUpload}
+                    onChange={e => setCleanUpload(e.target.checked)}
+                  />
+                  上传时清洗
+                </label>
                 <button
                   className="btn btn--brand page__head-cta"
                   disabled={uploading || selectedId == null}
@@ -270,10 +316,21 @@ export default function KBPage() {
                     </div>
                   </div>
                   <div className="kb-card__right">
-                    <span className={statusTagClass(doc.status)}>{statusLabel(doc.status)}</span>
-                    <button className="kb-card__del" title="删除文件"
-                            onClick={() => void handleDeleteFile(doc)}>删除</button>
-                  </div>
+                <span className={statusTagClass(doc.status)}>{statusLabel(doc.status)}</span>
+                {cleaningTag(doc) && (
+                  <span className={cleaningTag(doc)!.cls}>{cleaningTag(doc)!.label}</span>
+                )}
+                {doc.runStatus != null && CLEANING_IN_FLIGHT.includes(doc.runStatus) && (
+                  <button className="kb-card__del" title="取消清洗任务"
+                          onClick={() => void handleCancelCleaning(doc)}>取消</button>
+                )}
+                {doc.status === 'FAILED' && (
+                  <button className="kb-card__del" title="重新摄入该文件"
+                          onClick={() => void handleRetry(doc)}>重试</button>
+                )}
+                <button className="kb-card__del" title="删除文件"
+                        onClick={() => void handleDeleteFile(doc)}>删除</button>
+              </div>
                 </article>
               ))}
             </div>

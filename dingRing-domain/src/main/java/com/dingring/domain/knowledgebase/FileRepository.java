@@ -14,6 +14,9 @@ public interface FileRepository {
 
     List<File> findByKnowledgeBaseId(Long knowledgeBaseId);
 
+    /** 全量文件（对账任务用：孤儿向量检测需跨知识库比对） */
+    List<File> findAll();
+
     boolean update(File file);
 
     boolean deleteById(Long id);

@@ -7,9 +7,14 @@ import com.dingring.app.dto.response.KbSummary;
 import com.dingring.common.exception.BizException;
 import com.dingring.common.exception.ErrorCode;
 import com.dingring.common.exception.ParamException;
+import com.dingring.common.util.HashUtil;
 import com.dingring.common.util.LogHelper;
+import com.dingring.domain.knowledgebase.DocumentVersion;
+import com.dingring.domain.knowledgebase.DocumentVersionRepository;
 import com.dingring.domain.knowledgebase.File;
 import com.dingring.domain.knowledgebase.FileRepository;
+import com.dingring.domain.knowledgebase.IngestionRun;
+import com.dingring.domain.knowledgebase.IngestionRunRepository;
 import com.dingring.domain.knowledgebase.KnowledgeBase;
 import com.dingring.domain.knowledgebase.KnowledgeBaseRepository;
 import com.dingring.domain.group.GroupRepository;
@@ -21,7 +26,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.nio.file.Paths;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * 知识库管理应用服务（Phase E）。
@@ -38,6 +46,13 @@ public class KnowledgeBaseAppService {
     private final RagService ragService;
     private final VectorStoreCleaner vectorStoreCleaner;
     private final GroupRepository groupRepository;
+    private final IngestionRunRepository ingestionRunRepository;
+    private final DocumentVersionRepository documentVersionRepository;
+
+    @org.springframework.beans.factory.annotation.Value("${dingring.rag.cleaning.enabled:true}")
+    private boolean cleaningEnabledByDefault;
+    @org.springframework.beans.factory.annotation.Value("${dingring.rag.cleaning.executor:builtin}")
+    private String cleaningExecutor;
 
     /** 创建知识库（空库默认 ACTIVE，文件状态由摄入管道流转） */
     public KbDetail create(CreateKbRequest request) {
@@ -77,12 +92,13 @@ public class KnowledgeBaseAppService {
 
     /**
      * 删除知识库：连带清理文件元数据与物理文件。
-     * <p>向量条目按 kbId 联动清理（失败仅告警）。
+     * <p>先标记 DELETING 并使活跃 run 失效（防止异步摄入在清理后写回向量），再删向量与元数据。
      */
     public void delete(Long id) {
         knowledgeBaseRepository.findById(id)
                 .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "知识库不存在: " + id));
         for (File file : fileRepository.findByKnowledgeBaseId(id)) {
+            invalidateActiveRun(file);
             fileStorageService.delete(file.getPath());
             fileRepository.deleteById(file.getId());
         }
@@ -98,13 +114,16 @@ public class KnowledgeBaseAppService {
      * <p>仅接受 .md/.markdown（contentType 非空时须 text/*），否则抛 {@link ParamException}。
      * <p>摄入失败不影响上传结果，状态由摄入管道回写为 FAILED。
      */
-    public FileDTO upload(Long kbId, MultipartFile file) {
+    public FileDTO upload(Long kbId, MultipartFile file, boolean clean) {
         // P2：当前仅支持 md 文档（解析与切片链路按 markdown 调优）
         validateMarkdown(file);
         KnowledgeBase kb = knowledgeBaseRepository.findById(kbId)
                 .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "知识库不存在: " + kbId));
 
         String path = fileStorageService.store(file);
+        String docContentHash = hashStoredFile(path);
+        int nextVersion = 1;
+        String executor = clean ? cleaningExecutor : IngestionRun.EXECUTOR_BUILTIN;
 
         File entity = new File();
         entity.setKnowledgeBaseId(kbId);
@@ -113,15 +132,124 @@ public class KnowledgeBaseAppService {
         entity.setFileType(detectFileType(file.getOriginalFilename()));
         entity.setFileSize(file.getSize());
         entity.setStatus(File.STATUS_UPLOADED);
+        entity.setDocContentHash(docContentHash);
+        entity.setCurrentVersion(nextVersion);
+        entity.setCleaningStatus(clean ? null : File.CLEANING_SKIPPED);
         fileRepository.save(entity);
 
+        // 创建摄入 run（活跃槽 = fileId）：同一文件同一时刻仅允许一个活跃 run
+        // 勾选清洗 + 外部执行方：置 CLEANING_WAITING，等 MCP 提交后由提交服务唤醒管道；
+        // 勾选清洗 + 内置执行方：管道内先 CLEANING_RUNNING 再继续；未勾选：直接摄入
+        IngestionRun run = new IngestionRun();
+        run.setRunId(UUID.randomUUID().toString());
+        run.setFileId(entity.getId());
+        run.setDocContentHash(docContentHash);
+        run.setDocumentVersion(nextVersion);
+        run.setExecutor(executor);
+        run.setStatus(clean && IngestionRun.EXECUTOR_EXTERNAL_MCP.equals(executor)
+                ? IngestionRun.STATUS_CLEANING_WAITING : IngestionRun.STATUS_UPLOAD_CREATED);
+        run.setAttempt(0);
+        run.setActiveSlot(entity.getId());
+        ingestionRunRepository.save(run);
+
+        // 版本记录（raw 不可变；active 切换在摄入全部成功后由管道执行）
+        DocumentVersion version = new DocumentVersion();
+        version.setFileId(entity.getId());
+        version.setDocumentVersion(nextVersion);
+        version.setDocumentTitle(stripExtension(entity.getName()));
+        version.setDocContentHash(docContentHash);
+        version.setRawPath(path);
+        version.setActive(false);
+        documentVersionRepository.save(version);
+
+        entity.setActiveRunId(run.getRunId());
+        fileRepository.update(entity);
+
         // 异步摄入：向量 metadata 按 kbId 溯源（检索过滤/删除清理均按 kbId）
-        ingestionPipeline.ingest(entity);
+        if (!IngestionRun.STATUS_CLEANING_WAITING.equals(run.getStatus())) {
+            ingestionPipeline.ingest(entity, run);
+        }
 
         LogHelper.printLog(KnowledgeBaseAppService.class, "upload", "KB_FILE_UPLOAD",
-                "文件已上传", "kbId={} fileId={} name={} size={}",
-                kbId, entity.getId(), entity.getName(), entity.getFileSize());
+                "文件已上传", "kbId={} fileId={} name={} size={} runId={} version={} clean={} executor={}",
+                kbId, entity.getId(), entity.getName(), entity.getFileSize(), run.getRunId(),
+                nextVersion, clean, executor);
         return toFileDTO(entity);
+    }
+
+    public FileDTO upload(Long kbId, MultipartFile file) {
+        return upload(kbId, file, cleaningEnabledByDefault);
+    }
+
+    /** 取消清洗任务：取消本次 run（无超时自动回退，等用户干预或取消） */
+    public void cancelCleaning(Long fileId) {
+        File file = fileRepository.findById(fileId)
+                .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "文件不存在: " + fileId));
+        IngestionRun run = ingestionRunRepository.findActiveByFileId(fileId)
+                .orElseThrow(() -> new ParamException("该文件无活跃清洗任务"));
+        if (!IngestionRun.STATUS_CLEANING_WAITING.equals(run.getStatus())
+                && !IngestionRun.STATUS_CLEANING_RUNNING.equals(run.getStatus())
+                && !IngestionRun.STATUS_FAILED.equals(run.getStatus())) {
+            throw new ParamException("任务非清洗中状态: " + run.getStatus());
+        }
+        run.setStatus(IngestionRun.STATUS_CANCELLED);
+        run.setActiveSlot(null);
+        run.setErrorMessage("用户取消");
+        ingestionRunRepository.update(run);
+        file.setActiveRunId(null);
+        file.setCleaningStatus(File.CLEANING_FAILED);
+        file.setStatus(File.STATUS_FAILED);
+        file.setErrorMsg("清洗已取消");
+        fileRepository.update(file);
+        LogHelper.printLog(KnowledgeBaseAppService.class, "cancelCleaning", "KB_CLEANING_CANCEL",
+                "清洗任务已取消", "fileId={} runId={}", fileId, run.getRunId());
+    }
+
+    /** 手动重试：FAILED 终态任务拉起新 run（幂等，不产生重复向量） */
+    public FileDTO retryIngestion(Long fileId) {
+        File file = fileRepository.findById(fileId)
+                .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "文件不存在: " + fileId));
+        if (ingestionRunRepository.findActiveByFileId(fileId).isPresent()) {
+            throw new ParamException("该文件已有活跃任务，不能重试");
+        }
+        String docContentHash = hashStoredFile(file.getPath());
+
+        IngestionRun run = new IngestionRun();
+        run.setRunId(UUID.randomUUID().toString());
+        run.setFileId(fileId);
+        run.setDocContentHash(docContentHash);
+        run.setDocumentVersion(file.getCurrentVersion() == null ? 1 : file.getCurrentVersion());
+        run.setExecutor(IngestionRun.EXECUTOR_BUILTIN);
+        run.setStatus(IngestionRun.STATUS_UPLOAD_CREATED);
+        run.setAttempt(0);
+        run.setActiveSlot(fileId);
+        ingestionRunRepository.save(run);
+
+        file.setStatus(File.STATUS_UPLOADED);
+        file.setErrorMsg(null);
+        file.setActiveRunId(run.getRunId());
+        fileRepository.update(file);
+
+        ingestionPipeline.ingest(file, run);
+        LogHelper.printLog(KnowledgeBaseAppService.class, "retryIngestion", "KB_RETRY",
+                "手动重试已拉起新 run", "fileId={} runId={}", fileId, run.getRunId());
+        return toFileDTO(file);
+    }
+
+    private String hashStoredFile(String path) {
+        try {
+            return HashUtil.sha256(Paths.get(path));
+        } catch (IOException e) {
+            throw new IllegalStateException("计算文件 hash 失败: " + path, e);
+        }
+    }
+
+    private static String stripExtension(String name) {
+        if (name == null || name.isBlank()) {
+            return "未命名文档";
+        }
+        int dot = name.lastIndexOf('.');
+        return dot > 0 ? name.substring(0, dot) : name;
     }
 
     public List<FileDTO> listFiles(Long kbId) {
@@ -132,19 +260,38 @@ public class KnowledgeBaseAppService {
                 .toList();
     }
 
-    /** 删除文件：先删物理文件再删元数据，物理文件缺失不阻断（幂等） */
+    /** 删除文件：先失效 run 并标记 DELETING，再删物理文件、向量与元数据（幂等） */
     public void deleteFile(Long kbId, Long fileId) {
         File file = fileRepository.findById(fileId)
                 .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "文件不存在: " + fileId));
         if (!kbId.equals(file.getKnowledgeBaseId())) {
             throw new ParamException("文件不属于该知识库");
         }
+        invalidateActiveRun(file);
+        file.setStatus(File.STATUS_DELETING);
+        fileRepository.update(file);
         fileStorageService.delete(file.getPath());
         // P2：联动清理该文件全部切片向量（失败仅告警，不阻断删除）
         vectorStoreCleaner.deleteByFileId(fileId);
         fileRepository.deleteById(fileId);
         LogHelper.printLog(KnowledgeBaseAppService.class, "deleteFile", "KB_FILE_DELETE",
                 "文件已删除", "kbId={} fileId={}", kbId, fileId);
+    }
+
+    /** 使文件当前活跃 run 失效（置 CANCELLED 并释放活跃槽），防止删除后异步写回 */
+    private void invalidateActiveRun(File file) {
+        if (file.getActiveRunId() == null) {
+            return;
+        }
+        ingestionRunRepository.findByRunId(file.getActiveRunId()).ifPresent(run -> {
+            if (run.isActive()) {
+                run.setStatus(IngestionRun.STATUS_CANCELLED);
+                run.setActiveSlot(null);
+                run.setErrorMessage("文件删除，run 已取消");
+                ingestionRunRepository.update(run);
+            }
+        });
+        file.setActiveRunId(null);
     }
 
     /**
@@ -177,6 +324,11 @@ public class KnowledgeBaseAppService {
                 .fileType(file.getFileType())
                 .fileSize(file.getFileSize())
                 .status(file.getStatus())
+                .cleaningStatus(file.getCleaningStatus())
+                // 活跃 run 状态供前端区分"待清洗（外部执行方）"与"清洗中"徽章
+                .runStatus(file.getActiveRunId() == null ? null
+                        : ingestionRunRepository.findByRunId(file.getActiveRunId())
+                        .map(IngestionRun::getStatus).orElse(null))
                 .chunkCount(file.getChunkCount())
                 .errorMsg(file.getErrorMsg())
                 .createTime(file.getCreateTime())

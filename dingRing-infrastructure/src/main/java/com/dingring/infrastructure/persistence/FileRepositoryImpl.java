@@ -40,6 +40,11 @@ public class FileRepositoryImpl implements FileRepository {
     }
 
     @Override
+    public List<File> findAll() {
+        return fileMapper.findAll();
+    }
+
+    @Override
     public boolean update(File file) {
         file.setUpdateTime(LocalDateTime.now());
         return fileMapper.update(file) > 0;

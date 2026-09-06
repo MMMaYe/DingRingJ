@@ -41,3 +41,11 @@ Thumbs.db
 # ---- 密钥文件（绝不入库）----
 test-records/scripts/.cloudbase_key
 test-records/scripts/.stepfun_key
+
+# ---- P3 tokenizer 模型文件（11MB 二进制，本地下载）----
+/models/
+
+# ---- 本地素材与个人文件 ----
+/vibe_images/
+/.trae/
+/马也简历*.html

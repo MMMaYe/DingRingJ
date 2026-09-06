@@ -55,11 +55,12 @@ public class KbController {
         return ApiResponse.ok();
     }
 
-    /** 上传文件（multipart） */
+    /** 上传文件（multipart）；clean 默认开启，可显式取消 */
     @PostMapping("/{id}/files")
     public ApiResponse<FileDTO> upload(@PathVariable Long id,
-                                       @RequestParam("file") MultipartFile file) {
-        return ApiResponse.ok(knowledgeBaseAppService.upload(id, file));
+                                       @RequestParam("file") MultipartFile file,
+                                       @RequestParam(value = "clean", required = false, defaultValue = "true") boolean clean) {
+        return ApiResponse.ok(knowledgeBaseAppService.upload(id, file, clean));
     }
 
     /** 列出知识库文件 */
@@ -75,10 +76,16 @@ public class KbController {
         return ApiResponse.ok();
     }
 
-    /** 检索测试（dev only）：验证知识库召回效果 */
-    @PostMapping("/search")
-    public ApiResponse<String> search(@RequestParam("query") String query,
-                                      @RequestParam(value = "groupId", required = false) Long groupId) {
-        return ApiResponse.ok(knowledgeBaseAppService.search(query, groupId));
+    /** 取消清洗任务（取消本次上传/run，不提供"跳过清洗后入库"） */
+    @PostMapping("/{id}/files/{fileId}/cleaning/cancel")
+    public ApiResponse<Void> cancelCleaning(@PathVariable Long id, @PathVariable Long fileId) {
+        knowledgeBaseAppService.cancelCleaning(fileId);
+        return ApiResponse.ok();
+    }
+
+    /** 手动重试失败任务：拉起新 run */
+    @PostMapping("/{id}/files/{fileId}/retry")
+    public ApiResponse<FileDTO> retry(@PathVariable Long id, @PathVariable Long fileId) {
+        return ApiResponse.ok(knowledgeBaseAppService.retryIngestion(fileId));
     }
 }

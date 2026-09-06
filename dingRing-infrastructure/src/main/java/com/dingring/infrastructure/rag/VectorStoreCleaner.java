@@ -28,6 +28,41 @@ public class VectorStoreCleaner {
         execute("DELETE FROM kb_store WHERE metadata->>'fileId' = ?", String.valueOf(fileId), "fileId", fileId);
     }
 
+    /**
+     * 删除指定文件指定版本的切片向量（重试/恢复幂等的关键）。
+     * <p>重试与启动恢复都可能与上次半途中断的摄入写回相同的 chunkId
+     * （{fileId}-v{version}-{index}），先清后写保证不产生重复向量。
+     */
+    public void deleteByFileIdAndVersion(Long fileId, Integer documentVersion) {
+        try {
+            int deleted = vectorJdbcTemplate.update(
+                    "DELETE FROM kb_store WHERE metadata->>'fileId' = ? AND metadata->>'documentVersion' = ?",
+                    String.valueOf(fileId), String.valueOf(documentVersion));
+            LogHelper.printLog(VectorStoreCleaner.class, "execute", "KB_VECTOR_CLEAN",
+                    "版本向量清理完成", "fileId={} version={} 删除条数={}", fileId, documentVersion, deleted);
+        } catch (Exception e) {
+            // 清理失败不阻断摄入：最坏情况是重复 chunk（对账任务兜底），优于上传整体失败
+            LogHelper.printWarnLog(VectorStoreCleaner.class, "execute", "KB_VECTOR_CLEAN",
+                    "版本向量清理失败继续摄入", "fileId={} version={} 错误: {}",
+                    fileId, documentVersion, e.getMessage());
+        }
+    }
+
+    /** 统计指定文件+版本的向量条数（对账：与 kb_file.chunk_count 比对） */
+    public int countByFileIdAndVersion(Long fileId, Integer documentVersion) {
+        try {
+            Integer count = vectorJdbcTemplate.queryForObject(
+                    "SELECT COUNT(*) FROM kb_store WHERE metadata->>'fileId' = ? AND metadata->>'documentVersion' = ?",
+                    Integer.class, String.valueOf(fileId), String.valueOf(documentVersion));
+            return count == null ? 0 : count;
+        } catch (Exception e) {
+            LogHelper.printWarnLog(VectorStoreCleaner.class, "execute", "KB_VECTOR_CLEAN",
+                    "版本向量计数失败", "fileId={} version={} 错误: {}",
+                    fileId, documentVersion, e.getMessage());
+            return -1;
+        }
+    }
+
     /** 删除指定知识库的全部向量（删除知识库时一次清理） */
     public void deleteByKbId(Long kbId) {
         execute("DELETE FROM kb_store WHERE metadata->>'kbId' = ?", String.valueOf(kbId), "kbId", kbId);

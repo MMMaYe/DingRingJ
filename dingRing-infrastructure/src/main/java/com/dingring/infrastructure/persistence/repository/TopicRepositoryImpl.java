@@ -55,6 +55,11 @@ public class TopicRepositoryImpl implements TopicRepository {
     }
 
     @Override
+    public List<Long> findAllIds() {
+        return topicMapper.findAllIds();
+    }
+
+    @Override
     public Long save(Topic topic) {
         LocalDateTime now = LocalDateTime.now();
         topic.setCreateTime(now);

@@ -33,6 +33,7 @@
         <spring-ai-alibaba.version>1.1.2.3</spring-ai-alibaba.version>
         <springdoc.version>2.7.0</springdoc.version>
         <mybatis.version>3.0.4</mybatis.version>
+        <djl.version>0.36.0</djl.version>
     </properties>
 
     <dependencyManagement>

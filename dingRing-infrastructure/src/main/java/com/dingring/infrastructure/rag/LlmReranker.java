@@ -27,16 +27,20 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
- * LLM 文档重排器（Phase E）。
+ * LLM 文档重排器（Phase E，legacy 兼容实现）。
  * <p>向量召回 Top-20 后，用轻量 LLM 对候选文档按相关性打分，取 Top-5。
  * <p>重排 prompt 由 {@link PromptTemplateLoader} 渲染 Nacos 模板（本地降级 classpath prompt-config.json），
  * 复用 routeJudge Agent（id=6，DeepSeek-V4-Flash）调用 LLM，避免新增 API 依赖。
  * <p>容错：LLM 打分失败时降级为原始顺序返回（跳过重排）。
+ * <p>P3 灰度切换：dingring.rag.reranker.provider=llm（或不配置）时生效；
+ * 配置 siliconflow 时由 {@link com.dingring.infrastructure.rag.retrieval.SiliconFlowReranker}
+ * 取代（Qwen3-Reranker-4B 专用模型，rerankStructured 主链路）——两者互斥装配，
+ * 任意时刻容器内恰有一个 Reranker Bean。
  */
 @Slf4j
 @Component
 @RequiredArgsConstructor
-@ConditionalOnProperty(name = "dingring.rag.enabled", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(name = "dingring.rag.reranker.provider", havingValue = "llm", matchIfMissing = true)
 public class LlmReranker implements Reranker {
 
     /** 重排 prompt 模板名（prompt-config.json 中定义） */

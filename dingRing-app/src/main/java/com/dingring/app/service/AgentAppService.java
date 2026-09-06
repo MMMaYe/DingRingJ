@@ -44,8 +44,9 @@ public class AgentAppService {
         agent.setProfilePicture(request.getProfilePicture());
         agent.setDescription(request.getDescription());
         agent.setBaseUrl(request.getBaseUrl());
-        // apiKey 现在创建/修改都必填，直接覆盖
-        agent.setApiKey(request.getApiKey());
+        if (request.getApiKey() != null && !request.getApiKey().isBlank()) {
+            agent.setApiKey(request.getApiKey());
+        }
         agent.setModelName(request.getModelName());
         agent.setCallType(request.getCallType());
         agent.setSystemPrompt(request.getSystemPrompt());
@@ -67,14 +68,10 @@ public class AgentAppService {
                 .toList();
     }
 
-    /**
-     * 按 id 查询 Agent 详情。
-     * 用于编辑场景拉取最新配置，避免使用列表快照数据覆盖他人修改。
-     * 返回的 DTO 包含 apiKey（编辑回填需要），与 list 接口（不含 apiKey）区分。
-     */
+    /** 按 id 查询 Agent 详情，敏感凭据不回传。 */
     public AgentDTO findById(Long id) {
         return agentRepository.findById(id)
-                .map(this::toDetailDto)
+                .map(this::toDto)
                 .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "Agent 不存在: " + id));
     }
 
@@ -92,24 +89,6 @@ public class AgentAppService {
                 .feature(agent.getFeature())
                 .createTime(agent.getCreateTime())
                 .updateTime(agent.getUpdateTime())
-                .build();
-    }
-
-    /** 详情场景：回传 apiKey（编辑回填需要） */
-    private AgentDTO toDetailDto(Agent agent) {
-        return AgentDTO.builder()
-                .id(agent.getId())
-                .name(agent.getName())
-                .profilePicture(agent.getProfilePicture())
-                .description(agent.getDescription())
-                .baseUrl(agent.getBaseUrl())
-                .modelName(agent.getModelName())
-                .callType(agent.getCallType())
-                .systemPrompt(agent.getSystemPrompt())
-                .feature(agent.getFeature())
-                .createTime(agent.getCreateTime())
-                .updateTime(agent.getUpdateTime())
-                .apiKey(agent.getApiKey())
                 .build();
     }
 }

@@ -120,7 +120,9 @@ class SaaLlmFactoryTest {
                 mock(InjectKbHook.class),
                 mock(SystemMessageMergeHook.class),
                 mock(ModelRequestLoggingInterceptor.class),
-                mock(WebTools.class));
+                mock(WebTools.class),
+                // F5 kb_read_in_redis 工具为条件装配，此处仅测 ChatModel 构建，注入空 Optional
+                java.util.Optional.empty());
         ReflectionTestUtils.setField(factory, "connectTimeoutSeconds", 10L);
         ReflectionTestUtils.setField(factory, "readTimeoutSeconds", 120L);
         ReflectionTestUtils.setField(factory, "defaultMaxTokens", maxTokens);

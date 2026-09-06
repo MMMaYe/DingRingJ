@@ -18,6 +18,8 @@ public interface FileMapper {
 
     List<File> findByKnowledgeBaseId(Long knowledgeBaseId);
 
+    List<File> findAll();
+
     int update(File file);
 
     int deleteById(Long id);

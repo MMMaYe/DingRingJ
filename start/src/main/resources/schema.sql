@@ -115,9 +115,54 @@ CREATE TABLE IF NOT EXISTS kb_file (
     status            VARCHAR(16)  NOT NULL DEFAULT 'UPLOADED' COMMENT '状态: UPLOADED/CHUNKED/EMBEDDED/READY/FAILED',
     chunk_count       INT          NULL COMMENT '切片数',
     error_msg         TEXT         NULL COMMENT '失败原因(status=FAILED 时)',
+    doc_content_hash  CHAR(64)     NULL COMMENT '原始文件 SHA-256',
+    current_version   INT          NOT NULL DEFAULT 0 COMMENT '当前生效文档版本',
+    active_run_id     VARCHAR(64)  NULL COMMENT '当前活跃摄入 runId',
+    cleaning_status   VARCHAR(16)  NULL COMMENT 'SKIPPED/CLEANED/FAILED',
     create_time       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
-    INDEX idx_kb_id (knowledge_base_id)
+    INDEX idx_kb_id (knowledge_base_id),
+    UNIQUE KEY uk_kb_file_active_run (active_run_id)
+);
+
+CREATE TABLE IF NOT EXISTS kb_document_version (
+    id                      BIGINT       PRIMARY KEY AUTO_INCREMENT,
+    file_id                 BIGINT       NOT NULL,
+    document_version        INT          NOT NULL,
+    document_title          VARCHAR(255) NOT NULL,
+    doc_content_hash        CHAR(64)     NOT NULL,
+    raw_path                VARCHAR(512) NOT NULL,
+    clean_path              VARCHAR(512) NULL,
+    cleaning_model          VARCHAR(128) NULL,
+    cleaning_prompt_version VARCHAR(64)  NULL,
+    chunking_version        VARCHAR(64)  NULL,
+    embedding_model         VARCHAR(128) NULL,
+    chunk_count             INT          NULL,
+    active                  TINYINT(1)   NOT NULL DEFAULT 0,
+    created_at              DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at              DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uk_kb_doc_version UNIQUE (file_id, document_version),
+    INDEX idx_kb_doc_active (file_id, active)
+);
+
+CREATE TABLE IF NOT EXISTS kb_ingestion_run (
+    id                 BIGINT      PRIMARY KEY AUTO_INCREMENT,
+    run_id             VARCHAR(64) NOT NULL,
+    file_id            BIGINT      NOT NULL,
+    doc_content_hash   CHAR(64)    NOT NULL,
+    document_version   INT         NOT NULL,
+    executor           VARCHAR(32) NOT NULL,
+    status             VARCHAR(32) NOT NULL,
+    attempt            INT         NOT NULL DEFAULT 0,
+    error_message      TEXT        NULL,
+    submitted_at       DATETIME    NULL,
+    active_slot        BIGINT      NULL COMMENT '活跃时等于 file_id，终态置 NULL',
+    created_at         DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at         DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uk_kb_ingestion_run_id UNIQUE (run_id),
+    CONSTRAINT uk_kb_ingestion_active_slot UNIQUE (active_slot),
+    INDEX idx_kb_ingestion_file (file_id, created_at),
+    INDEX idx_kb_ingestion_status (status, updated_at)
 );
 
 -- 用户画像表（跨群全局画像，版本化写回：每次提炼后标记旧记录为失效，插入新记录，保留历史轨迹）

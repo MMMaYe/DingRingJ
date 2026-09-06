@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.dingring.infrastructure.persistence.mapper.IngestionRunMapper">
+
+    <sql id="columns">
+        id, run_id, file_id, doc_content_hash, document_version, executor, status, attempt,
+        error_message, submitted_at, active_slot, created_at, updated_at
+    </sql>
+
+    <select id="findByRunId" resultType="com.dingring.domain.knowledgebase.IngestionRun">
+        SELECT <include refid="columns"/> FROM kb_ingestion_run WHERE run_id = #{runId}
+    </select>
+
+    <select id="findActiveByFileId" resultType="com.dingring.domain.knowledgebase.IngestionRun">
+        SELECT <include refid="columns"/> FROM kb_ingestion_run
+        WHERE file_id = #{fileId} AND active_slot IS NOT NULL
+    </select>
+
+    <!-- 恢复候选：重启前仍在途的 run（持有活跃槽 + 非终态）。
+         活跃槽存的是 fileId 而非布尔，必须 IS NOT NULL；
+         排除 CLEANING_WAITING：外部执行方提交时由提交服务唤醒，重启恢复不应代劳 -->
+    <select id="findRecoverable" resultType="com.dingring.domain.knowledgebase.IngestionRun">
+        SELECT <include refid="columns"/> FROM kb_ingestion_run
+        WHERE active_slot IS NOT NULL
+          AND status NOT IN ('READY', 'FAILED', 'CANCELLED', 'CLEANING_WAITING')
+        ORDER BY created_at
+    </select>
+
+    <!-- 清洗中状态 run（对账任务告警用：长期未完成仅提示不自动降级） -->
+    <select id="findCleaningRuns" resultType="com.dingring.domain.knowledgebase.IngestionRun">
+        SELECT <include refid="columns"/> FROM kb_ingestion_run
+        WHERE status IN ('CLEANING_WAITING', 'CLEANING_RUNNING')
+        ORDER BY created_at
+    </select>
+
+    <insert id="insert" parameterType="com.dingring.domain.knowledgebase.IngestionRun"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO kb_ingestion_run
+        (run_id, file_id, doc_content_hash, document_version, executor, status, attempt,
+         error_message, submitted_at, active_slot, created_at, updated_at)
+        VALUES
+        (#{runId}, #{fileId}, #{docContentHash}, #{documentVersion}, #{executor}, #{status}, #{attempt},
+         #{errorMessage}, #{submittedAt}, #{activeSlot}, #{createdAt}, #{updatedAt})
+    </insert>
+
+    <update id="update" parameterType="com.dingring.domain.knowledgebase.IngestionRun">
+        UPDATE kb_ingestion_run
+        SET status = #{status}, attempt = #{attempt}, error_message = #{errorMessage},
+            submitted_at = #{submittedAt}, active_slot = #{activeSlot}, updated_at = #{updatedAt}
+        WHERE id = #{id}
+    </update>
+</mapper>

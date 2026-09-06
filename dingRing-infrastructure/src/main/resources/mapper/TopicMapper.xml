@@ -66,6 +66,11 @@
         ORDER BY closed_at DESC, id DESC
     </select>
 
+    <!-- 向量对账：topic_id_store 的 topicId 与全部话题 id 比对找孤儿 -->
+    <select id="findAllIds" resultType="long">
+        SELECT id FROM topic
+    </select>
+
     <insert id="insert" parameterType="com.dingring.domain.discussion.Topic"
             useGeneratedKeys="true" keyProperty="id">
         INSERT INTO topic (chat_group_id, title, status, conclusion, closed_at, version, feature, create_time, update_time)

@@ -74,6 +74,12 @@
             <artifactId>spring-ai-alibaba-dashscope</artifactId>
             <version>${spring-ai-alibaba.version}</version>
         </dependency>
+        <!-- HuggingFace tokenizer for reproducible token budgets -->
+        <dependency>
+            <groupId>ai.djl.huggingface</groupId>
+            <artifactId>tokenizers</artifactId>
+            <version>${djl.version}</version>
+        </dependency>
         <!-- Spring AOP -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -93,6 +99,12 @@
         <dependency>
             <groupId>org.springframework</groupId>
             <artifactId>spring-websocket</artifactId>
+        </dependency>
+        <!-- P3 F5：Redis 检索缓存（两级 key：目录 1 天 + chunk 全文 2 天；
+             无 Redis 环境自动降级直查 PG，RedisRetrievalCache 全操作静默失败） -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
         </dependency>
         <!-- 测试：JUnit 5 + AssertJ + Mockito -->
         <dependency>

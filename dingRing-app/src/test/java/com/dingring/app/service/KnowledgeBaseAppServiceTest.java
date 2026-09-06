@@ -1,9 +1,11 @@
 package com.dingring.app.service;
 
-import com.dingring.app.dto.request.CreateKbRequest;
 import com.dingring.common.exception.ParamException;
+import com.dingring.domain.knowledgebase.DocumentVersionRepository;
 import com.dingring.domain.knowledgebase.File;
 import com.dingring.domain.knowledgebase.FileRepository;
+import com.dingring.domain.knowledgebase.IngestionRun;
+import com.dingring.domain.knowledgebase.IngestionRunRepository;
 import com.dingring.domain.knowledgebase.KnowledgeBase;
 import com.dingring.domain.knowledgebase.KnowledgeBaseRepository;
 import com.dingring.domain.group.GroupRepository;
@@ -14,11 +16,16 @@ import com.dingring.infrastructure.rag.VectorStoreCleaner;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+import org.mockito.ArgumentCaptor;
 import org.springframework.mock.web.MockMultipartFile;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -28,10 +35,13 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * {@link KnowledgeBaseAppService} P2 用例：删除联动向量清理 + 上传 md 双检校验。
+ * {@link KnowledgeBaseAppService} P3 用例：run 驱动上传 + 删除竞态失效。
  */
-@DisplayName("KnowledgeBaseAppService 删除联动与上传 md 双检")
+@DisplayName("KnowledgeBaseAppService run 驱动上传与删除失效")
 class KnowledgeBaseAppServiceTest {
+
+    @TempDir
+    Path tempDir;
 
     private KnowledgeBaseRepository knowledgeBaseRepository;
     private FileRepository fileRepository;
@@ -40,6 +50,8 @@ class KnowledgeBaseAppServiceTest {
     private RagService ragService;
     private VectorStoreCleaner vectorStoreCleaner;
     private GroupRepository groupRepository;
+    private IngestionRunRepository ingestionRunRepository;
+    private DocumentVersionRepository documentVersionRepository;
     private KnowledgeBaseAppService service;
 
     @BeforeEach
@@ -51,8 +63,11 @@ class KnowledgeBaseAppServiceTest {
         ragService = mock(RagService.class);
         vectorStoreCleaner = mock(VectorStoreCleaner.class);
         groupRepository = mock(GroupRepository.class);
+        ingestionRunRepository = mock(IngestionRunRepository.class);
+        documentVersionRepository = mock(DocumentVersionRepository.class);
         service = new KnowledgeBaseAppService(knowledgeBaseRepository, fileRepository,
-                ingestionPipeline, fileStorageService, ragService, vectorStoreCleaner, groupRepository);
+                ingestionPipeline, fileStorageService, ragService, vectorStoreCleaner,
+                groupRepository, ingestionRunRepository, documentVersionRepository);
     }
 
     private KnowledgeBase kb(Long id) {
@@ -76,16 +91,28 @@ class KnowledgeBaseAppServiceTest {
     }
 
     @Test
-    @DisplayName("删除文件按 fileId 联动清理向量")
-    void shouldCleanVectorsOnFileDelete() {
+    @DisplayName("删除文件先失效活跃 run 再清理向量")
+    void shouldInvalidateRunBeforeCleaningVectors() {
         File file = new File();
         file.setId(9L);
         file.setKnowledgeBaseId(1L);
         file.setPath("/tmp/x.md");
+        file.setActiveRunId("run-9");
+        IngestionRun run = new IngestionRun();
+        run.setRunId("run-9");
+        run.setFileId(9L);
+        run.setActiveSlot(9L);
+        run.setStatus(IngestionRun.STATUS_EMBEDDING);
         when(fileRepository.findById(9L)).thenReturn(Optional.of(file));
+        when(ingestionRunRepository.findByRunId("run-9")).thenReturn(Optional.of(run));
 
         service.deleteFile(1L, 9L);
 
+        ArgumentCaptor<IngestionRun> captor = ArgumentCaptor.forClass(IngestionRun.class);
+        verify(ingestionRunRepository).update(captor.capture());
+        assertThat(captor.getValue().getStatus()).isEqualTo(IngestionRun.STATUS_CANCELLED);
+        assertThat(captor.getValue().getActiveSlot()).isNull();
+        assertThat(file.getStatus()).isEqualTo(File.STATUS_DELETING);
         verify(vectorStoreCleaner).deleteByFileId(9L);
         verify(fileRepository).deleteById(9L);
     }
@@ -101,20 +128,29 @@ class KnowledgeBaseAppServiceTest {
                 .isInstanceOf(ParamException.class)
                 .hasMessageContaining(".md");
         verify(fileStorageService, never()).store(any());
-        verify(ingestionPipeline, never()).ingest(any());
+        verify(ingestionPipeline, never()).ingest(any(), any());
     }
 
     @Test
-    @DisplayName("上传 .md 文件正常流转（落盘->元数据->异步摄入）")
-    void shouldAcceptMarkdownUpload() {
+    @DisplayName("上传 .md 创建 run 与版本记录并触发 run 驱动摄入")
+    void shouldAcceptMarkdownUploadWithRunAndVersion() throws Exception {
         when(knowledgeBaseRepository.findById(1L)).thenReturn(Optional.of(kb(1L)));
-        when(fileStorageService.store(any())).thenReturn("/tmp/x.md");
+        Path stored = tempDir.resolve("note.md");
+        Files.writeString(stored, "# 标题\n内容");
+        when(fileStorageService.store(any())).thenReturn(stored.toString());
         MockMultipartFile md = new MockMultipartFile(
                 "file", "note.md", "text/markdown", "# 标题\n内容".getBytes());
 
         assertThatCode(() -> service.upload(1L, md)).doesNotThrowAnyException();
-        // 闭环验证：落盘确实发生（不只是摄入管道被调用）
+
         verify(fileStorageService).store(any());
-        verify(ingestionPipeline).ingest(any());
+        verify(documentVersionRepository).save(any());
+        ArgumentCaptor<IngestionRun> runCaptor = ArgumentCaptor.forClass(IngestionRun.class);
+        verify(ingestionRunRepository).save(runCaptor.capture());
+        IngestionRun run = runCaptor.getValue();
+        assertThat(run.getDocContentHash()).isNotBlank();
+        assertThat(run.getActiveSlot()).isEqualTo(run.getFileId());
+        assertThat(run.getStatus()).isEqualTo(IngestionRun.STATUS_UPLOAD_CREATED);
+        verify(ingestionPipeline).ingest(any(), any());
     }
 }

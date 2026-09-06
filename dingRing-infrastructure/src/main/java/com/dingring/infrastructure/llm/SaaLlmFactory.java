@@ -13,6 +13,7 @@ import com.dingring.infrastructure.agent.hook.InjectKbHook;
 import com.dingring.infrastructure.agent.hook.ProfileInjectionHook;
 import com.dingring.infrastructure.agent.hook.SystemMessageMergeHook;
 import com.dingring.infrastructure.agent.interceptor.ModelRequestLoggingInterceptor;
+import com.dingring.infrastructure.agent.tool.KbReadInRedisTool;
 import com.dingring.infrastructure.agent.tool.WebTools;
 import com.dingring.infrastructure.aop.Event;
 import lombok.RequiredArgsConstructor;
@@ -31,6 +32,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.time.Duration;
+import java.util.Optional;
 
 /**
  * 按 Agent 配置构建 ChatModel 和 ReactAgent。
@@ -71,6 +73,8 @@ public class SaaLlmFactory {
     private final SystemMessageMergeHook systemMessageMergeHook;
     private final ModelRequestLoggingInterceptor modelRequestLoggingInterceptor;
     private final WebTools webTools;
+    /** Optional：dingring.rag.enabled=false 时 KbReadInRedisTool 不装配，此处注入空值 */
+    private final Optional<KbReadInRedisTool> kbReadInRedisTool;
 
     public OpenAiChatModel buildChatModel(Agent agent, CallOptions options) {
         double temperature = options != null && options.temperature() != null
@@ -168,6 +172,14 @@ public class SaaLlmFactory {
         // methodTools 由 SAA 扫描 @Tool 方法注册——后续新增工具方法零装配代码
         if (toolSet != ToolSet.CONCLUDE) {
             builder.methodTools(webTools);
+        }
+        // P3 F5：知识库全文读取工具（kb_read_in_redis）——仅知识消费场景挂载：
+        // DISCUSS/WORK 的 SystemMessage 注入了检索目录（InjectKbHook），模型按目录深读；
+        // CHAT 无目录注入（无 ToolSet 参数默认走 DISCUSS/WORK 构建入口）；
+        // CONCLUDE 收束无需深读。RAG 关闭时 KbReadInRedisTool 不装配（条件 Bean），
+        // 此处注入的 Optional 空值跳过。
+        if (toolSet == ToolSet.DISCUSS || toolSet == ToolSet.WORK) {
+            kbReadInRedisTool.ifPresent(builder::methodTools);
         }
         //TODO:这里的SystemPrompt缺失
 //                .systemPrompt缺失

@@ -23,6 +23,11 @@ public class File {
     /** 状态：失败 */
     public static final String STATUS_FAILED = "FAILED";
 
+    public static final String STATUS_DELETING = "DELETING";
+    public static final String CLEANING_SKIPPED = "SKIPPED";
+    public static final String CLEANING_CLEANED = "CLEANED";
+    public static final String CLEANING_FAILED = "FAILED";
+
     /** 文件类型：PDF */
     public static final String TYPE_PDF = "PDF";
     /** 文件类型：Markdown */
@@ -45,6 +50,10 @@ public class File {
     private Integer chunkCount;
     /** 失败原因（status=FAILED 时） */
     private String errorMsg;
+    private String docContentHash;
+    private Integer currentVersion;
+    private String activeRunId;
+    private String cleaningStatus;
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
 }

@@ -165,13 +165,12 @@ class AgentControllerTest {
     class GetById {
 
         @Test
-        @DisplayName("Agent 存在时返回 200 + DTO（含 apiKey，编辑回填需要）")
+        @DisplayName("Agent 存在时返回 200 + DTO（不含 apiKey，F1 安全基线）")
         void shouldReturnAgentById() throws Exception {
             AgentDTO dto = AgentDTO.builder()
                     .id(1L).name("老王").baseUrl("https://api.deepseek.com")
                     .modelName("deepseek-chat").callType("API")
                     .systemPrompt("你是架构师")
-                    .apiKey("sk-secret")
                     .build();
             when(agentAppService.findById(1L)).thenReturn(dto);
 
@@ -181,8 +180,8 @@ class AgentControllerTest {
                     .andExpect(jsonPath("$.data.name").value("老王"))
                     .andExpect(jsonPath("$.data.callType").value("API"))
                     .andExpect(jsonPath("$.data.systemPrompt").value("你是架构师"))
-                    // 详情接口必须返回 apiKey，前端编辑回填需要
-                    .andExpect(jsonPath("$.data.apiKey").value("sk-secret"));
+                    // F1：详情接口不回传 apiKey（编辑留空保留），防凭据外泄
+                    .andExpect(jsonPath("$.data.apiKey").doesNotExist());
         }
 
         @Test

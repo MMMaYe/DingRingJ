@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.dingring.infrastructure.persistence.mapper.DocumentVersionMapper">
+
+    <sql id="columns">
+        id, file_id, document_version, document_title, doc_content_hash, raw_path, clean_path,
+        cleaning_model, cleaning_prompt_version, chunking_version, embedding_model,
+        chunk_count, active, created_at, updated_at
+    </sql>
+
+    <select id="findByFileAndVersion" resultType="com.dingring.domain.knowledgebase.DocumentVersion">
+        SELECT <include refid="columns"/> FROM kb_document_version
+        WHERE file_id = #{fileId} AND document_version = #{documentVersion}
+    </select>
+
+    <select id="findByFileId" resultType="com.dingring.domain.knowledgebase.DocumentVersion">
+        SELECT <include refid="columns"/> FROM kb_document_version
+        WHERE file_id = #{fileId} ORDER BY document_version DESC
+    </select>
+
+    <insert id="insert" parameterType="com.dingring.domain.knowledgebase.DocumentVersion"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO kb_document_version
+        (file_id, document_version, document_title, doc_content_hash, raw_path, clean_path,
+         cleaning_model, cleaning_prompt_version, chunking_version, embedding_model,
+         chunk_count, active, created_at, updated_at)
+        VALUES
+        (#{fileId}, #{documentVersion}, #{documentTitle}, #{docContentHash}, #{rawPath}, #{cleanPath},
+         #{cleaningModel}, #{cleaningPromptVersion}, #{chunkingVersion}, #{embeddingModel},
+         #{chunkCount}, #{active}, #{createdAt}, #{updatedAt})
+    </insert>
+
+    <update id="update" parameterType="com.dingring.domain.knowledgebase.DocumentVersion">
+        UPDATE kb_document_version
+        SET document_title = #{documentTitle}, clean_path = #{cleanPath}, cleaning_model = #{cleaningModel},
+            cleaning_prompt_version = #{cleaningPromptVersion}, chunking_version = #{chunkingVersion},
+            embedding_model = #{embeddingModel}, chunk_count = #{chunkCount}, active = #{active},
+            updated_at = #{updatedAt}
+        WHERE id = #{id}
+    </update>
+
+    <update id="deactivateAll">
+        UPDATE kb_document_version SET active = 0, updated_at = CURRENT_TIMESTAMP WHERE file_id = #{fileId}
+    </update>
+
+    <update id="activate">
+        UPDATE kb_document_version SET active = 1, updated_at = CURRENT_TIMESTAMP
+        WHERE file_id = #{fileId} AND document_version = #{documentVersion}
+    </update>
+</mapper>
