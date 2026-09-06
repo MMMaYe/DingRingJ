@@ -48,7 +48,9 @@ class MarkdownSemanticChunkerTest {
     }
 
     @Test
-    void doesNotAggregateAcrossHeadingBoundary() {
+    void mergesFragmentsAcrossHeadingBoundaryBelowFloor() {
+        // 两侧均低于 minTokens=120 的碎片必须合并（设计 §5.1"低于必须合并"优先于标题边界），
+        // 否则结构密集文档会产生大量噪声向量
         String markdown = """
                 # 标题A
                 段落一。
@@ -58,9 +60,48 @@ class MarkdownSemanticChunkerTest {
 
         List<SemanticChunk> chunks = chunker.chunk(parser.parse(markdown, "doc.md"));
 
+        assertThat(chunks).hasSize(1);
+        assertThat(chunks.get(0).content()).contains("段落一", "段落二");
+        assertThat(chunks.get(0).headingPath()).containsExactly("doc.md", "标题A");
+    }
+
+    @Test
+    void keepsHeadingBoundaryWhenBothSidesReachFloor() {
+        // 双方都达到 minTokens 时保持标题边界（不无脑合并）
+        StringBuilder first = new StringBuilder();
+        StringBuilder second = new StringBuilder();
+        for (int i = 0; i < 40; i++) {
+            first.append("标题A下的段落内容编号").append(i).append("。");
+            second.append("标题B下的段落内容编号").append(i).append("。");
+        }
+        String markdown = "# 标题A\n" + first + "\n# 标题B\n" + second;
+
+        List<SemanticChunk> chunks = chunker.chunk(parser.parse(markdown, "doc.md"));
+
         assertThat(chunks).hasSize(2);
-        assertThat(chunks.get(0).content()).contains("段落一");
-        assertThat(chunks.get(1).content()).contains("段落二");
+        assertThat(chunks.get(0).content()).contains("标题A下的段落内容编号");
+        assertThat(chunks.get(1).content()).contains("标题B下的段落内容编号");
+    }
+
+    @Test
+    void mergesTinyIntroSentenceWithFollowingCode() {
+        // "典型代码如下："这类引导句单独成 chunk 是检索噪声，应并入后续代码块
+        String markdown = """
+                # 标题
+                典型代码如下：
+
+                ```java
+                int a = 1;
+                ```
+
+                尾部说明段。
+                """;
+
+        List<SemanticChunk> chunks = chunker.chunk(parser.parse(markdown, "doc.md"));
+
+        assertThat(chunks).hasSize(1);
+        assertThat(chunks.get(0).content()).contains("典型代码如下", "int a = 1;", "尾部说明段");
+        assertThat(chunks.get(0).blockTypes()).contains(BlockType.PARAGRAPH, BlockType.CODE_FENCE);
     }
 
     @Test

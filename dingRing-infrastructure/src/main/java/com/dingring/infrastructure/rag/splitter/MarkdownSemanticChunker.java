@@ -58,6 +58,70 @@ public class MarkdownSemanticChunker {
             }
         }
         flush(result, buffer);
+        return mergeFragments(result);
+    }
+
+    /**
+     * 碎片合并（设计 §5.1「minTokens=碎片下限，低于必须合并」）。
+     * <p>标题/结构块边界只约束聚合阶段；结构密集文档（多小节+短代码块）按边界切完后
+     * 仍会产生大量低于 minTokens 的碎片（实测一篇技术文 70% chunk 不足 120 token，
+     * 极端如 7 字符的"典型代码如下："成为独立噪声向量）。碎片作为独立向量对检索
+     * 是纯噪声——embedding 无语义、反而占据召回名额，因此合并的收益远大于跨边界的
+     * 语境稀释（headingPath 取前块，父/邻居扩展可补上下文）。
+     * <p>规则：相邻 chunk 任一低于 minTokens 即合并；合并后不超过 maxTokens；
+     * 双方都达标则保持边界不动（尊重标题/结构边界）。
+     */
+    private List<SemanticChunk> mergeFragments(List<SemanticChunk> chunks) {
+        if (chunks.size() <= 1) {
+            return reindex(chunks);
+        }
+        int[] tokens = new int[chunks.size()];
+        for (int i = 0; i < chunks.size(); i++) {
+            tokens[i] = tokenCounter.count(chunks.get(i).content());
+        }
+        List<SemanticChunk> merged = new ArrayList<>();
+        List<Integer> mergedTokens = new ArrayList<>();
+        for (int i = 0; i < chunks.size(); i++) {
+            SemanticChunk current = chunks.get(i);
+            if (!merged.isEmpty()) {
+                int lastTokens = mergedTokens.get(mergedTokens.size() - 1);
+                boolean fragment = lastTokens < minTokens || tokens[i] < minTokens;
+                if (fragment && lastTokens + tokens[i] <= maxTokens) {
+                    merged.set(merged.size() - 1, combine(merged.get(merged.size() - 1), current));
+                    mergedTokens.set(mergedTokens.size() - 1, lastTokens + tokens[i]);
+                    continue;
+                }
+            }
+            merged.add(current);
+            mergedTokens.add(tokens[i]);
+        }
+        return reindex(merged);
+    }
+
+    /** 合并两个 chunk：来源行/偏移取跨度，headingPath/parentChunkId 取前块（语境锚定） */
+    private SemanticChunk combine(SemanticChunk first, SemanticChunk second) {
+        Set<BlockType> types = EnumSet.noneOf(BlockType.class);
+        types.addAll(first.blockTypes());
+        types.addAll(second.blockTypes());
+        String language = first.language() != null && !first.language().isBlank()
+                ? first.language() : second.language();
+        return new SemanticChunk(first.index(),
+                first.content() + "\n" + second.content(),
+                first.headingPath(), types,
+                first.sourceStartLine(), second.sourceEndLine(),
+                first.sourceStartOffset(), second.sourceEndOffset(),
+                language, first.parentChunkId());
+    }
+
+    /** 合并后重建连续索引（chunkId 含 index，必须 0..n-1 连续才能保证幂等重试不漂移） */
+    private static List<SemanticChunk> reindex(List<SemanticChunk> chunks) {
+        List<SemanticChunk> result = new ArrayList<>(chunks.size());
+        for (int i = 0; i < chunks.size(); i++) {
+            SemanticChunk c = chunks.get(i);
+            result.add(c.index() == i ? c : new SemanticChunk(i, c.content(), c.headingPath(),
+                    c.blockTypes(), c.sourceStartLine(), c.sourceEndLine(),
+                    c.sourceStartOffset(), c.sourceEndOffset(), c.language(), c.parentChunkId()));
+        }
         return result;
     }
 

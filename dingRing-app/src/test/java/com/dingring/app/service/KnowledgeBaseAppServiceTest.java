@@ -1,6 +1,7 @@
 package com.dingring.app.service;
 
 import com.dingring.common.exception.ParamException;
+import com.dingring.domain.knowledgebase.DocumentVersion;
 import com.dingring.domain.knowledgebase.DocumentVersionRepository;
 import com.dingring.domain.knowledgebase.File;
 import com.dingring.domain.knowledgebase.FileRepository;
@@ -152,5 +153,73 @@ class KnowledgeBaseAppServiceTest {
         assertThat(run.getActiveSlot()).isEqualTo(run.getFileId());
         assertThat(run.getStatus()).isEqualTo(IngestionRun.STATUS_UPLOAD_CREATED);
         verify(ingestionPipeline).ingest(any(), any());
+    }
+
+    @Test
+    @DisplayName("勾选清洗+内置执行方：run 以 CLEANING_RUNNING 进入管道（否则管道清洗分支永不触发）")
+    void shouldCreateCleaningRunningRunWhenCleanRequested() throws Exception {
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "cleaningEnabledByDefault", true);
+        when(knowledgeBaseRepository.findById(1L)).thenReturn(Optional.of(kb(1L)));
+        Path stored = tempDir.resolve("note.md");
+        Files.writeString(stored, "# 标题\n内容");
+        when(fileStorageService.store(any())).thenReturn(stored.toString());
+        MockMultipartFile md = new MockMultipartFile(
+                "file", "note.md", "text/markdown", "# 标题\n内容".getBytes());
+
+        service.upload(1L, md, true);
+
+        ArgumentCaptor<IngestionRun> runCaptor = ArgumentCaptor.forClass(IngestionRun.class);
+        verify(ingestionRunRepository).save(runCaptor.capture());
+        assertThat(runCaptor.getValue().getStatus()).isEqualTo(IngestionRun.STATUS_CLEANING_RUNNING);
+        verify(ingestionPipeline).ingest(any(), any());
+    }
+
+    @Test
+    @DisplayName("重试未清洗版本：重新以 CLEANING_RUNNING 摄入（对齐上传清洗语义）")
+    void shouldRetryWithCleaningWhenVersionHasNoCleanArtifact() throws Exception {
+        File file = new File();
+        file.setId(9L);
+        file.setName("note.md");
+        file.setPath(tempDir.resolve("note.md").toString());
+        Files.writeString(tempDir.resolve("note.md"), "# 标题\n内容");
+        file.setCurrentVersion(1);
+        // cleaningStatus=null 表示当初勾选了清洗（SKIPPED 才是未勾选）
+        when(fileRepository.findById(9L)).thenReturn(Optional.of(file));
+        when(ingestionRunRepository.findActiveByFileId(9L)).thenReturn(Optional.empty());
+        DocumentVersion version = new DocumentVersion();
+        version.setFileId(9L);
+        version.setDocumentVersion(1);
+        version.setCleanPath(null);
+        when(documentVersionRepository.findByFileAndVersion(9L, 1)).thenReturn(Optional.of(version));
+
+        service.retryIngestion(9L);
+
+        ArgumentCaptor<IngestionRun> runCaptor = ArgumentCaptor.forClass(IngestionRun.class);
+        verify(ingestionRunRepository).save(runCaptor.capture());
+        assertThat(runCaptor.getValue().getStatus()).isEqualTo(IngestionRun.STATUS_CLEANING_RUNNING);
+        verify(ingestionPipeline).ingest(any(), any());
+    }
+
+    @Test
+    @DisplayName("重试已有 clean 产物的版本：直接摄入不重洗")
+    void shouldRetryWithoutCleaningWhenCleanArtifactExists() throws Exception {
+        File file = new File();
+        file.setId(9L);
+        file.setPath(tempDir.resolve("note.md").toString());
+        Files.writeString(tempDir.resolve("note.md"), "# 标题\n内容");
+        file.setCurrentVersion(1);
+        when(fileRepository.findById(9L)).thenReturn(Optional.of(file));
+        when(ingestionRunRepository.findActiveByFileId(9L)).thenReturn(Optional.empty());
+        DocumentVersion version = new DocumentVersion();
+        version.setFileId(9L);
+        version.setDocumentVersion(1);
+        version.setCleanPath("/tmp/already-clean.md");
+        when(documentVersionRepository.findByFileAndVersion(9L, 1)).thenReturn(Optional.of(version));
+
+        service.retryIngestion(9L);
+
+        ArgumentCaptor<IngestionRun> runCaptor = ArgumentCaptor.forClass(IngestionRun.class);
+        verify(ingestionRunRepository).save(runCaptor.capture());
+        assertThat(runCaptor.getValue().getStatus()).isEqualTo(IngestionRun.STATUS_UPLOAD_CREATED);
     }
 }

@@ -28,17 +28,20 @@ public class BuiltinDocumentCleaner {
     private final CleaningSubmissionValidator validator;
     private final Long cleaningAgentId;
     private final String cleaningModel;
+    private final Integer cleaningMaxTokens;
 
     public BuiltinDocumentCleaner(LlmService llmService,
                                    AgentRepository agentRepository,
                                    CleaningSubmissionValidator validator,
                                    @Value("${dingring.rag.cleaning.agent-id:6}") Long cleaningAgentId,
-                                   @Value("${dingring.rag.cleaning.model:}") String cleaningModel) {
+                                   @Value("${dingring.rag.cleaning.model:}") String cleaningModel,
+                                   @Value("${dingring.rag.cleaning.max-tokens:60000}") Integer cleaningMaxTokens) {
         this.llmService = llmService;
         this.agentRepository = agentRepository;
         this.validator = validator;
         this.cleaningAgentId = cleaningAgentId;
         this.cleaningModel = cleaningModel;
+        this.cleaningMaxTokens = cleaningMaxTokens;
     }
 
     /**
@@ -53,7 +56,9 @@ public class BuiltinDocumentCleaner {
         if (cleaningModel != null && !cleaningModel.isBlank()) {
             agent.setModelName(cleaningModel);
         }
-        LlmService.CallOptions options = new LlmService.CallOptions(0.0, null, 300L, true, false);
+        // maxTokens 必须显式指定：清洗输出=整篇文档的 JSON（实测 45K 原文输出 12K+ token），
+        // 若传 null 会回退 Agent feature 的小配额（路由判定器 1024），JSON 必然截断成非法协议
+        LlmService.CallOptions options = new LlmService.CallOptions(0.0, cleaningMaxTokens, 300L, true, false);
         String response = llmService.chat(agent, CleaningPromptTemplate.CONSTRAINTS,
                 List.of(LlmService.ChatTurn.user(CleaningPromptTemplate.userMessage(rawMarkdown))), options);
 

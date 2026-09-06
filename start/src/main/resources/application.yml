@@ -144,6 +144,14 @@ dingring:
     chunk:
       fixed-size: 512
       overlap: 64
+    # P3 F4：内置清洗执行方——复用 Agent 连接（baseUrl/apiKey），model 可覆盖。
+    # agent-id=2（小林/SiliconFlow）：清洗要求输出整篇文档 JSON（12K+ token），
+    # 不能用 agent 6（路由判定器）：其 opencode.ai/zen 路由对大请求不稳定（403/octet-stream）
+    # 且 feature maxTokens=1024 会截断 JSON。max-tokens 显式给大值，防回退 Agent feature 小配额
+    cleaning:
+      agent-id: 2
+      model: deepseek-ai/DeepSeek-V4-Flash
+      max-tokens: 60000
     # P3 多阶段检索（7.3/7.4/7.7）：dense+lexical → RRF → rerank → MMR
     retrieval:
       dense-top-k: 30

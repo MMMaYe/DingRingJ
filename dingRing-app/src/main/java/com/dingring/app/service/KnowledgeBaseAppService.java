@@ -139,15 +139,19 @@ public class KnowledgeBaseAppService {
 
         // 创建摄入 run（活跃槽 = fileId）：同一文件同一时刻仅允许一个活跃 run
         // 勾选清洗 + 外部执行方：置 CLEANING_WAITING，等 MCP 提交后由提交服务唤醒管道；
-        // 勾选清洗 + 内置执行方：管道内先 CLEANING_RUNNING 再继续；未勾选：直接摄入
+        // 勾选清洗 + 内置执行方：置 CLEANING_RUNNING——管道内置清洗分支按该状态进入，
+        // 状态必须由入口设置（管道内只按状态分流，不做 UPLOAD_CREATED→CLEANING_RUNNING 转换）；
+        // 未勾选：直接摄入
         IngestionRun run = new IngestionRun();
         run.setRunId(UUID.randomUUID().toString());
         run.setFileId(entity.getId());
         run.setDocContentHash(docContentHash);
         run.setDocumentVersion(nextVersion);
         run.setExecutor(executor);
-        run.setStatus(clean && IngestionRun.EXECUTOR_EXTERNAL_MCP.equals(executor)
-                ? IngestionRun.STATUS_CLEANING_WAITING : IngestionRun.STATUS_UPLOAD_CREATED);
+        run.setStatus(!clean ? IngestionRun.STATUS_UPLOAD_CREATED
+                : IngestionRun.EXECUTOR_EXTERNAL_MCP.equals(executor)
+                        ? IngestionRun.STATUS_CLEANING_WAITING
+                        : IngestionRun.STATUS_CLEANING_RUNNING);
         run.setAttempt(0);
         run.setActiveSlot(entity.getId());
         ingestionRunRepository.save(run);
@@ -213,14 +217,21 @@ public class KnowledgeBaseAppService {
             throw new ParamException("该文件已有活跃任务，不能重试");
         }
         String docContentHash = hashStoredFile(file.getPath());
+        int versionNo = file.getCurrentVersion() == null ? 1 : file.getCurrentVersion();
 
         IngestionRun run = new IngestionRun();
         run.setRunId(UUID.randomUUID().toString());
         run.setFileId(fileId);
         run.setDocContentHash(docContentHash);
-        run.setDocumentVersion(file.getCurrentVersion() == null ? 1 : file.getCurrentVersion());
+        run.setDocumentVersion(versionNo);
         run.setExecutor(IngestionRun.EXECUTOR_BUILTIN);
-        run.setStatus(IngestionRun.STATUS_UPLOAD_CREATED);
+        // 重试语义与上传对齐：当初勾选了清洗（非 SKIPPED）但该版本尚无 clean 产物
+        // （清洗中断/失败），重试必须重新清洗，否则重试只会得到未清洗的切片
+        boolean needClean = !File.CLEANING_SKIPPED.equals(file.getCleaningStatus())
+                && documentVersionRepository.findByFileAndVersion(fileId, versionNo)
+                        .map(v -> v.getCleanPath() == null).orElse(true);
+        run.setStatus(needClean ? IngestionRun.STATUS_CLEANING_RUNNING
+                : IngestionRun.STATUS_UPLOAD_CREATED);
         run.setAttempt(0);
         run.setActiveSlot(fileId);
         ingestionRunRepository.save(run);
