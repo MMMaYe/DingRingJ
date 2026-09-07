@@ -57,7 +57,7 @@ DingRingJ 试图把「向 AI 提问」升级为「和一群 AI 同事一起思�
 - **流式发言**：Agent 发言通过 WebSocket 逐块推送（MESSAGE_DELTA / COMPLETE / ABORT），还原「正在输入」的群聊体感
 - **知识卡片**：讨论收束时由总结 Agent 生成主题沉淀产物，再由产物衍生卡片，异步提取 Q&A 知识卡片供复习，后台任务对账兜底
 - **画像与群记忆**：持续从用户发言提炼用户画像，从历史结论积累群上下文记忆，意图感知地注入后续讨论
-- **RAG 知识库**：文件上传（暂强要求md文件） → 固定尺寸切块（512 + 64 overlap）→ Qwen3-Embedding 向量化 → PostgreSQL/pgvector 检索 → LLM 重排
+- **RAG 知识库**：文件上传 →（可选）LLM 文档清洗 → Markdown 语义切块（状态机式解析代码围栏 / 表格 / 标题层级，Qwen tokenizer 控尺寸）→ Qwen3-Embedding 向量化 → pgvector 稠密 + pg_trgm 关键词双路召回 → RRF 融合 → Qwen3-Reranker 精排（失败降级 RRF 序）→ MMR 去冗余；检索结果经 Redis 缓存、故障静默降级直查
 - **Tool / Skill 机制**：基于 Spring AI Alibaba `methodTools` 的 WebTools（Tavily webSearch + webFetch，keyless/Bearer 自适应，含退避重试）；技能种子配置驱动
 - **全链路日志观测**：`@Event` 打点 + AOP 全量化日志（LLM 入参/工具调用/意图路由），文件增量采集进仪表盘，三视图（LLM 调用 / Traces / 观测日志）可视化
 
